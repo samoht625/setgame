@@ -167,7 +167,10 @@ body {
 }
 
 /* Responsive design */
-@media (max-width: 768px) {
+/* More aggressive mobile detection - move controls to header on any mobile device */
+@media (max-width: 1024px) and (orientation: landscape), 
+       (max-width: 768px),
+       (hover: none) and (pointer: coarse) {
     .game-container {
         padding: 4px;
     }
@@ -212,6 +215,34 @@ body {
     .grid-4-cols { grid-template-columns: repeat(3, 1fr); max-width: 480px; }
     .grid-5-cols { grid-template-columns: repeat(4, 1fr); max-width: 635px; }
     .grid-6-cols { grid-template-columns: repeat(4, 1fr); max-width: 635px; }
+}
+
+/* Additional rule specifically for landscape mobile devices */
+@media (max-width: 1024px) and (orientation: landscape) {
+    .controls {
+        /* Ensure controls are always in header for landscape mobile */
+        position: static !important;
+        flex-direction: row;
+        gap: 8px;
+        bottom: auto;
+        right: auto;
+    }
+}
+
+/* Catch-all rule for touch devices to ensure controls are in header */
+@media (hover: none) and (pointer: coarse) {
+    .controls {
+        /* Force controls to header on any touch device */
+        position: static !important;
+        flex-direction: row;
+        gap: 8px;
+        bottom: auto;
+        right: auto;
+    }
+    
+    .game-header {
+        justify-content: space-between;
+    }
 }
 
 @media (max-width: 480px) {
