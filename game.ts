@@ -17,6 +17,7 @@ export class SetGameUI {
     private wasGamePausedBeforeModal: boolean = false;
     private wasGameRunning: boolean = false;
     private gameLogic: GameLogic;
+    private imageCache: Map<number, HTMLImageElement> = new Map();
     
     // DOM elements
     private gameContainer!: HTMLElement;
@@ -29,8 +30,36 @@ export class SetGameUI {
 
     constructor() {
         this.gameLogic = new GameLogic();
-        this.initializeUI();
-        this.startNewGame();
+        this.preloadImages().then(() => {
+            this.initializeUI();
+            this.startNewGame();
+        });
+    }
+
+    private async preloadImages(): Promise<void> {
+        const imagePromises: Promise<void>[] = [];
+        
+        // Preload all 81 card images
+        for (let i = 1; i <= 81; i++) {
+            const img = new Image();
+            const promise = new Promise<void>((resolve, reject) => {
+                img.onload = () => {
+                    this.imageCache.set(i, img);
+                    resolve();
+                };
+                img.onerror = () => {
+                    console.warn(`Failed to load image for card ${i}`);
+                    resolve(); // Continue even if some images fail
+                };
+            });
+            
+            img.src = `cards/${i}.png`;
+            imagePromises.push(promise);
+        }
+        
+        // Wait for all images to load
+        await Promise.all(imagePromises);
+        console.log(`Preloaded ${this.imageCache.size} card images`);
     }
 
     private initializeUI(): void {
@@ -148,12 +177,23 @@ export class SetGameUI {
         const cardDiv = document.createElement('div');
         cardDiv.className = `card ${isSelected ? 'selected' : ''}`;
         
-        const img = document.createElement('img');
-        img.src = `cards/${card.getId()}.png`;
-        img.alt = card.toString();
-        img.draggable = false;
+        const cardId = card.getId();
+        const cachedImg = this.imageCache.get(cardId);
         
-        cardDiv.appendChild(img);
+        if (cachedImg) {
+            // Clone the cached image for instant display
+            const img = cachedImg.cloneNode(true) as HTMLImageElement;
+            img.alt = card.toString();
+            img.draggable = false;
+            cardDiv.appendChild(img);
+        } else {
+            // Fallback to original method if image not cached
+            const img = document.createElement('img');
+            img.src = `cards/${cardId}.png`;
+            img.alt = card.toString();
+            img.draggable = false;
+            cardDiv.appendChild(img);
+        }
         
         cardDiv.addEventListener('click', () => {
             if (!this.isPaused) {
