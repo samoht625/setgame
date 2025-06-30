@@ -12,6 +12,7 @@ export class SetGameUI {
         this.imageCache = new Map();
         this.gameEnded = false;
         this.lastScoreEntry = null;
+        this.updateTimeout = null;
         this.gameLogic = new GameLogic();
         this.preloadImages().then(() => {
             this.initializeUI();
@@ -99,12 +100,20 @@ export class SetGameUI {
         this.timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
     updateDisplay() {
-        this.updateStatus();
-        this.updateCards();
-        this.updateButtons();
-        if (this.gameLogic.isGameOver()) {
-            this.endGame();
+        // Clear any pending update
+        if (this.updateTimeout) {
+            clearTimeout(this.updateTimeout);
         }
+        // Use requestAnimationFrame for smooth updates
+        this.updateTimeout = requestAnimationFrame(() => {
+            this.updateStatus();
+            this.updateCards();
+            this.updateButtons();
+            if (this.gameLogic.isGameOver()) {
+                this.endGame();
+            }
+            this.updateTimeout = null;
+        });
     }
     updateStatus() {
         this.statusElement.textContent = this.gameLogic.getSetsFound().toString();
@@ -157,12 +166,12 @@ export class SetGameUI {
         cardDiv.addEventListener('click', () => {
             if (!this.isPaused) {
                 const wasSet = this.handleCardSelection(card);
-                this.updateDisplay();
                 // Only auto-deal if a set was found and now there is no set visible
                 if (wasSet) {
                     this.autoDealIfNoSet();
-                    this.updateDisplay();
                 }
+                // Single update after all logic is complete
+                this.updateDisplay();
             }
         });
         return cardDiv;

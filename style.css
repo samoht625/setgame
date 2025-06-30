@@ -115,6 +115,9 @@ body {
     padding: 0;
     margin: 0 auto;
     position: relative;
+    /* Prevent layout thrashing */
+    transform: translateZ(0);
+    backface-visibility: hidden;
 }
 
 .grid-4-cols { grid-template-columns: repeat(4, 1fr); max-width: 750px; }
@@ -132,6 +135,10 @@ body {
     overflow: hidden;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     max-width: 180px;
+    /* Mobile optimizations */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    will-change: transform, box-shadow;
 }
 
 .card:hover {

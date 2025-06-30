@@ -20,6 +20,7 @@ export class SetGameUI {
     private imageCache: Map<number, HTMLImageElement> = new Map();
     private gameEnded: boolean = false;
     private lastScoreEntry: HighScoreEntry | null = null;
+    private updateTimeout: number | null = null;
     
     // DOM elements
     private gameContainer!: HTMLElement;
@@ -136,13 +137,22 @@ export class SetGameUI {
     }
 
     private updateDisplay(): void {
-        this.updateStatus();
-        this.updateCards();
-        this.updateButtons();
-        
-        if (this.gameLogic.isGameOver()) {
-            this.endGame();
+        // Clear any pending update
+        if (this.updateTimeout) {
+            clearTimeout(this.updateTimeout);
         }
+        
+        // Use requestAnimationFrame for smooth updates
+        this.updateTimeout = requestAnimationFrame(() => {
+            this.updateStatus();
+            this.updateCards();
+            this.updateButtons();
+            
+            if (this.gameLogic.isGameOver()) {
+                this.endGame();
+            }
+            this.updateTimeout = null;
+        }) as any;
     }
 
     private updateStatus(): void {
@@ -202,13 +212,14 @@ export class SetGameUI {
         cardDiv.addEventListener('click', () => {
             if (!this.isPaused) {
                 const wasSet = this.handleCardSelection(card);
-                this.updateDisplay();
                 
                 // Only auto-deal if a set was found and now there is no set visible
                 if (wasSet) {
                     this.autoDealIfNoSet();
-                    this.updateDisplay();
                 }
+                
+                // Single update after all logic is complete
+                this.updateDisplay();
             }
         });
         
