@@ -137,12 +137,13 @@ export class SetGameUI {
     }
 
     private updateDisplay(): void {
-        // Clear any pending update
+        // Clear any pending update to prevent race conditions
         if (this.updateTimeout) {
-            clearTimeout(this.updateTimeout);
+            cancelAnimationFrame(this.updateTimeout);
+            this.updateTimeout = null;
         }
         
-        // Use requestAnimationFrame for smooth updates
+        // Use requestAnimationFrame for smooth, properly timed updates
         this.updateTimeout = requestAnimationFrame(() => {
             this.updateStatus();
             this.updateCards();
@@ -160,16 +161,65 @@ export class SetGameUI {
     }
 
     private updateCards(): void {
-        this.cardContainer.innerHTML = '';
         const displayedCards = this.gameLogic.getDisplayedCards();
         const selectedCards = this.gameLogic.getSelectedCards();
         
-        // Adjust grid layout based on number of cards
+        // Adjust grid layout BEFORE DOM manipulation to prevent layout thrashing
         this.adjustGridLayout(displayedCards.length);
         
-        displayedCards.forEach(card => {
-            const cardElement = this.createCardElement(card, selectedCards.has(card));
-            this.cardContainer.appendChild(cardElement);
+        // Smart DOM diffing instead of innerHTML clearing
+        this.updateCardsWithDiffing(displayedCards, selectedCards);
+    }
+
+    private updateCardsWithDiffing(displayedCards: Card[], selectedCards: Set<Card>): void {
+        const existingCards = Array.from(this.cardContainer.children) as HTMLElement[];
+        const existingCardIds = existingCards.map(el => parseInt(el.dataset.cardId || '0'));
+        const newCardIds = displayedCards.map(card => card.getId());
+        
+        // Remove cards that are no longer displayed
+        existingCards.forEach((cardEl, index) => {
+            const cardId = existingCardIds[index];
+            if (!newCardIds.includes(cardId)) {
+                cardEl.remove();
+            }
+        });
+        
+        // Add or update cards
+        displayedCards.forEach((card, index) => {
+            const cardId = card.getId();
+            const isSelected = selectedCards.has(card);
+            const existingIndex = existingCardIds.indexOf(cardId);
+            
+            if (existingIndex === -1) {
+                // New card - create and insert at correct position
+                const cardElement = this.createCardElement(card, isSelected);
+                if (index < this.cardContainer.children.length) {
+                    this.cardContainer.insertBefore(cardElement, this.cardContainer.children[index]);
+                } else {
+                    this.cardContainer.appendChild(cardElement);
+                }
+            } else {
+                // Existing card - update selection state only if needed
+                const existingEl = existingCards[existingIndex];
+                const currentlySelected = existingEl.classList.contains('selected');
+                if (currentlySelected !== isSelected) {
+                    if (isSelected) {
+                        existingEl.classList.add('selected');
+                    } else {
+                        existingEl.classList.remove('selected');
+                    }
+                }
+                
+                // Move to correct position if needed
+                const currentPosition = Array.from(this.cardContainer.children).indexOf(existingEl);
+                if (currentPosition !== index) {
+                    if (index < this.cardContainer.children.length) {
+                        this.cardContainer.insertBefore(existingEl, this.cardContainer.children[index]);
+                    } else {
+                        this.cardContainer.appendChild(existingEl);
+                    }
+                }
+            }
         });
     }
 
@@ -190,24 +240,28 @@ export class SetGameUI {
     private createCardElement(card: Card, isSelected: boolean): HTMLElement {
         const cardDiv = document.createElement('div');
         cardDiv.className = `card ${isSelected ? 'selected' : ''}`;
+        cardDiv.dataset.cardId = card.getId().toString();
         
         const cardId = card.getId();
         const cachedImg = this.imageCache.get(cardId);
         
+        // Always create a new img element for consistency
+        const img = document.createElement('img');
+        img.alt = card.toString();
+        img.draggable = false;
+        
         if (cachedImg) {
-            // Clone the cached image for instant display
-            const img = cachedImg.cloneNode(true) as HTMLImageElement;
-            img.alt = card.toString();
-            img.draggable = false;
-            cardDiv.appendChild(img);
+            // Use cached image src for instant loading
+            img.src = cachedImg.src;
+            // Copy any additional properties from cached image
+            img.width = cachedImg.width;
+            img.height = cachedImg.height;
         } else {
             // Fallback to original method if image not cached
-            const img = document.createElement('img');
             img.src = `cards/${cardId}.png`;
-            img.alt = card.toString();
-            img.draggable = false;
-            cardDiv.appendChild(img);
         }
+        
+        cardDiv.appendChild(img);
         
         cardDiv.addEventListener('click', () => {
             if (!this.isPaused) {

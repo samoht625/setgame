@@ -115,9 +115,12 @@ body {
     padding: 0;
     margin: 0 auto;
     position: relative;
-    /* Prevent layout thrashing */
+    /* Prevent layout thrashing and improve performance */
     transform: translateZ(0);
     backface-visibility: hidden;
+    contain: layout style;
+    /* Optimize for frequent DOM changes */
+    will-change: contents;
 }
 
 .grid-4-cols { grid-template-columns: repeat(4, 1fr); max-width: 750px; }
@@ -129,7 +132,8 @@ body {
     aspect-ratio: 3/2;
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.15s ease;
+    /* Separate transitions to avoid conflicts with DOM updates */
+    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
     border: 2px solid #dee2e6;
     background: white;
     overflow: hidden;
@@ -139,6 +143,8 @@ body {
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
     will-change: transform, box-shadow;
+    /* Performance optimization */
+    contain: layout style paint;
 }
 
 .card:hover {
