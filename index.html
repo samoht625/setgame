@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Set Card Game</title>
+    <link rel="stylesheet" href="style.css">
+    <link id="dynamic-favicon" rel="icon" type="image/png" href="cards/1.png">
+</head>
+<body>
+    <div id="game-container" class="game-container">
+        <header class="game-header">
+            <div class="stats">
+                <div class="stat">
+                    <div id="sets-count" class="stat-number">0</div>
+                    <div class="stat-label">sets</div>
+                </div>
+                <div class="stat">
+                    <div id="timer" class="stat-number">00:00</div>
+                    <div class="stat-label">time</div>
+                </div>
+            </div>
+            <div class="controls">
+                <button id="new-game-btn" class="icon-btn" title="New Game">
+                    <img src="icons/rotate-cw.svg" alt="New Game" width="20" height="20">
+                </button>
+                <button id="pause-btn" class="icon-btn" title="Pause">
+                    <img src="icons/pause.svg" alt="Pause" width="20" height="20">
+                </button>
+                <button id="best-times-btn" class="icon-btn" title="Best Times">
+                    <img src="icons/award.svg" alt="Best Times" width="20" height="20">
+                </button>
+            </div>
+        </header>
+
+        <main id="card-container" class="card-container">
+            <!-- Cards will be dynamically inserted here -->
+        </main>
+
+        <!-- Best Times Modal -->
+        <div id="high-scores-modal" class="modal" style="display:none;">
+            <div class="modal-content">
+                <span id="close-modal" class="close">&times;</span>
+                <div class="modal-body">
+                    <table id="high-scores-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Time</th>
+                                <th>Date Achieved</th>
+                            </tr>
+                        </thead>
+                        <tbody id="high-scores-list">
+                            <!-- High scores will be inserted here -->
+                        </tbody>
+                    </table>
+                    <div id="no-scores" class="no-scores" style="display:none;">
+                        <p>No times recorded yet!</p>
+                        <p class="subtitle">Complete a game to set your first record.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script type="module" src="main.js"></script>
+        <script>
+        // Set favicon to a random card image on each page load
+        (function() {
+            var cardNum = Math.floor(Math.random() * 81) + 1;
+            var favicon = document.getElementById('dynamic-favicon');
+            favicon.href = 'cards/' + cardNum + '.png';
+        })();
+        </script>
+    </div>
+</body>
+</html> 

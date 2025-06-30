@@ -1,0 +1,17 @@
+{
+  "name": "set-card-game",
+  "version": "1.0.0",
+  "description": "Set card game implemented in TypeScript",
+  "main": "main.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "serve": "python3 -m http.server 8000"
+  },
+  "keywords": ["set", "card-game", "typescript", "game"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+} 
