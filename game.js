@@ -10,6 +10,8 @@ export class SetGameUI {
         this.wasGamePausedBeforeModal = false;
         this.wasGameRunning = false;
         this.imageCache = new Map();
+        this.gameEnded = false;
+        this.lastScoreEntry = null;
         this.gameLogic = new GameLogic();
         this.preloadImages().then(() => {
             this.initializeUI();
@@ -68,6 +70,8 @@ export class SetGameUI {
         this.isPaused = false;
         this.pausedTime = 0;
         this.pauseStartTime = 0;
+        this.gameEnded = false;
+        this.lastScoreEntry = null;
         this.pauseButton.querySelector('img').src = 'icons/pause.svg';
         this.pauseButton.querySelector('img').alt = 'Pause';
         this.pauseButton.title = 'Pause';
@@ -191,7 +195,10 @@ export class SetGameUI {
             this.togglePause();
         }
         const scores = this.getHighScores();
-        if (scores.length === 0) {
+        const isNewScore = this.lastScoreEntry !== null;
+        const isHighScore = isNewScore && scores.some(score => score.time === this.lastScoreEntry.time &&
+            score.date === this.lastScoreEntry.date);
+        if (scores.length === 0 && !isNewScore) {
             table.style.display = 'none';
             noScores.style.display = 'block';
         }
@@ -199,8 +206,15 @@ export class SetGameUI {
             table.style.display = 'table';
             noScores.style.display = 'none';
             tbody.innerHTML = '';
+            // Show top 10 scores
             scores.forEach((entry, index) => {
                 const row = document.createElement('tr');
+                const isThisNewScore = isNewScore &&
+                    entry.time === this.lastScoreEntry.time &&
+                    entry.date === this.lastScoreEntry.date;
+                if (isThisNewScore) {
+                    row.classList.add('new-score');
+                }
                 row.innerHTML = `
                     <td>${index + 1}</td>
                     <td>${entry.time}</td>
@@ -208,6 +222,17 @@ export class SetGameUI {
                 `;
                 tbody.appendChild(row);
             });
+            // If the new score is not a high score, show it at the bottom
+            if (isNewScore && !isHighScore) {
+                const row = document.createElement('tr');
+                row.classList.add('not-high-score');
+                row.innerHTML = `
+                    <td>-</td>
+                    <td>${this.lastScoreEntry.time}</td>
+                    <td>${this.lastScoreEntry.date} (Not a high score)</td>
+                `;
+                tbody.appendChild(row);
+            }
         }
         modal.style.display = 'flex';
     }
@@ -220,6 +245,9 @@ export class SetGameUI {
         }
     }
     endGame() {
+        if (this.gameEnded)
+            return; // Prevent duplicate calls
+        this.gameEnded = true;
         if (this.gameTimer) {
             clearInterval(this.gameTimer);
         }
@@ -227,10 +255,10 @@ export class SetGameUI {
         const minutes = Math.floor(elapsed / 60);
         const seconds = elapsed % 60;
         const timeStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        const message = `Game Over!\n\nSets Found: ${this.gameLogic.getSetsFound()}\nTime: ${timeStr}\n\nWell done!`;
+        // Save the score and show high scores modal
+        this.saveHighScore(timeStr, this.gameLogic.getSetsFound());
         setTimeout(() => {
-            alert(message);
-            this.saveHighScore(timeStr, this.gameLogic.getSetsFound());
+            this.showHighScores();
         }, 500);
     }
     saveHighScore(timeStr, setsFound) {
@@ -245,6 +273,7 @@ export class SetGameUI {
             date: dateStr,
             timeSeconds: this.parseTimeToSeconds(timeStr)
         };
+        this.lastScoreEntry = scoreEntry;
         const scores = this.getHighScores();
         scores.push(scoreEntry);
         // Sort by time (fastest first)

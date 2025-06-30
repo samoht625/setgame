@@ -347,6 +347,25 @@ body {
     background: #f8f9fa;
 }
 
+#high-scores-table tbody tr.new-score {
+    background: #e3f2fd;
+    border-left: 4px solid #007bff;
+}
+
+#high-scores-table tbody tr.new-score:hover {
+    background: #d1ecf1;
+}
+
+#high-scores-table tbody tr.not-high-score {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    opacity: 0.8;
+}
+
+#high-scores-table tbody tr.not-high-score:hover {
+    background: #ffeaa7;
+}
+
 #high-scores-table th:first-child,
 #high-scores-table td:first-child {
     text-align: center;
