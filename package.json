@@ -6,12 +6,18 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
-    "serve": "python3 -m http.server 8000"
+    "serve": "python3 -m http.server 8000",
+    "server": "node server.js",
+    "dev": "npm run build && npm run server"
   },
   "keywords": ["set", "card-game", "typescript", "game"],
   "author": "",
   "license": "MIT",
   "devDependencies": {
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.13.0"
   }
 } 

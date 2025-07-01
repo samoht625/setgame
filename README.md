@@ -11,6 +11,7 @@ A TypeScript web implementation of the classic Set card game. Find sets of three
 - 💡 **Hints** - Get hints when stuck
 - 📱 **Responsive Design** - Works on desktop and mobile
 - 🎨 **Modern UI** - Clean, intuitive interface
+- 👥 **Multiplayer Mode** - Real-time multiplayer with WebSocket support
 
 ## How to Play
 
@@ -23,15 +24,26 @@ A TypeScript web implementation of the classic Set card game. Find sets of three
 
 ## Running the Game
 
-### Option 1: Direct Play
+### Single Player Mode
+
+#### Option 1: Direct Play
 1. Open `index.html` in your web browser
 2. Start playing immediately!
 
-### Option 2: Local Server (Recommended)
+#### Option 2: Local Server
 1. Install dependencies: `npm install -g typescript`
 2. Compile TypeScript: `npm run build` (or just `tsc`)
 3. Start server: `npm run serve` (or `python3 -m http.server 8000`)
 4. Open `http://localhost:8000` in your browser
+
+### Multiplayer Mode
+
+1. Install dependencies: `npm install`
+2. Build TypeScript: `npm run build`
+3. Start the server: `npm run server`
+4. Open `http://localhost:8000` for single player
+5. Open `http://localhost:8000/m` for multiplayer
+6. Share the URL with friends to play together!
 
 ## Development
 
@@ -54,14 +66,19 @@ tsc --watch
 
 ### Project Structure
 ```
-├── card.ts          # Card class and enums
-├── gameLogic.ts     # Game logic and rules
-├── game.ts          # UI and game interface
-├── main.ts          # Application entry point
-├── index.html       # Main HTML page
-├── style.css        # Game styling
-├── cards/           # Card images (PNG files)
-└── README.md        # This file
+├── card.ts              # Card class and enums
+├── gameLogic.ts         # Game logic and rules
+├── game.ts              # UI and game interface
+├── main.ts              # Application entry point
+├── multiplayerGame.ts   # Multiplayer game UI
+├── multiplayerMain.ts   # Multiplayer entry point
+├── server.js            # Node.js/Express/WebSocket server
+├── index.html           # Main HTML page
+├── multiplayer.html     # Multiplayer HTML page
+├── style.css            # Game styling
+├── cards/               # Card images (PNG files)
+├── icons/               # UI icons
+└── README.md            # This file
 ```
 
 ## Game Rules
@@ -73,6 +90,15 @@ tsc --watch
 ### Invalid Set Examples
 - **Mixed**: 1 red solid diamond, 1 red solid oval, 1 green solid diamond
   - ❌ Color is red, red, green (not all same, not all different)
+
+## Multiplayer Features
+
+- **Real-time Gameplay**: All players see the same board updated in real-time
+- **Join Anytime**: Players can join mid-game with just a name (no registration required)
+- **Persistent Scoring**: Total wins are tracked per player name
+- **Auto-restart**: Game automatically starts a new round when completed
+- **Visual Feedback**: See which cards other players have selected
+- **No Timer**: Focus on finding sets without time pressure
 
 ## Technologies Used
 

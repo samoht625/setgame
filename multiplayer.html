@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Set Card Game - Multiplayer</title>
+    <link rel="stylesheet" href="style.css">
+    <link id="dynamic-favicon" rel="icon" type="image/png" href="cards/1.png">
+    <style>
+        /* Multiplayer-specific styles */
+        .multiplayer-header {
+            background: #1a1a1a;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .player-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #fff;
+        }
+        
+        .player-stats {
+            display: flex;
+            gap: 2rem;
+        }
+        
+        .player-list {
+            background: #2a2a2a;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .player-list h3 {
+            margin: 0 0 0.5rem 0;
+            color: #fff;
+            font-size: 1rem;
+        }
+        
+        .player-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            border-radius: 6px;
+            margin-bottom: 0.25rem;
+            background: #3a3a3a;
+            color: #fff;
+            font-size: 0.9rem;
+        }
+        
+        .player-item.current-player {
+            background: #4a5a6a;
+            border: 1px solid #6a7a8a;
+        }
+        
+        .player-scores {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+        }
+        
+        .join-form {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1a1a1a;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            text-align: center;
+        }
+        
+        .join-form h2 {
+            color: #fff;
+            margin-bottom: 1.5rem;
+        }
+        
+        .join-form input {
+            width: 100%;
+            padding: 0.75rem;
+            font-size: 1rem;
+            border: 2px solid #3a3a3a;
+            border-radius: 6px;
+            background: #2a2a2a;
+            color: #fff;
+            margin-bottom: 1rem;
+        }
+        
+        .join-form input:focus {
+            outline: none;
+            border-color: #5a6a7a;
+        }
+        
+        .join-form button {
+            width: 100%;
+            padding: 0.75rem;
+            font-size: 1rem;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .join-form button:hover {
+            background: #45a049;
+        }
+        
+        .join-form button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 999;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #4CAF50;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 6px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            z-index: 1001;
+            animation: slideDown 0.3s ease-out;
+        }
+        
+        .notification.error {
+            background: #f44336;
+        }
+        
+        @keyframes slideDown {
+            from {
+                transform: translateX(-50%) translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .deck-remaining {
+            color: #999;
+            font-size: 0.9rem;
+        }
+        
+        .card.other-player-selected {
+            border: 3px solid #ff9800;
+            box-shadow: 0 0 10px rgba(255, 152, 0, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container" class="game-container">
+        <!-- Join Form -->
+        <div id="overlay" class="overlay"></div>
+        <div id="join-form" class="join-form">
+            <h2>Join Multiplayer Game</h2>
+            <input 
+                type="text" 
+                id="player-name" 
+                placeholder="Enter your name" 
+                maxlength="20"
+                autocomplete="off"
+            />
+            <button id="join-btn" disabled>Join Game</button>
+        </div>
+
+        <!-- Game Content (hidden initially) -->
+        <div id="game-content" style="display: none;">
+            <header class="multiplayer-header">
+                <div class="player-info">
+                    <span class="player-name" id="current-player-name"></span>
+                    <div class="player-stats">
+                        <div class="stat">
+                            <div id="sets-count" class="stat-number">0</div>
+                            <div class="stat-label">sets this game</div>
+                        </div>
+                        <div class="stat">
+                            <div id="total-wins" class="stat-number">0</div>
+                            <div class="stat-label">total wins</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="deck-remaining" id="deck-remaining">
+                    Cards remaining: 69
+                </div>
+            </header>
+
+            <div class="player-list" id="player-list">
+                <h3>Active Players</h3>
+                <div id="players-container">
+                    <!-- Players will be dynamically inserted here -->
+                </div>
+            </div>
+
+            <main id="card-container" class="card-container">
+                <!-- Cards will be dynamically inserted here -->
+            </main>
+        </div>
+    </div>
+
+    <script type="module" src="multiplayerMain.js"></script>
+    <script>
+        // Set favicon to a random card image on each page load
+        (function() {
+            var cardNum = Math.floor(Math.random() * 81) + 1;
+            var favicon = document.getElementById('dynamic-favicon');
+            favicon.href = 'cards/' + cardNum + '.png';
+        })();
+    </script>
+</body>
+</html>
