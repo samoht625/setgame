@@ -166,6 +166,28 @@ wss.on('connection', (ws) => {
                 broadcastGameState();
                 break;
                 
+            case 'changeName':
+                if (!playerId || !gameState.players.has(playerId)) break;
+                
+                const newName = data.name;
+                const playerToUpdate = gameState.players.get(playerId);
+                const oldName = playerToUpdate.name;
+                
+                // Update player name
+                playerToUpdate.name = newName;
+                
+                // Update total wins mapping
+                const wins = gameState.playerWins.get(oldName) || 0;
+                gameState.playerWins.delete(oldName);
+                gameState.playerWins.set(newName, wins);
+                playerToUpdate.totalWins = wins;
+                
+                // Update playerName variable for this connection
+                playerName = newName;
+                
+                broadcastGameState();
+                break;
+                
             case 'selectCards':
                 if (!playerId || !gameState.players.has(playerId)) break;
                 
@@ -229,13 +251,14 @@ wss.on('connection', (ws) => {
                             }, 3000);
                         }
                         
-                        // Send set found notification
+                        // Send set found notification with card data
                         wss.clients.forEach(client => {
                             if (client.readyState === WebSocket.OPEN) {
                                 client.send(JSON.stringify({
                                     type: 'setFound',
                                     playerName: playerName,
-                                    playerId: playerId
+                                    playerId: playerId,
+                                    cards: selectedCards // Include the actual card data
                                 }));
                             }
                         });

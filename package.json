@@ -4,20 +4,29 @@
   "description": "Set card game implemented in TypeScript",
   "main": "main.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && vite build",
     "watch": "tsc --watch",
-    "serve": "python3 -m http.server 8000",
+    "serve": "vite preview",
     "server": "node server.js",
-    "dev": "npm run build && npm run server"
+    "dev": "vite",
+    "dev:convex": "convex dev",
+    "dev:old": "npm run build && npm run server"
   },
-  "keywords": ["set", "card-game", "typescript", "game"],
+  "keywords": [
+    "set",
+    "card-game",
+    "typescript",
+    "game"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vite": "^7.0.0"
   },
   "dependencies": {
+    "convex": "^1.25.2",
     "express": "^4.18.2",
     "ws": "^8.13.0"
   }
-} 
+}

@@ -9,47 +9,88 @@
 </head>
 <body>
     <div id="game-container" class="game-container">
-        <header class="game-header">
-            <div class="stats">
-                <div class="stat">
-                    <div id="sets-count" class="stat-number">0</div>
-                    <div class="stat-label">sets</div>
+        <!-- Top Level: Profile & Mode Selection -->
+        <header class="app-header">
+            <div class="profile-section">
+                <div class="player-name-container">
+                    <span id="player-name" class="player-name"></span>
+                    <button id="change-name-btn" class="name-edit-btn" title="Change Name">
+                        <img src="icons/edit.svg" alt="Edit" width="10" height="10">
+                    </button>
                 </div>
-                <div class="stat">
-                    <div id="timer" class="stat-number">00:00</div>
-                    <div class="stat-label">time</div>
-                </div>
+                <button id="best-times-btn" class="profile-btn" title="Best Times">
+                    <img src="icons/award.svg" alt="Best Times" width="12" height="12">
+                </button>
             </div>
-            <div class="controls">
-                <button id="new-game-btn" class="icon-btn" title="New Game">
-                    <img src="icons/rotate-cw.svg" alt="New Game" width="20" height="20">
-                </button>
-                <button id="pause-btn" class="icon-btn" title="Pause">
-                    <img src="icons/pause.svg" alt="Pause" width="20" height="20">
-                </button>
-                <button id="best-times-btn" class="icon-btn" title="Best Times">
-                    <img src="icons/award.svg" alt="Best Times" width="20" height="20">
-                </button>
-                <a href="/m" class="icon-btn" title="Multiplayer" style="text-decoration: none;">
-                    <img src="icons/users.svg" alt="Multiplayer" width="20" height="20">
+            <div class="mode-selector">
+                <div class="mode-option active">
+                    <span>Solitaire</span>
+                </div>
+                <a href="/m" class="mode-option" title="Switch to Multiplayer">
+                    <span>Multiplayer</span>
                 </a>
             </div>
         </header>
 
-        <main id="card-container" class="card-container">
-            <!-- Cards will be dynamically inserted here -->
-        </main>
+        <!-- Game Content -->
+        <div id="game-content">
+            <div class="game-layout">
+                <!-- Left Sidebar -->
+                <aside class="game-sidebar">
+                    <!-- Game Stats -->
+                    <div class="sidebar-section game-stats">
+                        <div class="stat-display">
+                            <div class="stat">
+                                <div id="sets-count" class="stat-number">0</div>
+                                <div class="stat-label">sets</div>
+                            </div>
+                            <div class="stat">
+                                <div id="timer" class="stat-number">00:00</div>
+                                <div class="stat-label">time</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Game Controls -->
+                    <div class="sidebar-section game-controls-section">
+                        <div class="game-controls">
+                            <button id="new-game-btn" class="control-btn" title="New Game">
+                                <img src="icons/rotate-cw.svg" alt="New Game" width="16" height="16">
+                                <span>New Game</span>
+                            </button>
+                            <button id="pause-btn" class="control-btn" title="Pause">
+                                <img src="icons/pause.svg" alt="Pause" width="16" height="16">
+                                <span>Pause</span>
+                            </button>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Main Game Area -->
+                <main class="game-main">
+                    <div id="card-container" class="card-container">
+                        <!-- Cards will be dynamically inserted here -->
+                    </div>
+                </main>
+            </div>
+        </div>
 
         <!-- Best Times Modal -->
         <div id="high-scores-modal" class="modal" style="display:none;">
             <div class="modal-content">
                 <span id="close-modal" class="close">&times;</span>
                 <div class="modal-body">
+                    <div class="modal-stats">
+                        <div class="modal-stat">
+                            <div id="mp-wins-display" class="modal-stat-number">0</div>
+                            <div class="modal-stat-label">Multiplayer Wins</div>
+                        </div>
+                    </div>
                     <table id="high-scores-table">
                         <thead>
                             <tr>
                                 <th>Rank</th>
-                                <th>Time</th>
+                                <th>Best Time</th>
                                 <th>Date Achieved</th>
                             </tr>
                         </thead>

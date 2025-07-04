@@ -1,3 +1,4 @@
+import { getProfileName, setProfileName, generateRandomName, getMultiplayerWins, setMultiplayerWins, incrementMultiplayerWins } from './profileUtils.js';
 export class MultiplayerSetGame {
     constructor() {
         this.ws = null;
@@ -6,6 +7,7 @@ export class MultiplayerSetGame {
         this.selectedCards = new Set();
         this.currentGameId = null;
         this.imageCache = new Map();
+        this.changeNameHandler = null;
         this.preloadImages().then(() => {
             this.initializeUI();
             this.setupWebSocket();
@@ -34,29 +36,44 @@ export class MultiplayerSetGame {
     }
     initializeUI() {
         // Get DOM elements
-        this.joinForm = document.getElementById('join-form');
-        this.overlay = document.getElementById('overlay');
         this.gameContent = document.getElementById('game-content');
-        this.playerNameInput = document.getElementById('player-name');
-        this.joinButton = document.getElementById('join-btn');
-        this.currentPlayerName = document.getElementById('current-player-name');
-        this.setsCountElement = document.getElementById('sets-count');
-        this.totalWinsElement = document.getElementById('total-wins');
-        this.deckRemainingElement = document.getElementById('deck-remaining');
+        this.playerNameElement = document.getElementById('player-name');
+        this.changeNameButton = document.getElementById('change-name-btn');
+        this.bestTimesButton = document.getElementById('best-times-btn');
         this.playersContainer = document.getElementById('players-container');
         this.cardContainer = document.getElementById('card-container');
+        this.recentSetsContainer = document.getElementById('recent-sets-container');
         // Setup event listeners
-        this.playerNameInput.addEventListener('input', () => {
-            this.joinButton.disabled = this.playerNameInput.value.trim().length === 0;
+        this.changeNameButton.addEventListener('click', () => this.showChangeNameDialog());
+        this.bestTimesButton.addEventListener('click', () => this.showBestTimesModal());
+        // Modal close functionality
+        const modal = document.getElementById('high-scores-modal');
+        const closeModal = document.getElementById('close-modal');
+        closeModal.addEventListener('click', () => { this.closeBestTimesModal(); });
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal)
+                this.closeBestTimesModal();
         });
-        this.playerNameInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !this.joinButton.disabled) {
-                this.joinGame();
+        // Global escape key handler for modals
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                // Check if best times modal is open
+                if (modal.style.display === 'flex') {
+                    this.closeBestTimesModal();
+                }
             }
         });
-        this.joinButton.addEventListener('click', () => this.joinGame());
-        // Focus on name input
-        this.playerNameInput.focus();
+        // Initialize profile
+        this.initializeProfile();
+    }
+    initializeProfile() {
+        this.playerName = getProfileName();
+        this.playerNameElement.textContent = this.playerName;
+        // Show the profile section now that we have the name
+        const profileSection = document.querySelector('.profile-section');
+        if (profileSection) {
+            profileSection.classList.add('loaded');
+        }
     }
     setupWebSocket() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -64,6 +81,7 @@ export class MultiplayerSetGame {
         this.ws = new WebSocket(wsUrl);
         this.ws.onopen = () => {
             console.log('Connected to server');
+            this.joinGame();
         };
         this.ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
@@ -82,7 +100,6 @@ export class MultiplayerSetGame {
         };
     }
     joinGame() {
-        this.playerName = this.playerNameInput.value.trim();
         if (this.playerName && this.ws && this.ws.readyState === WebSocket.OPEN) {
             this.ws.send(JSON.stringify({
                 type: 'join',
@@ -108,10 +125,7 @@ export class MultiplayerSetGame {
         }
     }
     showGame() {
-        this.joinForm.style.display = 'none';
-        this.overlay.style.display = 'none';
-        this.gameContent.style.display = 'block';
-        this.currentPlayerName.textContent = this.playerName;
+        this.playerNameElement.textContent = this.playerName;
     }
     updateGameState(state) {
         // Check if this is a new game
@@ -119,17 +133,18 @@ export class MultiplayerSetGame {
             this.showNotification('New game started!', false);
         }
         this.currentGameId = state.gameId;
-        // Update deck remaining
-        this.deckRemainingElement.textContent = `Cards remaining: ${state.deckRemaining}`;
         // Update players list
         this.updatePlayersList(state.players);
         // Update cards
         this.updateCards(state.displayedCards, state.players);
-        // Update current player stats
+        // Update current player multiplayer wins in localStorage
         const currentPlayer = state.players.find(p => p.id === this.playerId);
         if (currentPlayer) {
-            this.setsCountElement.textContent = currentPlayer.setsFound.toString();
-            this.totalWinsElement.textContent = currentPlayer.totalWins.toString();
+            // Keep localStorage in sync with server state
+            const currentStoredWins = getMultiplayerWins();
+            if (currentPlayer.totalWins > currentStoredWins) {
+                setMultiplayerWins(currentPlayer.totalWins);
+            }
         }
     }
     updatePlayersList(players) {
@@ -144,14 +159,11 @@ export class MultiplayerSetGame {
             }
             const nameSpan = document.createElement('span');
             nameSpan.textContent = player.name;
-            const scoresDiv = document.createElement('div');
-            scoresDiv.className = 'player-scores';
-            scoresDiv.innerHTML = `
-                <span>Sets: ${player.setsFound}</span>
-                <span>Total: ${player.totalWins}</span>
-            `;
+            const scoreSpan = document.createElement('span');
+            scoreSpan.className = 'player-score';
+            scoreSpan.textContent = player.setsFound.toString();
             playerDiv.appendChild(nameSpan);
-            playerDiv.appendChild(scoresDiv);
+            playerDiv.appendChild(scoreSpan);
             this.playersContainer.appendChild(playerDiv);
         });
     }
@@ -239,9 +251,73 @@ export class MultiplayerSetGame {
     handleSetFound(data) {
         if (data.playerId === this.playerId) {
             this.showNotification('Set found! +1 point', false);
+            // Increment multiplayer wins in localStorage
+            incrementMultiplayerWins();
         }
         else {
             this.showNotification(`${data.playerName} found a set!`, false);
+        }
+        // Add to recent sets with card data
+        this.addRecentSet(data.playerName, data.playerId === this.playerId, data.cards);
+    }
+    showChangeNameDialog() {
+        const currentName = this.playerName;
+        const newName = prompt('Enter your name (or leave empty for a random name):', currentName);
+        if (newName !== null) {
+            let finalName;
+            if (newName.trim() === '') {
+                // Generate a new random name
+                finalName = generateRandomName();
+            }
+            else {
+                finalName = newName.trim();
+            }
+            if (finalName !== this.playerName) {
+                this.playerName = finalName;
+                this.playerNameElement.textContent = finalName;
+                setProfileName(finalName);
+                // Send name change to server
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify({
+                        type: 'changeName',
+                        name: finalName
+                    }));
+                }
+                this.showNotification('Name changed successfully!', false);
+            }
+        }
+    }
+    addRecentSet(playerName, isCurrentPlayer, cards) {
+        // Remove "no sets" message if it exists
+        const noSets = this.recentSetsContainer.querySelector('.no-sets');
+        if (noSets) {
+            noSets.remove();
+        }
+        // Create new set entry
+        const setEntry = document.createElement('div');
+        setEntry.className = 'set-entry';
+        if (isCurrentPlayer) {
+            setEntry.classList.add('current-player-set');
+        }
+        // Create cards container
+        if (cards && cards.length === 3) {
+            const cardsContainer = document.createElement('div');
+            cardsContainer.className = 'set-cards';
+            cards.forEach(card => {
+                const cardImg = document.createElement('img');
+                cardImg.src = `cards/${card.id}.png`;
+                cardImg.alt = `Card ${card.id}`;
+                cardImg.className = 'set-card-img';
+                cardsContainer.appendChild(cardImg);
+            });
+            setEntry.appendChild(cardsContainer);
+        }
+        // Add to top of list
+        this.recentSetsContainer.insertBefore(setEntry, this.recentSetsContainer.firstChild);
+        // Keep only last 10 sets
+        const entries = this.recentSetsContainer.querySelectorAll('.set-entry');
+        if (entries.length > 10) {
+            entries[entries.length - 1].remove();
         }
     }
     showNotification(message, isError) {
@@ -255,5 +331,61 @@ export class MultiplayerSetGame {
         setTimeout(() => {
             notification.remove();
         }, 3000);
+    }
+    showBestTimesModal() {
+        const modal = document.getElementById('high-scores-modal');
+        const table = document.getElementById('high-scores-table');
+        const noScores = document.getElementById('no-scores');
+        const tbody = document.getElementById('high-scores-list');
+        const mpWinsDisplay = document.getElementById('mp-wins-display');
+        // Update multiplayer wins display
+        mpWinsDisplay.textContent = getMultiplayerWins().toString();
+        // Get high scores from single-player mode
+        const scores = this.getHighScores();
+        if (scores.length === 0) {
+            table.style.display = 'none';
+            noScores.style.display = 'block';
+        }
+        else {
+            table.style.display = 'table';
+            noScores.style.display = 'none';
+            tbody.innerHTML = '';
+            // Show top 10 scores
+            scores.forEach((entry, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${entry.time}</td>
+                    <td>${entry.date}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        modal.style.display = 'flex';
+    }
+    getHighScores() {
+        const scores = localStorage.getItem('setGameHighScores');
+        if (!scores)
+            return [];
+        const parsed = JSON.parse(scores);
+        // Migration: Convert old string format to new object format
+        if (parsed.length > 0 && typeof parsed[0] === 'string') {
+            const migrated = parsed.map((scoreStr) => ({
+                time: scoreStr.split(' ')[0], // Remove "(X sets)" part
+                date: 'Jun 29, 2025',
+                timeSeconds: this.parseTimeToSeconds(scoreStr.split(' ')[0])
+            }));
+            localStorage.setItem('setGameHighScores', JSON.stringify(migrated));
+            return migrated;
+        }
+        return parsed;
+    }
+    parseTimeToSeconds(timeStr) {
+        const [minutes, seconds] = timeStr.split(':').map(Number);
+        return minutes * 60 + seconds;
+    }
+    closeBestTimesModal() {
+        const modal = document.getElementById('high-scores-modal');
+        modal.style.display = 'none';
     }
 }

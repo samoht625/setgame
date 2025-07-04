@@ -1,5 +1,6 @@
 import { Card } from './card.js';
 import { GameLogic } from './gameLogic.js';
+import { getProfileName, setProfileName, generateRandomName, getBestTime, getMultiplayerWins, updateBestTime } from './profileUtils.js';
 
 interface HighScoreEntry {
     time: string;
@@ -30,6 +31,8 @@ export class SetGameUI {
     private newGameButton!: HTMLButtonElement;
     private pauseButton!: HTMLButtonElement;
     private highScoresButton!: HTMLButtonElement;
+    private playerNameElement!: HTMLElement;
+    private changeNameButton!: HTMLButtonElement;
 
     constructor() {
         this.gameLogic = new GameLogic();
@@ -81,10 +84,18 @@ export class SetGameUI {
         this.pauseButton = document.getElementById('pause-btn')! as HTMLButtonElement;
         this.highScoresButton = document.getElementById('best-times-btn')! as HTMLButtonElement;
         
+        // Get profile elements
+        this.playerNameElement = document.getElementById('player-name')!;
+        this.changeNameButton = document.getElementById('change-name-btn')! as HTMLButtonElement;
+        
+        // Initialize profile
+        this.initializeProfile();
+        
         // Add event listeners
         this.newGameButton.addEventListener('click', () => this.startNewGame());
         this.pauseButton.addEventListener('click', () => this.togglePause());
         this.highScoresButton.addEventListener('click', () => this.showHighScores());
+        this.changeNameButton.addEventListener('click', () => this.showChangeNameDialog());
         
         // Modal close functionality
         const modal = document.getElementById('high-scores-modal')!;
@@ -92,6 +103,16 @@ export class SetGameUI {
         closeModal.addEventListener('click', () => { this.closeHighScoresModal(); });
         modal.addEventListener('click', (e) => {
             if (e.target === modal) this.closeHighScoresModal();
+        });
+        
+        // Global escape key handler for modals
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                // Check if high scores modal is open
+                if (modal.style.display === 'flex') {
+                    this.closeHighScoresModal();
+                }
+            }
         });
     }
 
@@ -106,6 +127,7 @@ export class SetGameUI {
         (this.pauseButton.querySelector('img') as HTMLImageElement).alt = 'Pause';
         this.pauseButton.title = 'Pause';
         this.hidePauseOverlay();
+        this.pauseButton.disabled = false;
         
         // Set timer to 00:00 immediately
         this.timerElement.textContent = '00:00';
@@ -172,7 +194,10 @@ export class SetGameUI {
     }
 
     private updateCardsWithDiffing(displayedCards: Card[], selectedCards: Set<Card>): void {
-        const existingCards = Array.from(this.cardContainer.children) as HTMLElement[];
+        // Only get card elements, not other children like pause overlay
+        const existingCards = Array.from(this.cardContainer.children).filter(el => 
+            el.classList.contains('card')
+        ) as HTMLElement[];
         const existingCardIds = existingCards.map(el => parseInt(el.dataset.cardId || '0'));
         const newCardIds = displayedCards.map(card => card.getId());
         
@@ -304,6 +329,10 @@ export class SetGameUI {
         const table = document.getElementById('high-scores-table')! as HTMLTableElement;
         const noScores = document.getElementById('no-scores')!;
         const tbody = document.getElementById('high-scores-list')!;
+        const mpWinsDisplay = document.getElementById('mp-wins-display')!;
+        
+        // Update multiplayer wins display
+        mpWinsDisplay.textContent = getMultiplayerWins().toString();
         
         // Pause game if it's running and not already paused
         this.wasGamePausedBeforeModal = this.isPaused;
@@ -387,6 +416,9 @@ export class SetGameUI {
         const seconds = elapsed % 60;
         const timeStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         
+        // Check if this is a new best time
+        updateBestTime(elapsed);
+        
         // Save the score and show high scores modal
         this.saveHighScore(timeStr, this.gameLogic.getSetsFound());
         setTimeout(() => {
@@ -468,6 +500,7 @@ export class SetGameUI {
             this.pauseOverlay = document.createElement('div');
             this.pauseOverlay.className = 'pause-overlay';
             this.pauseOverlay.innerHTML = '<div class="pause-text">PAUSED</div>';
+            // Add to card container to only cover the game board
             this.cardContainer.appendChild(this.pauseOverlay);
         }
         this.pauseOverlay.style.display = 'flex';
@@ -476,6 +509,35 @@ export class SetGameUI {
     private hidePauseOverlay(): void {
         if (this.pauseOverlay) {
             this.pauseOverlay.style.display = 'none';
+        }
+    }
+
+    private initializeProfile(): void {
+        const playerName = getProfileName();
+        this.playerNameElement.textContent = playerName;
+        
+        // Show the profile section now that we have the name
+        const profileSection = document.querySelector('.profile-section') as HTMLElement;
+        if (profileSection) {
+            profileSection.classList.add('loaded');
+        }
+    }
+
+    private showChangeNameDialog(): void {
+        const currentName = this.playerNameElement.textContent || '';
+        const newName = prompt('Enter your name (or leave empty for a random name):', currentName);
+        
+        if (newName !== null) {
+            let finalName: string;
+            if (newName.trim() === '') {
+                // Generate a new random name
+                finalName = generateRandomName();
+            } else {
+                finalName = newName.trim();
+            }
+            
+            setProfileName(finalName);
+            this.playerNameElement.textContent = finalName;
         }
     }
 } 

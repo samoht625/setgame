@@ -2,3 +2,4 @@ node_modules/
 npm-debug.log*
 .DS_Store
 *.js.map
+.env.local
