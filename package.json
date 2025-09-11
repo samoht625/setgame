@@ -6,12 +6,23 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
-    "serve": "python3 -m http.server 8000"
+    "serve": "python3 -m http.server 8000",
+    "start": "python3 -m http.server 8000"
   },
-  "keywords": ["set", "card-game", "typescript", "game"],
+  "keywords": [
+    "set",
+    "card-game",
+    "typescript",
+    "game"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "socket.io": "^4.8.1"
   }
-} 
+}
