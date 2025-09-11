@@ -2,12 +2,19 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: ['http://localhost:8000', 'https://setgame.onrender.com'],
+        origin: process.env.NODE_ENV === 'production' 
+            ? ['https://setgame-frontend.onrender.com', 'https://setgame.onrender.com', 'https://setgame-backend.onrender.com'] 
+            : ['http://localhost:8000', 'http://127.0.0.1:8000'],
         methods: ['GET', 'POST']
     }
 });
@@ -15,8 +22,17 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: process.env.NODE_ENV === 'production' 
+        ? ['https://setgame-frontend.onrender.com', 'https://setgame.onrender.com', 'https://setgame-backend.onrender.com'] 
+        : true,
+    methods: ['GET', 'POST'],
+    credentials: true
+}));
 app.use(express.json());
+
+// Serve static files from the parent directory (frontend files)
+app.use(express.static(path.join(__dirname, '../../..')));
 
 // Store rooms in memory (temporary)
 const rooms = new Map();
@@ -63,6 +79,11 @@ app.get('/api/rooms/:roomCode', (req, res) => {
         players: room.players,
         currentGame: null
     });
+});
+
+// Catch-all handler: send back index.html for client-side routing
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../../../index.html'));
 });
 
 // WebSocket connection handling
