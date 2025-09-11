@@ -13,8 +13,6 @@ export class MultiplayerSetGame {
         this.imageCache = new Map();
         this.updateTimeout = null;
         this.gameLogic = new GameLogic();
-        this.debugMode = false;
-        this.debugValidSet = null;
         this.preloadImages().then(() => {
             this.initializeUI();
             this.initializeDefaultPlayers();
@@ -50,14 +48,14 @@ export class MultiplayerSetGame {
         this.timerElement = document.getElementById('timer');
         this.newGameButton = document.getElementById('new-game-btn');
         this.pauseButton = document.getElementById('pause-btn');
-        // this.addPlayerButton = document.getElementById('add-player-btn'); // Removed button
+        this.addPlayerButton = document.getElementById('add-player-btn');
         this.playerModal = document.getElementById('player-modal');
         this.setupEventListeners();
     }
     setupEventListeners() {
         this.newGameButton.addEventListener('click', () => this.startNewGame());
         this.pauseButton.addEventListener('click', () => this.togglePause());
-        // this.addPlayerButton.addEventListener('click', () => this.showPlayerModal()); // Removed button
+        this.addPlayerButton.addEventListener('click', () => this.showPlayerModal());
         // Modal close functionality
         document.getElementById('close-player-modal').addEventListener('click', () => this.closePlayerModal());
         this.playerModal.addEventListener('click', (e) => {
@@ -66,29 +64,16 @@ export class MultiplayerSetGame {
         });
         // Add player functionality
         document.getElementById('add-player-confirm').addEventListener('click', () => this.addPlayer());
-        // document.getElementById('add-player-sidebar-btn').addEventListener('click', () => this.showPlayerModal()); // Removed button
+        document.getElementById('add-player-sidebar-btn').addEventListener('click', () => this.showPlayerModal());
         document.getElementById('new-player-name').addEventListener('keypress', (e) => {
             if (e.key === 'Enter')
                 this.addPlayer();
-        });
-        // Debug mode toggle with Command-D
-        document.addEventListener('keydown', (e) => {
-            if (e.metaKey && e.key === 'd') {
-                e.preventDefault();
-                this.toggleDebugMode();
-            }
         });
     }
     initializeDefaultPlayers() {
         // Add 2 default players to start
         this.addPlayer('Player 1');
         this.addPlayer('Player 2');
-        // Set the first player as current player
-        const firstPlayer = Array.from(this.players.values())[0];
-        if (firstPlayer) {
-            this.currentPlayerId = firstPlayer.id;
-            this.updatePlayersDisplay();
-        }
     }
     addPlayer(name) {
         if (this.players.size >= 12) {
@@ -104,6 +89,7 @@ export class MultiplayerSetGame {
         const player = {
             id: playerId,
             name: playerName,
+            score: 0,
             isActive: false,
             setsFound: 0
         };
@@ -165,18 +151,14 @@ export class MultiplayerSetGame {
         this.gameEnded = false;
         this.actionMessages = [];
         this.updateActionBar();
-        // Reset all player sets
+        // Reset all player scores
         this.players.forEach(player => {
             player.setsFound = 0;
+            player.score = 0;
         });
         this.updatePlayersDisplay();
         this.showActionMessage('New game started!', 'game_started');
         this.startTimer();
-        // Update debug valid set if debug mode is on
-        if (this.debugMode) {
-            this.debugValidSet = this.getValidSet();
-            this.updateExistingCardsDebugHighlighting();
-        }
         this.updateDisplay();
     }
     startTimer() {
@@ -285,13 +267,7 @@ export class MultiplayerSetGame {
     }
     createCardElement(card, isSelected) {
         const cardDiv = document.createElement('div');
-        let className = 'minimal-card';
-        if (isSelected) className += ' selected';
-        if (this.debugMode && this.debugValidSet && this.debugValidSet.includes(card)) {
-            className += ' debug-highlight';
-            console.log('Adding debug highlight to card:', card.getId());
-        }
-        cardDiv.className = className;
+        cardDiv.className = `minimal-card ${isSelected ? 'selected' : ''}`;
         cardDiv.dataset.cardId = card.getId().toString();
         const cardId = card.getId();
         const cachedImg = this.imageCache.get(cardId);
@@ -329,7 +305,8 @@ export class MultiplayerSetGame {
             const player = this.players.get(this.currentPlayerId);
             if (player) {
                 player.setsFound++;
-                this.showActionMessage(`${player.name} found a SET! (+1 set)`, 'set_found', player.name);
+                player.score += 10; // Points for finding a set
+                this.showActionMessage(`${player.name} found a SET! (+10 points)`, 'set_found', player.name);
                 this.updatePlayersDisplay();
             }
             return true;
@@ -339,11 +316,6 @@ export class MultiplayerSetGame {
     autoDealIfNoSet() {
         while (!this.gameLogic.hasVisibleSet() && this.gameLogic.getRemainingCards() > 0) {
             this.gameLogic.dealMoreCards();
-        }
-        // Update debug valid set if debug mode is on
-        if (this.debugMode) {
-            this.debugValidSet = this.getValidSet();
-            this.updateExistingCardsDebugHighlighting();
         }
     }
     showActionMessage(text, type, playerName) {
@@ -427,62 +399,6 @@ export class MultiplayerSetGame {
             `;
             playerList.appendChild(item);
         });
-    }
-    toggleDebugMode() {
-        this.debugMode = !this.debugMode;
-        console.log('Debug mode:', this.debugMode ? 'ON' : 'OFF');
-        if (this.debugMode) {
-            this.debugValidSet = this.getValidSet();
-            console.log('Valid set found:', this.debugValidSet);
-            if (this.debugValidSet) {
-                console.log('Valid set cards:', this.debugValidSet.map(card => card.getId()));
-            } else {
-                console.log('No valid set found');
-            }
-        } else {
-            this.debugValidSet = null;
-        }
-        this.showActionMessage(`Debug mode ${this.debugMode ? 'ON' : 'OFF'}`, 'info');
-        this.updateExistingCardsDebugHighlighting();
-    }
-    getValidSet() {
-        // Find a valid set from the displayed cards
-        const displayedCards = this.gameLogic.getDisplayedCards();
-        for (let i = 0; i < displayedCards.length; i++) {
-            for (let j = i + 1; j < displayedCards.length; j++) {
-                for (let k = j + 1; k < displayedCards.length; k++) {
-                    const card1 = displayedCards[i];
-                    const card2 = displayedCards[j];
-                    const card3 = displayedCards[k];
-                    if (GameLogic.isValidSet(card1, card2, card3)) {
-                        return [card1, card2, card3];
-                    }
-                }
-            }
-        }
-        return null;
-    }
-    updateExistingCardsDebugHighlighting() {
-        const cardElements = this.cardContainer.children;
-        const displayedCards = this.gameLogic.getDisplayedCards();
-        
-        for (let i = 0; i < cardElements.length; i++) {
-            const cardElement = cardElements[i];
-            const cardId = parseInt(cardElement.dataset.cardId);
-            
-            // Find the corresponding card object
-            const card = displayedCards.find(c => c.getId() === cardId);
-            if (!card) continue;
-            
-            // Remove existing debug highlight
-            cardElement.classList.remove('debug-highlight');
-            
-            // Add debug highlight if needed
-            if (this.debugMode && this.debugValidSet && this.debugValidSet.includes(card)) {
-                cardElement.classList.add('debug-highlight');
-                console.log('Updated debug highlight for card:', cardId);
-            }
-        }
     }
 }
 // Initialize the multiplayer game when DOM is loaded
