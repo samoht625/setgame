@@ -12,25 +12,114 @@ export class Room {
     }
 
     static async create() {
-        const roomCode = this.generateRoomCode();
-        const gameState = {
-            deck: this.generateDeck(),
-            displayedCards: [],
-            selectedCards: [],
-            gamePhase: 'waiting',
-            currentPlayerId: null,
-            gameStartTime: null,
-            isPaused: false
-        };
+        try {
+            const roomCode = this.generateRoomCode();
+            const gameState = {
+                deck: this.generateDeck(),
+                displayedCards: [],
+                selectedCards: [],
+                gamePhase: 'waiting',
+                currentPlayerId: null,
+                gameStartTime: null,
+                isPaused: false
+            };
 
-        const query = `
-            INSERT INTO rooms (room_code, game_state)
-            VALUES ($1, $2)
-            RETURNING *
+            const query = `
+                INSERT INTO rooms (room_code, game_state)
+                VALUES ($1, $2)
+                RETURNING *
+            `;
+            
+            const result = await pool.query(query, [roomCode, JSON.stringify(gameState)]);
+            return result.rows[0];
+        } catch (error) {
+            console.error('Error creating room:', error);
+            
+            // If table doesn't exist, try to create it
+            if (error.code === '42P01') { // relation does not exist
+                console.log('Tables not found, creating schema...');
+                await this.createTables();
+                
+                // Retry the room creation
+                const roomCode = this.generateRoomCode();
+                const gameState = {
+                    deck: this.generateDeck(),
+                    displayedCards: [],
+                    selectedCards: [],
+                    gamePhase: 'waiting',
+                    currentPlayerId: null,
+                    gameStartTime: null,
+                    isPaused: false
+                };
+
+                const query = `
+                    INSERT INTO rooms (room_code, game_state)
+                    VALUES ($1, $2)
+                    RETURNING *
+                `;
+                
+                const result = await pool.query(query, [roomCode, JSON.stringify(gameState)]);
+                return result.rows[0];
+            }
+            
+            throw error;
+        }
+    }
+
+    static async createTables() {
+        const schema = `
+            CREATE TABLE IF NOT EXISTS rooms (
+                id SERIAL PRIMARY KEY,
+                room_code VARCHAR(20) UNIQUE NOT NULL,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW(),
+                game_state JSONB NOT NULL DEFAULT '{}',
+                is_active BOOLEAN DEFAULT true,
+                max_players INTEGER DEFAULT 12
+            );
+
+            CREATE TABLE IF NOT EXISTS players (
+                id SERIAL PRIMARY KEY,
+                room_id INTEGER REFERENCES rooms(id) ON DELETE CASCADE,
+                player_id VARCHAR(50) NOT NULL,
+                name VARCHAR(50) NOT NULL,
+                joined_at TIMESTAMP DEFAULT NOW(),
+                last_seen TIMESTAMP DEFAULT NOW(),
+                is_online BOOLEAN DEFAULT true,
+                current_score INTEGER DEFAULT 0,
+                sets_found INTEGER DEFAULT 0,
+                UNIQUE(room_id, player_id)
+            );
+
+            CREATE TABLE IF NOT EXISTS games (
+                id SERIAL PRIMARY KEY,
+                room_id INTEGER REFERENCES rooms(id) ON DELETE CASCADE,
+                started_at TIMESTAMP DEFAULT NOW(),
+                ended_at TIMESTAMP NULL,
+                winner_player_id VARCHAR(50) NULL,
+                total_sets_found INTEGER DEFAULT 0,
+                game_duration_seconds INTEGER NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS sets (
+                id SERIAL PRIMARY KEY,
+                game_id INTEGER REFERENCES games(id) ON DELETE CASCADE,
+                player_id VARCHAR(50) NOT NULL,
+                found_at TIMESTAMP DEFAULT NOW(),
+                card_ids INTEGER[] NOT NULL,
+                points_awarded INTEGER DEFAULT 10
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_rooms_room_code ON rooms(room_code);
+            CREATE INDEX IF NOT EXISTS idx_players_room_id ON players(room_id);
+            CREATE INDEX IF NOT EXISTS idx_players_player_id ON players(player_id);
+            CREATE INDEX IF NOT EXISTS idx_games_room_id ON games(room_id);
+            CREATE INDEX IF NOT EXISTS idx_sets_game_id ON sets(game_id);
+            CREATE INDEX IF NOT EXISTS idx_sets_player_id ON sets(player_id);
         `;
         
-        const result = await pool.query(query, [roomCode, JSON.stringify(gameState)]);
-        return result.rows[0];
+        await pool.query(schema);
+        console.log('Database tables created successfully');
     }
 
     static async findByCode(roomCode) {
