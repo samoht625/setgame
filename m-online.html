@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Set Game - Online Multiplayer</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Additional styles for online multiplayer */
+        .room-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .room-modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .room-modal h2 {
+            margin-bottom: 1.5rem;
+            color: #333;
+        }
+
+        .room-input-group {
+            margin-bottom: 1rem;
+        }
+
+        .room-input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .room-input-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .room-input-group input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        .room-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1.5rem;
+        }
+
+        .room-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .room-btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .room-btn-primary:hover {
+            background-color: #45a049;
+        }
+
+        .room-btn-secondary {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        .room-btn-secondary:hover {
+            background-color: #1976D2;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .close-modal:hover {
+            color: #333;
+        }
+
+        .player-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-left: 0.5rem;
+        }
+
+        .player-status.online {
+            background-color: #4CAF50;
+        }
+
+        .player-status.offline {
+            background-color: #f44336;
+        }
+
+        .action-message.error {
+            color: #f44336;
+        }
+
+        .action-message.info {
+            color: #2196F3;
+        }
+
+        .action-message.player_joined {
+            color: #4CAF50;
+        }
+
+        .action-message.player_left {
+            color: #ff9800;
+        }
+
+        .action-message.set_found {
+            color: #9C27B0;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Header -->
+        <header class="game-header">
+            <h1>Set Game - Online Multiplayer</h1>
+            <div class="game-stats">
+                <div class="stat">
+                    <span class="stat-label">Sets Found:</span>
+                    <span id="total-sets">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Time:</span>
+                    <span id="timer">00:00</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Players Section -->
+        <section class="players-section">
+            <h2>Players</h2>
+            <div id="players-container" class="players-container">
+                <!-- Players will be dynamically added here -->
+            </div>
+        </section>
+
+        <!-- Cards Section -->
+        <section class="cards-section">
+            <div class="game-controls">
+                <button id="new-game-btn" class="control-btn">
+                    <img src="icons/rotate-cw.svg" alt="New Game">
+                    New Game
+                </button>
+                <button id="pause-btn" class="control-btn">
+                    <img src="icons/pause.svg" alt="Pause">
+                    Pause
+                </button>
+            </div>
+            
+            <div id="card-container" class="card-container grid-4-cols">
+                <!-- Cards will be dynamically added here -->
+            </div>
+        </section>
+
+        <!-- Action Messages -->
+        <div id="action-bar" class="action-bar" style="display: none;">
+            <div id="action-messages" class="action-messages">
+                <!-- Action messages will be dynamically added here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Room Modal -->
+    <div id="room-modal" class="room-modal">
+        <div class="room-modal-content">
+            <button id="close-room-modal" class="close-modal">&times;</button>
+            <h2>Join or Create Room</h2>
+            
+            <div class="room-input-group">
+                <label for="player-name">Your Name:</label>
+                <input type="text" id="player-name" placeholder="Enter your name" maxlength="20">
+            </div>
+            
+            <div class="room-input-group">
+                <label for="room-code">Room Code:</label>
+                <input type="text" id="room-code" placeholder="Enter room code" maxlength="6">
+            </div>
+            
+            <div class="room-buttons">
+                <button id="join-room-btn" class="room-btn room-btn-primary">Join Room</button>
+                <button id="create-room-btn" class="room-btn room-btn-secondary">Create Room</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="multiplayer-online.js"></script>
+</body>
+</html>
