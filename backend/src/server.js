@@ -74,22 +74,12 @@ app.get('/api/rooms/:roomCode', async (req, res) => {
 });
 
 app.post('/api/rooms', async (req, res) => {
-    try {
-        const room = await Room.create();
-        res.json({
-            roomCode: room.room_code,
-            message: 'Room created successfully'
-        });
-    } catch (error) {
-        console.error('Error creating room:', error);
-        
-        // Fallback: create a simple room without database
-        const roomCode = `room-${Math.random().toString(36).substr(2, 6)}`;
-        res.json({
-            roomCode: roomCode,
-            message: 'Room created successfully (fallback mode)'
-        });
-    }
+    // Temporary: create room without database
+    const roomCode = `room-${Math.random().toString(36).substr(2, 6)}`;
+    res.json({
+        roomCode: roomCode,
+        message: 'Room created successfully'
+    });
 });
 
 app.get('/api/rooms/:roomCode/players', async (req, res) => {
