@@ -12,7 +12,19 @@ services:
         fromDatabase:
           name: setgame-db
           property: connectionString
+      - key: PORT
+        value: 10000
     healthCheckPath: /api/health
+
+  - type: web
+    name: setgame-frontend
+    env: static
+    plan: free
+    staticPublishPath: .
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
 
 databases:
   - name: setgame-db

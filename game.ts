@@ -9,7 +9,7 @@ interface HighScoreEntry {
 
 export class SetGameUI {
     private startTime: number = 0;
-    private gameTimer: number | null = null;
+    private gameTimer: ReturnType<typeof setInterval> | null = null;
     private isPaused: boolean = false;
     private pauseOverlay: HTMLElement | null = null;
     private pausedTime: number = 0;

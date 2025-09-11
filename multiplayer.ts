@@ -23,7 +23,7 @@ export class MultiplayerSetGame {
     private currentPlayerId: string | null = null;
     private actionMessages: ActionMessage[] = [];
     private startTime: number = 0;
-    private gameTimer: number | null = null;
+    private gameTimer: ReturnType<typeof setInterval> | null = null;
     private isPaused: boolean = false;
     private pausedTime: number = 0;
     private pauseStartTime: number = 0;
