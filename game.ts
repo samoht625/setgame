@@ -283,8 +283,17 @@ export class SetGameUI {
     // Returns true if a set was found and replaced
     private handleCardSelection(card: Card): boolean {
         const beforeSetsFound = this.gameLogic.getSetsFound();
-        this.gameLogic.selectCard(card);
+        const result = this.gameLogic.selectCard(card);
         const afterSetsFound = this.gameLogic.getSetsFound();
+        
+        // Handle invalid set with delayed clearing
+        if (result === 'invalid-set') {
+            setTimeout(() => {
+                this.gameLogic.clearSelection();
+                this.updateDisplay();
+            }, 1500); // Keep selection visible for 1.5 seconds
+        }
+        
         return afterSetsFound > beforeSetsFound;
     }
 

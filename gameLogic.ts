@@ -52,28 +52,32 @@ export class GameLogic {
         }
     }
 
-    selectCard(card: Card): boolean {
+    selectCard(card: Card): 'deselected' | 'selected' | 'valid-set' | 'invalid-set' {
         if (this.selectedCards.has(card)) {
             this.selectedCards.delete(card);
-            return false;
+            return 'deselected';
         } else {
             this.selectedCards.add(card);
             if (this.selectedCards.size === 3) {
-                this.checkForSet();
+                return this.checkForSet();
             }
-            return true;
+            return 'selected';
         }
     }
 
-    private checkForSet(): void {
-        if (this.selectedCards.size !== 3) return;
+    private checkForSet(): 'valid-set' | 'invalid-set' {
+        if (this.selectedCards.size !== 3) return 'invalid-set';
         
         const cards = Array.from(this.selectedCards);
         if (GameLogic.isValidSet(cards[0], cards[1], cards[2])) {
             this.setsFound++;
             this.replaceSelectedCardsInPlace();
+            this.selectedCards.clear();
+            return 'valid-set';
+        } else {
+            // Don't clear selection here - let UI handle the timing
+            return 'invalid-set';
         }
-        this.selectedCards.clear();
     }
 
     private replaceSelectedCardsInPlace(): void {
@@ -155,5 +159,9 @@ export class GameLogic {
 
     getRemainingCards(): number {
         return this.deck.length;
+    }
+
+    clearSelection(): void {
+        this.selectedCards.clear();
     }
 } 
