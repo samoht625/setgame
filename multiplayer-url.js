@@ -316,7 +316,7 @@ class URLBasedMultiplayerSetGame {
                 this.handlePlayerNameUpdated(data);
                 break;
             case 'game_state_update':
-                this.handleGameStateUpdate(data.gameState);
+                this.handleGameStateUpdate(data.gameState, data.players);
                 break;
             case 'error':
                 this.showActionMessage(data.message, 'error');
@@ -396,7 +396,17 @@ class URLBasedMultiplayerSetGame {
         }
     }
 
-    handleGameStateUpdate(gameState) {
+    handleGameStateUpdate(gameState, players) {
+        if (Array.isArray(players)) {
+            // Update players map from payload
+            this.players.clear();
+            players.forEach((p) => {
+                if (p && p.playerId) {
+                    this.players.set(p.playerId, p);
+                }
+            });
+            this.updatePlayersDisplay();
+        }
         this.loadGameState(gameState);
     }
 
