@@ -236,7 +236,7 @@ io.on('connection', (socket) => {
                 player: player
             });
             
-            console.log(`Player ${playerName} joined room ${roomCode}`);
+            console.log(`${finalPlayerName} joined room ${roomCode}`);
             
         } catch (error) {
             console.error('Error joining room:', error);
