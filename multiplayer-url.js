@@ -236,7 +236,11 @@ class URLBasedMultiplayerSetGame {
             console.log('Attempting to connect to room:', this.roomCode, 'with player:', this.playerName);
             
             // Connect using Socket.IO
-            this.socket = io(this.BACKEND_URL);
+            this.socket = io(this.BACKEND_URL, {
+                transports: ['polling', 'websocket'],
+                upgrade: true,
+                rememberUpgrade: false
+            });
             
             this.socket.on('connect', () => {
                 console.log('Connected to server, joining room:', this.roomCode);
