@@ -2,7 +2,6 @@ services:
   - type: web
     name: setgame-backend
     env: node
-    plan: free
     buildCommand: cd backend && npm install && npm run migrate
     startCommand: cd backend && npm start
     envVars:
@@ -16,10 +15,8 @@ services:
         value: 10000
     healthCheckPath: /api/health
 
-  - type: web
+  - type: static
     name: setgame-frontend
-    env: static
-    plan: free
     staticPublishPath: .
     routes:
       - type: rewrite
