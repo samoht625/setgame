@@ -15,8 +15,9 @@ services:
         value: 10000
     healthCheckPath: /api/health
 
-  - type: static
+  - type: web
     name: setgame-frontend
+    env: static
     staticPublishPath: .
     routes:
       - type: rewrite
