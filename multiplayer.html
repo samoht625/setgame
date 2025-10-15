@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Set Card Game - Multiplayer</title>
+    <link rel="stylesheet" href="/style.css">
+    <link id="dynamic-favicon" rel="icon" type="image/png" href="/cards/1.png">
+    <style>
+        .players-section {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+        .players-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .player-item {
+            padding: 0.5rem;
+            background: white;
+            border-radius: 4px;
+            border: 2px solid #ddd;
+            cursor: pointer;
+        }
+        .player-item.active {
+            border-color: #4CAF50;
+            background: #e8f5e8;
+        }
+        
+        .player-item .player-name {
+            margin-right: 0.5rem;
+        }
+        
+        .player-item .player-score {
+            margin-right: 0.5rem;
+            font-weight: bold;
+            color: #2196F3;
+        }
+        .action-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            z-index: 1000;
+        }
+        .action-message {
+            margin: 0.25rem 0;
+        }
+        .action-message.error { color: #ff6b6b; }
+        .action-message.info { color: #4ecdc4; }
+        .action-message.player_joined { color: #45b7d1; }
+        .action-message.player_left { color: #f9ca24; }
+        .action-message.set_found { color: #6c5ce7; font-weight: bold; }
+        
+        /* Room Controls Styles */
+        .room-controls {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .room-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            min-height: 2rem;
+        }
+        
+        .room-name-display {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.1rem;
+            line-height: 1.2;
+        }
+        
+        .room-name-input {
+            padding: 0.5rem;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            width: 200px;
+        }
+        
+        .room-name-input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        .edit-room-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            background-color: #2196F3;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        
+        .edit-room-btn:hover {
+            background-color: #1976D2;
+        }
+        
+        .player-name-display {
+            font-weight: bold;
+            color: #555;
+            font-size: 1.1rem;
+            line-height: 1.2;
+        }
+        
+        .player-name-input {
+            padding: 0.5rem;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            width: 150px;
+        }
+        
+        .player-name-input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        .edit-player-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        
+        .edit-player-btn:hover {
+            background-color: #45a049;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        /* Card styling */
+        .minimal-card {
+            aspect-ratio: 3/2;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+            border: 2px solid #dee2e6;
+            background: white;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            max-width: 180px;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            will-change: transform, box-shadow;
+            contain: layout style paint;
+        }
+
+        .minimal-card:hover {
+            border-color: #adb5bd;
+            background: #f8f9fa;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.2);
+        }
+
+        .minimal-card.selected {
+            border-color: #007bff !important;
+            background: #e3f2fd !important;
+            box-shadow: 0 2px 8px rgba(0,123,255,0.25) !important;
+        }
+
+        .minimal-card.debug-highlight {
+            border-color: #ffc107;
+            background: #fff3cd;
+            box-shadow: 0 2px 8px rgba(255,193,7,0.3);
+        }
+        
+        .minimal-card.set-found {
+            border-color: #28a745 !important;
+            background: #d4edda !important;
+            box-shadow: 0 0 20px rgba(40, 167, 69, 0.6) !important;
+            animation: setFoundPulse 2s ease-in-out;
+        }
+        
+        @keyframes setFoundPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .minimal-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container" class="game-container">
+        <header class="game-header">
+            <div class="stats">
+                <div class="stat">
+                    <div id="sets-count" class="stat-number">0</div>
+                    <div class="stat-label">sets</div>
+                </div>
+                <div class="stat">
+                    <div id="timer" class="stat-number">00:00</div>
+                    <div class="stat-label">time</div>
+                </div>
+            </div>
+            <div class="controls">
+                <button id="new-game-btn" class="icon-btn" title="New Game">
+                    <img src="/icons/rotate-cw.svg" alt="New Game" width="20" height="20">
+                </button>
+                <button id="pause-btn" class="icon-btn" title="Pause">
+                    <img src="/icons/pause.svg" alt="Pause" width="20" height="20">
+                </button>
+                <button id="best-times-btn" class="icon-btn" title="Best Times">
+                    <img src="/icons/award.svg" alt="Best Times" width="20" height="20">
+                </button>
+            </div>
+        </header>
+
+        <!-- Players Section -->
+        <section class="players-section">
+            <h2>Players</h2>
+            
+            <!-- Room Controls -->
+            <div id="room-controls" class="room-controls">
+                <div class="room-info">
+                    <span class="room-name-display" id="room-name-display"></span>
+                    <input type="text" id="room-name-input" class="room-name-input hidden" placeholder="Room name">
+                    <button id="edit-room-btn" class="edit-room-btn">Edit Room</button>
+                </div>
+                
+                <div class="room-info">
+                    <span class="player-name-display" id="player-name-display"></span>
+                    <input type="text" id="player-name-input" class="player-name-input hidden" placeholder="Player name">
+                    <button id="edit-player-btn" class="edit-player-btn">Edit Name</button>
+                </div>
+            </div>
+            
+            <div id="players-container" class="players-container">
+                <!-- Players will be dynamically added here -->
+            </div>
+        </section>
+
+        <main id="card-container" class="card-container">
+            <!-- Cards will be dynamically inserted here -->
+        </main>
+
+        <!-- Action Messages -->
+        <div id="action-bar" class="action-bar" style="display: none;">
+            <div id="action-messages" class="action-messages">
+                <!-- Action messages will be dynamically added here -->
+            </div>
+        </div>
+
+        <!-- Total Sets Display -->
+        <div id="total-sets" style="display: none;">0</div>
+
+        <!-- Best Times Modal -->
+        <div id="high-scores-modal" class="modal" style="display:none;">
+            <div class="modal-content">
+                <span id="close-modal" class="close">&times;</span>
+                <div class="modal-body">
+                    <table id="high-scores-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Time</th>
+                                <th>Date Achieved</th>
+                            </tr>
+                        </thead>
+                        <tbody id="high-scores-list">
+                            <!-- High scores will be inserted here -->
+                        </tbody>
+                    </table>
+                    <div id="no-scores" class="no-scores" style="display:none;">
+                        <p>No times recorded yet!</p>
+                        <p class="subtitle">Complete a game to set your first record.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script>
+        // Set favicon to a random card image on each page load
+        (function() {
+            var cardNum = Math.floor(Math.random() * 81) + 1;
+            var favicon = document.getElementById('dynamic-favicon');
+            favicon.href = '/cards/' + cardNum + '.png';
+        })();
+    </script>
+    <script src="/multiplayer-url.js"></script>
+</body>
+</html>
