@@ -13,18 +13,18 @@ const server = createServer(app);
 const io = new Server(server, {
     cors: {
         origin: process.env.NODE_ENV === 'production' 
-            ? ['https://setgame.onrender.com', 'https://setgame-backend.onrender.com'] 
+            ? ['https://setgame-frontend.onrender.com', 'https://setgame-backend.onrender.com'] 
             : ['http://localhost:8000', 'http://127.0.0.1:8000'],
         methods: ['GET', 'POST']
     }
 });
 
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors({
     origin: process.env.NODE_ENV === 'production' 
-        ? ['https://setgame.onrender.com', 'https://setgame-backend.onrender.com'] 
+        ? ['https://setgame-frontend.onrender.com', 'https://setgame-backend.onrender.com'] 
         : true,
     methods: ['GET', 'POST'],
     credentials: true

@@ -157,7 +157,7 @@ class CleanMultiplayerSetGame {
         // Update players
         this.players.clear();
         data.players.forEach(player => {
-            this.players.set(player.playerId, player);
+            this.players.set(player.id, player);
         });
         
         this.updatePlayersDisplay();
@@ -471,9 +471,9 @@ class CleanMultiplayerSetGame {
             b = [card2.color, card2.shape, card2.number, card2.shading];
             c = [card3.color, card3.shape, card3.number, card3.shading];
         } else {
-            a = this.idToFeatures(card1.id);
-            b = this.idToFeatures(card2.id);
-            c = this.idToFeatures(card3.id);
+            a = CleanMultiplayerSetGame.idToFeatures(card1.id);
+            b = CleanMultiplayerSetGame.idToFeatures(card2.id);
+            c = CleanMultiplayerSetGame.idToFeatures(card3.id);
         }
 
         for (let i = 0; i < 4; i++) {
@@ -483,7 +483,7 @@ class CleanMultiplayerSetGame {
         return true;
     }
 
-    idToFeatures(id) {
+    static idToFeatures(id) {
         let x = id - 1; // 0..80
         const f3 = x % 3; x = Math.floor(x / 3);
         const f2 = x % 3; x = Math.floor(x / 3);
