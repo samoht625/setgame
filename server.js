@@ -305,19 +305,20 @@ io.on('connection', (socket) => {
                 
                 if (selectedCardObjects.length === 3 && gameLogic.isValidSet(...selectedCardObjects)) {
                     // Valid set found
+                    const setCardIds = selectedCardObjects.map(card => card.id);
                     room.gameState.setsFound++;
                     room.gameState.selectedCards = [];
                     
                     // Remove the 3 cards and deal 3 new ones
                     room.gameState.cards = room.gameState.cards.filter(card => 
-                        !room.gameState.selectedCards.includes(card.id)
+                        !setCardIds.includes(card.id)
                     );
                     
                     const newCards = gameLogic.dealCards(3);
                     room.gameState.cards.push(...newCards);
                     
                     io.to(roomCode).emit('set_found', {
-                        cardIds: room.gameState.selectedCards,
+                        cardIds: setCardIds,
                         gameState: room.gameState
                     });
                 } else {

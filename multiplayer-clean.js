@@ -157,7 +157,7 @@ class CleanMultiplayerSetGame {
         // Update players
         this.players.clear();
         data.players.forEach(player => {
-            this.players.set(player.id, player);
+            this.players.set(player.playerId, player);
         });
         
         this.updatePlayersDisplay();
@@ -461,18 +461,35 @@ class CleanMultiplayerSetGame {
     }
 
     isValidSet(card1, card2, card3) {
-        const features = ['color', 'shape', 'number', 'shading'];
-        
-        for (const feature of features) {
-            const values = [card1[feature], card2[feature], card3[feature]];
-            const uniqueValues = new Set(values);
-            
-            if (uniqueValues.size !== 1 && uniqueValues.size !== 3) {
-                return false;
-            }
+        const allHaveFeatureProps = [card1, card2, card3].every(c => 
+            c && 'color' in c && 'shape' in c && 'number' in c && 'shading' in c
+        );
+
+        let a, b, c;
+        if (allHaveFeatureProps) {
+            a = [card1.color, card1.shape, card1.number, card1.shading];
+            b = [card2.color, card2.shape, card2.number, card2.shading];
+            c = [card3.color, card3.shape, card3.number, card3.shading];
+        } else {
+            a = this.idToFeatures(card1.id);
+            b = this.idToFeatures(card2.id);
+            c = this.idToFeatures(card3.id);
         }
-        
+
+        for (let i = 0; i < 4; i++) {
+            const s = new Set([a[i], b[i], c[i]]);
+            if (!(s.size === 1 || s.size === 3)) return false;
+        }
         return true;
+    }
+
+    idToFeatures(id) {
+        let x = id - 1; // 0..80
+        const f3 = x % 3; x = Math.floor(x / 3);
+        const f2 = x % 3; x = Math.floor(x / 3);
+        const f1 = x % 3; x = Math.floor(x / 3);
+        const f0 = x % 3;
+        return [f0, f1, f2, f3];
     }
 }
 
