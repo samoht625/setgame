@@ -10,7 +10,7 @@ export class OnlineMultiplayerSetGame {
         this.imageCache = new Map();
         this.updateTimeout = null;
         // Backend URL
-        this.BACKEND_URL = 'https://setgame-backend.onrender.com';
+        this.BACKEND_URL = 'http://localhost:3000';
         this.gameLogic = new GameLogic();
         this.preloadImages().then(() => {
             this.initializeUI();
@@ -114,7 +114,7 @@ export class OnlineMultiplayerSetGame {
     async connectToRoom(playerName) {
         try {
             // Connect to WebSocket
-            this.socket = new WebSocket(`wss://setgame-backend.onrender.com`);
+            this.socket = new WebSocket(`ws://localhost:3000`);
             this.socket.onopen = () => {
                 console.log('Connected to server');
                 this.socket.send(JSON.stringify({

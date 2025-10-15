@@ -2,6 +2,7 @@
   "name": "set-card-game",
   "version": "1.0.0",
   "description": "Set card game implemented in TypeScript",
+  "type": "module",
   "main": "main.js",
   "scripts": {
     "build": "tsc",

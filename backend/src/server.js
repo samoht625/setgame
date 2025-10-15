@@ -15,8 +15,8 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: process.env.NODE_ENV === 'production' 
-            ? ['https://setgame.onrender.com'] 
+        origin: process.env.NODE_ENV === 'production'
+            ? ['https://setgame-frontend.onrender.com']
             : ['http://localhost:8000', 'http://127.0.0.1:8000'],
         methods: ['GET', 'POST']
     }
@@ -25,7 +25,13 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: process.env.NODE_ENV === 'production'
+        ? ['https://setgame-frontend.onrender.com']
+        : ['http://localhost:8000', 'http://127.0.0.1:8000'],
+    methods: ['GET', 'POST'],
+    credentials: true
+}));
 app.use(express.json());
 
 // Store active connections
@@ -74,12 +80,16 @@ app.get('/api/rooms/:roomCode', async (req, res) => {
 });
 
 app.post('/api/rooms', async (req, res) => {
-    // Temporary: create room without database
-    const roomCode = `room-${Math.random().toString(36).substr(2, 6)}`;
-    res.json({
-        roomCode: roomCode,
-        message: 'Room created successfully'
-    });
+    try {
+        const room = await Room.create();
+        res.json({
+            roomCode: room.room_code,
+            message: 'Room created successfully'
+        });
+    } catch (error) {
+        console.error('Error creating room:', error);
+        res.status(500).json({ error: 'Failed to create room' });
+    }
 });
 
 app.get('/api/rooms/:roomCode/players', async (req, res) => {
@@ -202,46 +212,145 @@ io.on('connection', (socket) => {
             const { cardId } = data;
             const roomId = socket.roomId;
             const playerId = socket.playerId;
-            
             if (!roomId || !playerId) {
                 socket.emit('error', { message: 'Not in a room' });
                 return;
             }
-            
-            // Get current game state
-            const gameState = await Room.getGameState(roomId);
-            if (!gameState) {
-                socket.emit('error', { message: 'Game state not found' });
-                return;
-            }
-            
-            // Add card to selected cards if not already selected
+
+            // Load state and players
+            const gameState = (await Room.getGameState(roomId)) || {};
+            const players = await Player.findByRoom(roomId);
+
+            gameState.deck = Array.isArray(gameState.deck) ? gameState.deck : [];
+            gameState.cards = Array.isArray(gameState.cards) ? gameState.cards : [];
+            gameState.selectedCards = Array.isArray(gameState.selectedCards) ? gameState.selectedCards : [];
+            gameState.gamePhase = gameState.gamePhase || 'waiting';
+
+            // Toggle selection
             if (!gameState.selectedCards.includes(cardId)) {
                 gameState.selectedCards.push(cardId);
             } else {
-                // Remove card if already selected
-                gameState.selectedCards = gameState.selectedCards.filter(id => id !== cardId);
+                gameState.selectedCards = gameState.selectedCards.filter((id) => id !== cardId);
             }
-            
-            // Check if we have 3 selected cards
+
+            // Handle set validation when 3 cards selected
             if (gameState.selectedCards.length === 3) {
-                // TODO: Implement set validation logic
-                // For now, just clear selection
+                const [a, b, c] = gameState.selectedCards;
+                const isSet = isValidSetById(a, b, c);
+                if (isSet) {
+                    // Update player score
+                    const playerRow = await Player.findByPlayerId(playerId);
+                    const newSets = (playerRow?.sets_found || 0) + 1;
+                    const newScore = (playerRow?.current_score || 0) + 10;
+                    await Player.updateScore(playerId, newSets, newScore);
+
+                    // Record set against current game
+                    let currentGame = await Game.getCurrentGame(roomId);
+                    if (!currentGame) {
+                        currentGame = await Game.create(roomId);
+                    }
+                    await Set.record(currentGame.id, playerId, [a, b, c], 10);
+
+                    // Replace/remove selected cards
+                    const remaining = gameState.cards.filter((id) => id !== a && id !== b && id !== c);
+                    // If <= 12, replace in place when possible
+                    if (gameState.cards.length <= 12) {
+                        const next = [];
+                        for (const id of gameState.cards) {
+                            if (id === a || id === b || id === c) {
+                                const dealt = gameState.deck.pop();
+                                if (dealt) next.push(dealt);
+                            } else {
+                                next.push(id);
+                            }
+                        }
+                        gameState.cards = next;
+                    } else {
+                        gameState.cards = remaining;
+                    }
+
+                    // Ensure at least one visible set (deal 3 if none and deck available)
+                    if (!hasVisibleSet(gameState.cards) && gameState.deck.length >= 3) {
+                        dealMoreCards(gameState, 3);
+                    }
+                }
+                // Clear selection (both for valid and invalid to keep UX simple)
                 gameState.selectedCards = [];
             }
-            
-            // Update game state
+
             await Room.updateGameState(roomId, gameState);
-            
-            // Broadcast to all players in room
+
+            // Send state + latest players snapshot (scores may have changed)
             io.to(socket.roomCode).emit('game_state_update', {
                 gameState,
-                selectedBy: playerId
+                selectedBy: playerId,
+                players: players.map((p) => ({
+                    playerId: p.player_id,
+                    name: p.name,
+                    isOnline: p.is_online,
+                    currentScore: p.current_score,
+                    setsFound: p.sets_found,
+                })),
             });
-            
         } catch (error) {
             console.error('Error selecting card:', error);
             socket.emit('error', { message: 'Failed to select card' });
+        }
+    });
+
+    socket.on('start_new_game', async () => {
+        try {
+            const roomId = socket.roomId;
+            if (!roomId) {
+                socket.emit('error', { message: 'Not in a room' });
+                return;
+            }
+            // Initialize deck and deal 12
+            const deck = generateShuffledDeck();
+            const gameState = {
+                deck,
+                cards: [],
+                selectedCards: [],
+                gamePhase: 'playing',
+            };
+            dealInitialCards(gameState);
+
+            // Create a new game row
+            await Game.create(roomId);
+
+            await Room.updateGameState(roomId, gameState);
+            io.to(socket.roomCode).emit('game_state_update', {
+                gameState,
+            });
+        } catch (error) {
+            console.error('Error starting new game:', error);
+            socket.emit('error', { message: 'Failed to start new game' });
+        }
+    });
+
+    socket.on('update_player_name', async (data) => {
+        try {
+            const { playerId, newName } = data;
+            const roomId = socket.roomId;
+            if (!roomId || !playerId || !newName) {
+                socket.emit('error', { message: 'Invalid player update' });
+                return;
+            }
+            // Update name
+            const player = await Player.findByPlayerId(playerId);
+            if (!player) {
+                socket.emit('error', { message: 'Player not found' });
+                return;
+            }
+            await updatePlayerName(playerId, newName);
+            io.to(socket.roomCode).emit('player_name_updated', {
+                playerId,
+                oldName: player.name,
+                newName,
+            });
+        } catch (error) {
+            console.error('Error updating player name:', error);
+            socket.emit('error', { message: 'Failed to update player name' });
         }
     });
     
@@ -295,4 +404,65 @@ server.listen(PORT, () => {
 });
 
 export default app;
+
+// ---------------- Helper functions ----------------
+function generateShuffledDeck() {
+    const deck = [];
+    for (let i = 1; i <= 81; i++) deck.push(i);
+    for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+    return deck;
+}
+
+function dealInitialCards(gameState) {
+    dealMoreCards(gameState, Math.min(12, gameState.deck.length));
+}
+
+function dealMoreCards(gameState, count = 3) {
+    gameState.cards = Array.isArray(gameState.cards) ? gameState.cards : [];
+    for (let i = 0; i < count && gameState.deck.length > 0; i++) {
+        const next = gameState.deck.pop();
+        if (next) gameState.cards.push(next);
+    }
+}
+
+function hasVisibleSet(cards) {
+    const n = cards.length;
+    for (let i = 0; i < n - 2; i++) {
+        for (let j = i + 1; j < n - 1; j++) {
+            for (let k = j + 1; k < n; k++) {
+                if (isValidSetById(cards[i], cards[j], cards[k])) return true;
+            }
+        }
+    }
+    return false;
+}
+
+function isValidSetById(a, b, c) {
+    const fa = idToFeatures(a);
+    const fb = idToFeatures(b);
+    const fc = idToFeatures(c);
+    for (let i = 0; i < 4; i++) {
+        const s = new Set([fa[i], fb[i], fc[i]]);
+        if (!(s.size === 1 || s.size === 3)) return false;
+    }
+    return true;
+}
+
+function idToFeatures(id) {
+    // Map 1..81 to four base-3 digits [n, s, h, c]
+    let x = (id - 1);
+    const f3 = x % 3; x = Math.floor(x / 3);
+    const f2 = x % 3; x = Math.floor(x / 3);
+    const f1 = x % 3; x = Math.floor(x / 3);
+    const f0 = x % 3;
+    return [f0, f1, f2, f3];
+}
+
+async function updatePlayerName(playerId, newName) {
+    const query = 'UPDATE players SET name = $1 WHERE player_id = $2';
+    await pool.query(query, [newName, playerId]);
+}
 

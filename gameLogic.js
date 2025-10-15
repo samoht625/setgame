@@ -61,8 +61,10 @@ export class GameLogic {
         if (GameLogic.isValidSet(cards[0], cards[1], cards[2])) {
             this.setsFound++;
             this.replaceSelectedCardsInPlace();
+            this.selectedCards.clear();
         }
-        this.selectedCards.clear();
+        // For invalid sets, keep the selection so user can see what they selected
+        // The selection will be cleared when they click on a selected card again
     }
     replaceSelectedCardsInPlace() {
         const indices = [];
