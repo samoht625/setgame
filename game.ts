@@ -285,13 +285,10 @@ export class SetGameUI {
         const beforeSetsFound = this.gameLogic.getSetsFound();
         const result = this.gameLogic.selectCard(card);
         const afterSetsFound = this.gameLogic.getSetsFound();
-        
-        // Handle invalid set with delayed clearing
+        // For invalid set, selection is cleared immediately in logic; just refresh UI
         if (result === 'invalid-set') {
-            setTimeout(() => {
-                this.gameLogic.clearSelection();
-                this.updateDisplay();
-            }, 1500); // Keep selection visible for 1.5 seconds
+            // Immediate redraw to remove borders
+            this.updateDisplay();
         }
         
         return afterSetsFound > beforeSetsFound;

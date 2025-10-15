@@ -269,13 +269,57 @@ io.on('connection', (socket) => {
             
             // Check if we have 3 selected cards
             if (room.gameState.selectedCards.length === 3) {
-                // Clear selection
+                const selected = [...room.gameState.selectedCards];
+
+                // Validate set by ID mapping (base-3 features)
+                const idToFeatures = (id) => {
+                    let x = id - 1; // 0..80
+                    const f3 = x % 3; x = Math.floor(x / 3);
+                    const f2 = x % 3; x = Math.floor(x / 3);
+                    const f1 = x % 3; x = Math.floor(x / 3);
+                    const f0 = x % 3;
+                    return [f0, f1, f2, f3];
+                };
+                const isValidSet = (a, b, c) => {
+                    const fa = idToFeatures(a);
+                    const fb = idToFeatures(b);
+                    const fc = idToFeatures(c);
+                    for (let i = 0; i < 4; i++) {
+                        const s = new Set([fa[i], fb[i], fc[i]]);
+                        if (!(s.size === 1 || s.size === 3)) return false;
+                    }
+                    return true;
+                };
+
+                const valid = isValidSet(selected[0], selected[1], selected[2]);
+
+                if (valid) {
+                    // Increment current player's setsFound
+                    const player = room.players.find(p => p.playerId === socket.playerId);
+                    if (player) {
+                        player.setsFound = (player.setsFound || 0) + 1;
+                        player.currentScore = (player.currentScore || 0) + 10;
+                    }
+
+                    // Remove the 3 selected cards from board
+                    room.gameState.cards = room.gameState.cards.filter(id => !selected.includes(id));
+
+                    // Deal up to 3 new cards from deck to maintain 12 if possible
+                    if (Array.isArray(room.gameState.deck) && room.gameState.deck.length > 0) {
+                        while (room.gameState.cards.length < 12 && room.gameState.deck.length > 0) {
+                            room.gameState.cards.push(room.gameState.deck.pop());
+                        }
+                    }
+                }
+
+                // Clear selection regardless of validity
                 room.gameState.selectedCards = [];
             }
             
             // Broadcast to all players in room
             io.to(roomCode).emit('game_state_update', {
                 gameState: room.gameState,
+                players: room.players,
                 selectedBy: socket.playerId
             });
             
@@ -341,24 +385,27 @@ io.on('connection', (socket) => {
                 return;
             }
             
-            // Generate initial cards (12 cards for Set game) - shuffled
+            // Generate initial cards (12 cards for Set game) and deck - shuffled
             const allCards = [];
             for (let i = 1; i <= 81; i++) {
                 allCards.push(i);
             }
             const shuffledCards = shuffleArray(allCards);
             const initialCards = shuffledCards.slice(0, 12);
+            const remainingDeck = shuffledCards.slice(12);
             
             // Update room game state
             room.gameState = {
                 cards: initialCards,
+                deck: remainingDeck,
                 selectedCards: [],
                 gamePhase: 'playing'
             };
             
             // Broadcast new game state to all players in room
             io.to(roomCode).emit('game_state_update', {
-                gameState: room.gameState
+                gameState: room.gameState,
+                players: room.players
             });
             
             console.log(`New game started in room ${roomCode} with ${initialCards.length} cards`);

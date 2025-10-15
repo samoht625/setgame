@@ -75,7 +75,8 @@ export class GameLogic {
             this.selectedCards.clear();
             return 'valid-set';
         } else {
-            // Don't clear selection here - let UI handle the timing
+            // Invalid set: clear immediately
+            this.selectedCards.clear();
             return 'invalid-set';
         }
     }
