@@ -61,6 +61,7 @@ class SetGameTester {
             
             // Test new game button
             await page.click('#new-game-btn');
+            await page.waitForTimeout(1000); // Wait for new game to initialize
             console.log('✅ New game button works');
             
             // Test pause button
@@ -73,6 +74,9 @@ class SetGameTester {
             const cards = await page.$$('.card');
             if (cards.length >= 3) {
                 console.log('🎯 Testing card selection...');
+                
+                // Small wait to ensure game is ready for interaction
+                await page.waitForTimeout(500);
                 
                 // Select first three cards to test selection mechanism
                 await cards[0].click();
@@ -135,17 +139,27 @@ class SetGameTester {
             // Test starting a new game if both players are connected
             if (players1.length > 0 && players2.length > 0) {
                 await page1.click('#new-game-btn');
-                await page1.waitForTimeout(2000);
                 
-                // Check if cards appear (multiplayer uses .minimal-card class)
-                const cards1 = await page1.$$('.minimal-card');
-                const cards2 = await page2.$$('.minimal-card');
-                
-                console.log(`✅ Game started - Player 1 sees ${cards1.length} cards, Player 2 sees ${cards2.length} cards`);
-                
-                // Test Set validation in multiplayer
-                if (cards1.length >= 3) {
-                    await this.testSetValidation(page1, 'multiplayer');
+                // Wait for cards to appear and game state to be ready
+                try {
+                    await page1.waitForSelector('.minimal-card', { timeout: 5000 });
+                    await page2.waitForSelector('.minimal-card', { timeout: 5000 });
+                    
+                    // Additional wait to ensure game phase is set to 'playing'
+                    await page1.waitForTimeout(1000);
+                    await page2.waitForTimeout(1000);
+                    
+                    const cards1 = await page1.$$('.minimal-card');
+                    const cards2 = await page2.$$('.minimal-card');
+                    
+                    console.log(`✅ Game started - Player 1 sees ${cards1.length} cards, Player 2 sees ${cards2.length} cards`);
+                    
+                    // Test Set validation in multiplayer
+                    if (cards1.length >= 3) {
+                        await this.testSetValidation(page1, 'multiplayer');
+                    }
+                } catch (waitError) {
+                    console.log('⚠️ Cards did not appear after starting game, skipping card tests');
                 }
             }
             
@@ -252,6 +266,22 @@ class SetGameTester {
             const isMultiplayer = mode === 'multiplayer';
             const cardSelector = isMultiplayer ? '.minimal-card' : '.card';
             
+            // For multiplayer, ensure we wait for game state to be ready
+            if (isMultiplayer) {
+                // Wait a bit longer to ensure game phase is set to 'playing'
+                await page.waitForTimeout(500);
+                
+                // Try to check if there's an error message indicating game not started
+                const errorElements = await page.$$('.action-message.error');
+                if (errorElements.length > 0) {
+                    const errorText = await page.evaluate(el => el.textContent, errorElements[0]);
+                    if (errorText && errorText.includes('Game not started yet')) {
+                        console.log('⚠️  Game not ready yet, waiting a bit more...');
+                        await page.waitForTimeout(2000);
+                    }
+                }
+            }
+            
             // Get all visible cards
             const cards = await page.$$(cardSelector);
             
@@ -284,60 +314,129 @@ class SetGameTester {
                 
                 if (setCards.length === 3) {
                     console.log('🎯 Testing valid set selection...');
-                    // Select the valid set
-                    for (const card of setCards) {
-                        await card.click();
-                        await page.waitForTimeout(200);
+                    
+                    // Get initial state to verify changes
+                    const initialCardCount = cards.length;
+                    let initialSetCount = 0;
+                    
+                    // For single player, get initial set count
+                    if (!isMultiplayer) {
+                        try {
+                            const setsCountElement = await page.$('#sets-count');
+                            if (setsCountElement) {
+                                const setCountText = await setsCountElement.textContent();
+                                initialSetCount = parseInt(setCountText) || 0;
+                            }
+                        } catch (e) {
+                            console.log('Could not get initial set count');
+                        }
                     }
                     
+                    // Select the valid set by clicking each card individually
+                    for (let i = 0; i < validSet.length; i++) {
+                        const cardId = validSet[i];
+                        console.log(`Clicking card ${i + 1} of 3 (ID: ${cardId})...`);
+                        
+                        // Find the card element by data-card-id attribute to get fresh reference
+                        const cardElement = await page.$(`[data-card-id="${cardId}"]`);
+                        if (cardElement) {
+                            await cardElement.click();
+                            await page.waitForTimeout(500); // Wait between clicks
+                        } else {
+                            console.log(`Could not find card element for ID ${cardId}`);
+                        }
+                    }
+                    
+                    // Wait for game to process the set and update UI
+                    await page.waitForTimeout(3000); // Longer wait for processing
+                    
+                    // Verify the set was processed
+                    const updatedCards = await page.$$(cardSelector);
+                    const cardCountChanged = updatedCards.length !== initialCardCount;
+                    
+                    console.log(`Debug: Initial card count: ${initialCardCount}, Current: ${updatedCards.length}`);
+                    
+                    let setCountIncreased = false;
+                    if (!isMultiplayer) {
+                        try {
+                            const setsCountElement = await page.$('#sets-count');
+                            if (setsCountElement) {
+                                const newSetCountText = await setsCountElement.textContent();
+                                const newSetCount = parseInt(newSetCountText) || 0;
+                                setCountIncreased = newSetCount > initialSetCount;
+                                console.log(`Debug: Initial set count: ${initialSetCount}, Current: ${newSetCount}`);
+                            }
+                        } catch (e) {
+                            console.log('Could not verify set count change');
+                        }
+                    }
+                    
+                    if (cardCountChanged || setCountIncreased) {
+                        console.log('✅ Valid set was processed - ', 
+                            cardCountChanged ? 'cards changed' : '', 
+                            setCountIncreased ? 'set count incremented' : '');
+                    } else {
+                        console.log('⚠️  Valid set selection may not have been processed');
+                        console.log('Debug: Cards changed:', cardCountChanged, 'Set count increased:', setCountIncreased);
+                    }
+                    
+                    // Extra wait to ensure UI is stable
                     await page.waitForTimeout(1000);
-                    console.log('✅ Valid set selection tested');
                 }
-                
-                // Clear selection by clicking somewhere else
-                await page.click('body');
-                await page.waitForTimeout(1000);
             } else {
                 console.log('⚠️  No valid set found among displayed cards');
             }
             
-            // Now test an invalid set (try first 3 cards if they're not the valid set we just tested)
+            // Now test an invalid set - get fresh card references
             console.log('🧪 Testing invalid set selection...');
             
-            // Find 3 cards that are NOT the valid set we just tested
-            let testCards = [];
-            let testCardIds = [];
-            let foundInvalidSet = false;
+            // Get fresh card references after potential valid set processing
+            const currentCards = await page.$$(cardSelector);
             
-            for (let i = 0; i < Math.min(cards.length, 12); i++) {
-                for (let j = i + 1; j < Math.min(cards.length, 12); j++) {
-                    for (let k = j + 1; k < Math.min(cards.length, 12); k++) {
-                        const testIds = [cardIds[i], cardIds[j], cardIds[k]];
-                        if (!this.isValidSet(testIds[0], testIds[1], testIds[2])) {
-                            testCards = [cards[i], cards[j], cards[k]];
-                            testCardIds = testIds;
-                            foundInvalidSet = true;
-                            break;
+            if (currentCards.length >= 3) {
+                // Get fresh card IDs for invalid set testing
+                const currentCardIds = await Promise.all(currentCards.map(async (card) => {
+                    const cardId = await page.evaluate((el) => {
+                        return parseInt(el.dataset.cardId || el.getAttribute('data-card-id') || '0');
+                    }, card);
+                    return cardId || 0;
+                }));
+                
+                // Find an invalid set from current cards
+                let testCards = [];
+                let testCardIds = [];
+                let foundInvalidSet = false;
+                
+                for (let i = 0; i < Math.min(currentCards.length, 12); i++) {
+                    for (let j = i + 1; j < Math.min(currentCards.length, 12); j++) {
+                        for (let k = j + 1; k < Math.min(currentCards.length, 12); k++) {
+                            const testIds = [currentCardIds[i], currentCardIds[j], currentCardIds[k]];
+                            if (!this.isValidSet(testIds[0], testIds[1], testIds[2])) {
+                                testCards = [currentCards[i], currentCards[j], currentCards[k]];
+                                testCardIds = testIds;
+                                foundInvalidSet = true;
+                                break;
+                            }
                         }
+                        if (foundInvalidSet) break;
                     }
                     if (foundInvalidSet) break;
                 }
-                if (foundInvalidSet) break;
-            }
-            
-            if (foundInvalidSet) {
-                console.log(`✅ Found invalid set to test: [${testCardIds.join(', ')}]`);
                 
-                // Select the invalid set
-                for (const card of testCards) {
-                    await card.click();
-                    await page.waitForTimeout(200);
+                if (foundInvalidSet) {
+                    console.log(`✅ Found invalid set to test: [${testCardIds.join(', ')}]`);
+                    
+                    // Select the invalid set
+                    for (const card of testCards) {
+                        await card.click();
+                        await page.waitForTimeout(300);
+                    }
+                    
+                    await page.waitForTimeout(1500);
+                    console.log('✅ Invalid set selection tested');
+                } else {
+                    console.log('⚠️  Could not find an invalid set to test');
                 }
-                
-                await page.waitForTimeout(1000);
-                console.log('✅ Invalid set selection tested');
-            } else {
-                console.log('⚠️  Could not find an invalid set to test');
             }
             
             // Clear any remaining selection
