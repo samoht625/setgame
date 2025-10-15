@@ -13,8 +13,11 @@ const server = createServer(app);
 const io = new Server(server, {
     cors: {
         origin: "*",
-        methods: ['GET', 'POST']
-    }
+        methods: ['GET', 'POST'],
+        credentials: true
+    },
+    allowEIO3: true,
+    transports: ['polling', 'websocket']
 });
 
 const PORT = process.env.PORT || 3000;
@@ -166,6 +169,16 @@ app.get('*', (req, res) => {
 // WebSocket connection handling
 io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);
+    console.log('Socket transport:', socket.conn.transport.name);
+
+    // Handle connection errors
+    socket.on('error', (error) => {
+        console.error('Socket error:', error);
+    });
+
+    socket.on('disconnect', (reason) => {
+        console.log('Client disconnected:', socket.id, reason);
+    });
     
     socket.on('join_room', async (data) => {
         try {
