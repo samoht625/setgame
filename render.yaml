@@ -2,8 +2,9 @@ services:
   - type: web
     name: setgame-backend
     env: node
-    buildCommand: cd backend && npm install && npm run migrate
+    buildCommand: cd backend && npm ci
     startCommand: cd backend && npm start
+    postdeploy: cd backend && npm run migrate
     envVars:
       - key: NODE_ENV
         value: production
