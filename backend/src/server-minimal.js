@@ -19,7 +19,7 @@ const io = new Server(server, {
     }
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8000;
 
 // Middleware
 app.use(cors({
@@ -31,15 +31,94 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Serve static files from the parent directory (frontend files)
-app.use(express.static(path.join(__dirname, '../../..')));
+// Serve static files from the project root directory
+app.use(express.static(path.join(__dirname, '../../')));
 
 // Store rooms in memory (temporary)
 const rooms = new Map();
 
+// Helper function to find an available room
+function findAvailableRoom() {
+    const MAX_PLAYERS_PER_ROOM = 12;
+    
+    // Look for existing rooms that aren't full, preferring rooms with fewer players
+    let bestRoom = null;
+    let minPlayers = MAX_PLAYERS_PER_ROOM;
+    
+    for (const [roomCode, room] of rooms) {
+        if (room.players.length < MAX_PLAYERS_PER_ROOM && room.players.length < minPlayers) {
+            bestRoom = roomCode;
+            minPlayers = room.players.length;
+        }
+    }
+    
+    if (bestRoom) {
+        return bestRoom;
+    }
+    
+    // If no available rooms, create a new one with a random name
+    const adjectives = ['happy', 'bright', 'clever', 'swift', 'brave', 'calm', 'wise', 'bold', 'kind', 'gentle'];
+    const nouns = ['tiger', 'eagle', 'wolf', 'bear', 'fox', 'lion', 'hawk', 'deer', 'owl', 'raven'];
+    
+    let roomCode;
+    do {
+        const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+        const noun = nouns[Math.floor(Math.random() * nouns.length)];
+        roomCode = `${adjective}-${noun}`;
+    } while (rooms.has(roomCode));
+    
+    // Create the new room
+    rooms.set(roomCode, {
+        roomCode,
+        players: [],
+        gameState: {
+            cards: [],
+            selectedCards: [],
+            gamePhase: 'waiting'
+        }
+    });
+    
+    return roomCode;
+}
+
+// Helper function to generate player names
+function generatePlayerName(existingPlayers) {
+    const existingNames = existingPlayers.map(p => p.name);
+    console.log('Existing player names:', existingNames);
+    let playerNumber = 1;
+    
+    while (existingNames.includes(`Player ${playerNumber}`)) {
+        playerNumber++;
+    }
+    
+    console.log(`Generated player name: Player ${playerNumber}`);
+    return `Player ${playerNumber}`;
+}
+
+// Helper function to shuffle an array
+function shuffleArray(array) {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
+
 // API Routes
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Handle /m route - redirect to available room
+app.get('/m', (req, res) => {
+    const availableRoom = findAvailableRoom();
+    res.redirect(`/m/${availableRoom}`);
+});
+
+// Handle multiplayer URL pattern /m/room-name
+app.get('/m/:roomName', (req, res) => {
+    res.sendFile(path.join(__dirname, '../../multiplayer.html'));
 });
 
 app.post('/api/rooms', (req, res) => {
@@ -92,6 +171,7 @@ io.on('connection', (socket) => {
     
     socket.on('join_room', async (data) => {
         try {
+            console.log('Received join_room event:', data);
             const { roomCode, playerName } = data;
             
             // Find or create room
@@ -109,10 +189,17 @@ io.on('connection', (socket) => {
                 rooms.set(roomCode, room);
             }
             
+            // Auto-assign player name if not provided or if it's just "Player"
+            let finalPlayerName = playerName;
+            if (!playerName || playerName === 'Player') {
+                finalPlayerName = generatePlayerName(room.players);
+                console.log(`Auto-assigned player name: ${finalPlayerName} (was: ${playerName})`);
+            }
+            
             // Create player
             const player = {
                 playerId: `player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                name: playerName,
+                name: finalPlayerName,
                 isOnline: true,
                 currentScore: 0,
                 setsFound: 0
@@ -184,6 +271,90 @@ io.on('connection', (socket) => {
         } catch (error) {
             console.error('Error selecting card:', error);
             socket.emit('error', { message: 'Failed to select card' });
+        }
+    });
+    
+    socket.on('update_player_name', async (data) => {
+        try {
+            const { playerId, newName } = data;
+            const roomCode = socket.roomCode;
+            
+            if (!roomCode) {
+                socket.emit('error', { message: 'Not in a room' });
+                return;
+            }
+            
+            const room = rooms.get(roomCode);
+            if (!room) {
+                socket.emit('error', { message: 'Room not found' });
+                return;
+            }
+            
+            const player = room.players.find(p => p.playerId === playerId);
+            if (!player) {
+                socket.emit('error', { message: 'Player not found' });
+                return;
+            }
+            
+            // Update player name
+            const oldName = player.name;
+            player.name = newName;
+            
+            // Notify all players in room
+            io.to(roomCode).emit('player_name_updated', {
+                playerId,
+                oldName,
+                newName
+            });
+            
+            console.log(`Player ${playerId} changed name from ${oldName} to ${newName}`);
+            
+        } catch (error) {
+            console.error('Error updating player name:', error);
+            socket.emit('error', { message: 'Failed to update player name' });
+        }
+    });
+    
+    socket.on('start_new_game', async () => {
+        try {
+            const roomCode = socket.roomCode;
+            
+            if (!roomCode) {
+                socket.emit('error', { message: 'Not in a room' });
+                return;
+            }
+            
+            const room = rooms.get(roomCode);
+            if (!room) {
+                socket.emit('error', { message: 'Room not found' });
+                return;
+            }
+            
+            // Generate initial cards (12 cards for Set game) - shuffled
+            const allCards = [];
+            for (let i = 1; i <= 81; i++) {
+                allCards.push(i);
+            }
+            const shuffledCards = shuffleArray(allCards);
+            const initialCards = shuffledCards.slice(0, 12);
+            
+            // Update room game state
+            room.gameState = {
+                cards: initialCards,
+                selectedCards: [],
+                gamePhase: 'playing'
+            };
+            
+            // Broadcast new game state to all players in room
+            io.to(roomCode).emit('game_state_update', {
+                gameState: room.gameState
+            });
+            
+            console.log(`New game started in room ${roomCode} with ${initialCards.length} cards`);
+            
+        } catch (error) {
+            console.error('Error starting new game:', error);
+            socket.emit('error', { message: 'Failed to start new game' });
         }
     });
     

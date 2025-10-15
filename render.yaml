@@ -3,7 +3,7 @@ services:
     name: setgame-backend
     env: node
     plan: free
-    buildCommand: cd backend && npm install
+    buildCommand: cd backend && npm install && npm run migrate
     startCommand: cd backend && npm start
     envVars:
       - key: NODE_ENV
@@ -22,6 +22,9 @@ services:
     plan: free
     staticPublishPath: .
     routes:
+      - type: rewrite
+        source: /m/*
+        destination: /multiplayer.html
       - type: rewrite
         source: /*
         destination: /index.html

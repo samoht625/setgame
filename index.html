@@ -6,49 +6,6 @@
     <title>Set Card Game</title>
     <link rel="stylesheet" href="style.css">
     <link id="dynamic-favicon" rel="icon" type="image/png" href="cards/1.png">
-    <style>
-        .players-section {
-            margin: 1rem 0;
-            padding: 1rem;
-            background: #f5f5f5;
-            border-radius: 8px;
-        }
-        .players-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-        }
-        .player-item {
-            padding: 0.5rem;
-            background: white;
-            border-radius: 4px;
-            border: 2px solid #ddd;
-            cursor: pointer;
-        }
-        .player-item.active {
-            border-color: #4CAF50;
-            background: #e8f5e8;
-        }
-        .action-bar {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 1rem;
-            border-radius: 8px;
-            z-index: 1000;
-        }
-        .action-message {
-            margin: 0.25rem 0;
-        }
-        .action-message.error { color: #ff6b6b; }
-        .action-message.info { color: #4ecdc4; }
-        .action-message.player_joined { color: #45b7d1; }
-        .action-message.player_left { color: #f9ca24; }
-        .action-message.set_found { color: #6c5ce7; font-weight: bold; }
-    </style>
 </head>
 <body>
     <div id="game-container" class="game-container">
@@ -76,27 +33,9 @@
             </div>
         </header>
 
-        <!-- Players Section -->
-        <section class="players-section">
-            <h2>Players</h2>
-            <div id="players-container" class="players-container">
-                <!-- Players will be dynamically added here -->
-            </div>
-        </section>
-
         <main id="card-container" class="card-container">
             <!-- Cards will be dynamically inserted here -->
         </main>
-
-        <!-- Action Messages -->
-        <div id="action-bar" class="action-bar" style="display: none;">
-            <div id="action-messages" class="action-messages">
-                <!-- Action messages will be dynamically added here -->
-            </div>
-        </div>
-
-        <!-- Total Sets Display -->
-        <div id="total-sets" style="display: none;">0</div>
 
         <!-- Best Times Modal -->
         <div id="high-scores-modal" class="modal" style="display:none;">
@@ -123,41 +62,8 @@
             </div>
         </div>
 
-        <!-- Room Modal -->
-    <div id="room-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.8); display: flex; justify-content: center; align-items: center; z-index: 1000;">
-        <div style="background: white; padding: 2rem; border-radius: 10px; max-width: 400px; width: 90%; text-align: center;">
-            <button id="close-room-modal" style="position: absolute; top: 10px; right: 15px; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999;">&times;</button>
-            <h2>Join or Create Room</h2>
-            
-            <div style="margin-bottom: 1rem;">
-                <label for="player-name" style="display: block; margin-bottom: 0.5rem; font-weight: bold; color: #555;">Your Name:</label>
-                <input type="text" id="player-name" placeholder="Enter your name" maxlength="20" value="Player" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 5px; font-size: 1rem; box-sizing: border-box;">
-            </div>
-            
-            <div style="margin-bottom: 1rem;">
-                <label for="room-code" style="display: block; margin-bottom: 0.5rem; font-weight: bold; color: #555;">Room Code:</label>
-                <input type="text" id="room-code" placeholder="Enter room code" maxlength="6" style="width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 5px; font-size: 1rem; box-sizing: border-box;">
-                <small style="color: #666; font-size: 0.8rem;">Leave empty to create a new room</small>
-            </div>
-            
-            <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1.5rem;">
-                <button id="join-room-btn" style="padding: 0.75rem 1.5rem; border: none; border-radius: 5px; font-size: 1rem; cursor: pointer; background-color: #4CAF50; color: white;">Join Room</button>
-                <button id="create-room-btn" style="padding: 0.75rem 1.5rem; border: none; border-radius: 5px; font-size: 1rem; cursor: pointer; background-color: #2196F3; color: white;">Create Room</button>
-            </div>
-            
-            <div id="room-url-section" style="margin-top: 1rem; display: none;">
-                <label style="display: block; margin-bottom: 0.5rem; font-weight: bold; color: #555;">Share this URL:</label>
-                <div style="display: flex; gap: 0.5rem;">
-                    <input type="text" id="room-url" readonly style="flex: 1; padding: 0.5rem; border: 2px solid #ddd; border-radius: 5px; font-size: 0.9rem; background: #f9f9f9;">
-                    <button id="copy-url-btn" style="padding: 0.5rem 1rem; border: none; border-radius: 5px; font-size: 0.9rem; cursor: pointer; background-color: #ff9800; color: white;">Copy</button>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
     <script type="module" src="main.js"></script>
-    <script type="module" src="multiplayer-online.js"></script>
         <script>
         // Set favicon to a random card image on each page load
         (function() {

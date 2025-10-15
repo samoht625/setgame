@@ -13,6 +13,7 @@ export class MultiplayerSetGame {
         this.imageCache = new Map();
         this.updateTimeout = null;
         this.gameLogic = new GameLogic();
+        this.setHighlighting = false;
         this.preloadImages().then(() => {
             this.initializeUI();
             this.initializeDefaultPlayers();
@@ -48,39 +49,81 @@ export class MultiplayerSetGame {
         this.timerElement = document.getElementById('timer');
         this.newGameButton = document.getElementById('new-game-btn');
         this.pauseButton = document.getElementById('pause-btn');
+        
+        // Check if elements exist before accessing them
         this.addPlayerButton = document.getElementById('add-player-btn');
         this.playerModal = document.getElementById('player-modal');
+        
         this.setupEventListeners();
     }
     setupEventListeners() {
         this.newGameButton.addEventListener('click', () => this.startNewGame());
         this.pauseButton.addEventListener('click', () => this.togglePause());
-        this.addPlayerButton.addEventListener('click', () => this.showPlayerModal());
+        
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Ctrl/Cmd + Shift + H to toggle set highlighting
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'H') {
+                e.preventDefault();
+                this.toggleSetHighlighting();
+            }
+        });
+        
+        // Only add event listeners if elements exist
+        if (this.addPlayerButton) {
+            this.addPlayerButton.addEventListener('click', () => this.showPlayerModal());
+        }
+        
         // Modal close functionality
-        document.getElementById('close-player-modal').addEventListener('click', () => this.closePlayerModal());
-        this.playerModal.addEventListener('click', (e) => {
-            if (e.target === this.playerModal)
-                this.closePlayerModal();
-        });
+        const closePlayerModal = document.getElementById('close-player-modal');
+        if (closePlayerModal) {
+            closePlayerModal.addEventListener('click', () => this.closePlayerModal());
+        }
+        
+        if (this.playerModal) {
+            this.playerModal.addEventListener('click', (e) => {
+                if (e.target === this.playerModal)
+                    this.closePlayerModal();
+            });
+        }
+        
         // Add player functionality
-        document.getElementById('add-player-confirm').addEventListener('click', () => this.addPlayer());
-        document.getElementById('add-player-sidebar-btn').addEventListener('click', () => this.showPlayerModal());
-        document.getElementById('new-player-name').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter')
-                this.addPlayer();
-        });
+        const addPlayerConfirm = document.getElementById('add-player-confirm');
+        if (addPlayerConfirm) {
+            addPlayerConfirm.addEventListener('click', () => this.addPlayer());
+        }
+        
+        const addPlayerSidebarBtn = document.getElementById('add-player-sidebar-btn');
+        if (addPlayerSidebarBtn) {
+            addPlayerSidebarBtn.addEventListener('click', () => this.showPlayerModal());
+        }
+        
+        const newPlayerName = document.getElementById('new-player-name');
+        if (newPlayerName) {
+            newPlayerName.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter')
+                    this.addPlayer();
+            });
+        }
     }
     initializeDefaultPlayers() {
         // Add 2 default players to start
         this.addPlayer('Player 1');
         this.addPlayer('Player 2');
+        
+        // Set the first player as the current player
+        if (this.players.size > 0) {
+            const firstPlayer = Array.from(this.players.values())[0];
+            this.currentPlayerId = firstPlayer.id;
+            this.updatePlayersDisplay();
+        }
     }
     addPlayer(name) {
         if (this.players.size >= 12) {
             this.showActionMessage('Maximum 12 players allowed', 'error');
             return;
         }
-        const playerName = name || document.getElementById('new-player-name').value.trim();
+        const playerName = name || (document.getElementById('new-player-name')?.value.trim() || '');
         if (!playerName) {
             this.showActionMessage('Please enter a player name', 'error');
             return;
@@ -97,9 +140,12 @@ export class MultiplayerSetGame {
         this.updatePlayersDisplay();
         this.showActionMessage(`${playerName} joined the game`, 'player_joined');
         // Clear input
-        document.getElementById('new-player-name').value = '';
+        const newPlayerNameInput = document.getElementById('new-player-name');
+        if (newPlayerNameInput) {
+            newPlayerNameInput.value = '';
+        }
         // Close modal if it was opened via the add button
-        if (this.playerModal.style.display !== 'none') {
+        if (this.playerModal && this.playerModal.style.display !== 'none') {
             this.closePlayerModal();
         }
     }
@@ -399,6 +445,83 @@ export class MultiplayerSetGame {
             `;
             playerList.appendChild(item);
         });
+    }
+    
+    toggleSetHighlighting() {
+        this.setHighlighting = !this.setHighlighting;
+        
+        if (this.setHighlighting) {
+            this.highlightValidSets();
+        } else {
+            this.clearSetHighlights();
+        }
+        
+        // Show action message
+        this.showActionMessage(`Set highlighting ${this.setHighlighting ? 'ON' : 'OFF'}`, 'info');
+    }
+    
+    highlightValidSets() {
+        const validSets = this.findValidSets();
+        
+        // Clear existing highlights
+        this.clearSetHighlights();
+        
+        // Add highlights to each valid set
+        validSets.forEach((set, index) => {
+            set.forEach(cardId => {
+                const cardElement = this.cardContainer.querySelector(`[data-card-id="${cardId}"]`);
+                if (cardElement) {
+                    cardElement.classList.add('debug-highlight');
+                }
+            });
+        });
+        
+        this.showActionMessage(`Highlighted ${validSets.length} valid sets`, 'info');
+    }
+    
+    clearSetHighlights() {
+        const highlightedCards = this.cardContainer.querySelectorAll('.debug-highlight');
+        highlightedCards.forEach(card => {
+            card.classList.remove('debug-highlight');
+        });
+    }
+    
+    findValidSets() {
+        if (!this.gameLogic) return [];
+        
+        const cards = this.gameLogic.getDisplayedCards();
+        const validSets = [];
+        
+        // Check all combinations of 3 cards
+        for (let i = 0; i < cards.length; i++) {
+            for (let j = i + 1; j < cards.length; j++) {
+                for (let k = j + 1; k < cards.length; k++) {
+                    const card1 = cards[i];
+                    const card2 = cards[j];
+                    const card3 = cards[k];
+                    
+                    if (this.isValidSet(card1, card2, card3)) {
+                        validSets.push([card1.getId(), card2.getId(), card3.getId()]);
+                    }
+                }
+            }
+        }
+        
+        return validSets;
+    }
+    
+    isValidSet(card1, card2, card3) {
+        // Check if all features are either the same or all different
+        return this.isValidFeature(card1.getNumber(), card2.getNumber(), card3.getNumber()) &&
+               this.isValidFeature(card1.getShape(), card2.getShape(), card3.getShape()) &&
+               this.isValidFeature(card1.getShading(), card2.getShading(), card3.getShading()) &&
+               this.isValidFeature(card1.getColor(), card2.getColor(), card3.getColor());
+    }
+    
+    isValidFeature(feature1, feature2, feature3) {
+        // All same or all different
+        return (feature1 === feature2 && feature2 === feature3) ||
+               (feature1 !== feature2 && feature2 !== feature3 && feature1 !== feature3);
     }
 }
 // Initialize the multiplayer game when DOM is loaded
