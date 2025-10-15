@@ -297,11 +297,58 @@ class SetGameTester {
                 }, card);
                 return cardId || 0;
             }));
+
+            // For single-player, derive features from alt text to ensure matching game logic
+            let singlePlayerFeatures = null;
+            if (!isMultiplayer) {
+                singlePlayerFeatures = await Promise.all(cards.map(async (card) => {
+                    const alt = await page.evaluate((el) => {
+                        const img = el.querySelector('img');
+                        return img ? img.alt : '';
+                    }, card);
+                    // alt example: "Card{ONE SOLID RED DIAMOND}"
+                    // Map to indices 0,1,2 for all four features
+                    const mapping = {
+                        ONE: 0, TWO: 1, THREE: 2,
+                        DIAMOND: 0, SQUIGGLE: 1, OVAL: 2,
+                        SOLID: 0, STRIPED: 1, OPEN: 2,
+                        RED: 0, GREEN: 1, PURPLE: 2
+                    };
+                    const m = /Card\{(ONE|TWO|THREE)\s+(SOLID|STRIPED|OPEN)\s+(RED|GREEN|PURPLE)\s+(DIAMOND|SQUIGGLE|OVAL)\}/.exec(alt || '');
+                    if (!m) return [0,0,0,0];
+                    const num = mapping[m[1]] ?? 0;
+                    const shading = mapping[m[2]] ?? 0;
+                    const color = mapping[m[3]] ?? 0;
+                    const shape = mapping[m[4]] ?? 0;
+                    // Keep feature order consistent with game logic usage; we just need consistency across three
+                    return [num, shape, shading, color];
+                }));
+            }
             
             console.log(`📊 Testing with ${cardIds.length} cards (IDs: ${cardIds.slice(0, 5).join(', ')}...)`);
             
-            // Find a valid set using the same logic as the game
-            const validSet = this.findValidSet(cardIds);
+            // Find a valid set
+            let validSet = null;
+            if (!isMultiplayer && singlePlayerFeatures) {
+                // Brute force using parsed features
+                for (let i = 0; i < cardIds.length - 2 && !validSet; i++) {
+                    for (let j = i + 1; j < cardIds.length - 1 && !validSet; j++) {
+                        for (let k = j + 1; k < cardIds.length && !validSet; k++) {
+                            const a = singlePlayerFeatures[i];
+                            const b = singlePlayerFeatures[j];
+                            const c = singlePlayerFeatures[k];
+                            let ok = true;
+                            for (let f = 0; f < 4; f++) {
+                                const s = new Set([a[f], b[f], c[f]]);
+                                if (!(s.size === 1 || s.size === 3)) { ok = false; break; }
+                            }
+                            if (ok) validSet = [cardIds[i], cardIds[j], cardIds[k]];
+                        }
+                    }
+                }
+            } else {
+                validSet = this.findValidSet(cardIds);
+            }
             
             if (validSet) {
                 console.log(`✅ Found valid set: [${validSet.join(', ')}]`);
@@ -316,7 +363,7 @@ class SetGameTester {
                     console.log('🎯 Testing valid set selection...');
                     
                     // Get initial state to verify changes
-                    const initialCardCount = cards.length;
+                    const initialCardIdsSet = new Set(cardIds);
                     let initialSetCount = 0;
                     
                     // For single player, get initial set count
@@ -350,11 +397,12 @@ class SetGameTester {
                     // Wait for game to process the set and update UI
                     await page.waitForTimeout(3000); // Longer wait for processing
                     
-                    // Verify the set was processed
-                    const updatedCards = await page.$$(cardSelector);
-                    const cardCountChanged = updatedCards.length !== initialCardCount;
+                    // Verify the set was processed: selected IDs no longer present
+                    const updatedCardEls = await page.$$(cardSelector);
+                    const updatedIds = await Promise.all(updatedCardEls.map(async (el) => parseInt(await el.getAttribute('data-card-id')) || 0));
+                    const removedAll = validSet.every(id => !updatedIds.includes(id));
                     
-                    console.log(`Debug: Initial card count: ${initialCardCount}, Current: ${updatedCards.length}`);
+                    console.log(`Debug: Selected IDs removed: ${removedAll}. Before had ${initialCardIdsSet.size}, now have ${updatedIds.length}`);
                     
                     let setCountIncreased = false;
                     if (!isMultiplayer) {
@@ -371,13 +419,13 @@ class SetGameTester {
                         }
                     }
                     
-                    if (cardCountChanged || setCountIncreased) {
+                    if (removedAll || setCountIncreased) {
                         console.log('✅ Valid set was processed - ', 
-                            cardCountChanged ? 'cards changed' : '', 
+                            removedAll ? 'selected cards removed' : '', 
                             setCountIncreased ? 'set count incremented' : '');
                     } else {
                         console.log('⚠️  Valid set selection may not have been processed');
-                        console.log('Debug: Cards changed:', cardCountChanged, 'Set count increased:', setCountIncreased);
+                        console.log('Debug: Selected removed:', removedAll, 'Set count increased:', setCountIncreased);
                     }
                     
                     // Extra wait to ensure UI is stable
