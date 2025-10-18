@@ -1,0 +1,104 @@
+Started GET "/up" for ::1 at 2025-10-18 08:15:16 -0700
+Processing by Rails::HealthController#show as */*
+  Rendering html template
+  Rendered html template (Duration: 0.1ms | GC: 0.0ms)
+Completed 200 OK in 12ms (Views: 2.2ms | GC: 0.0ms)
+
+
+Started GET "/" for ::1 at 2025-10-18 08:15:17 -0700
+Processing by HomeController#index as */*
+  Rendering layout layouts/application.html.erb
+  Rendering home/index.html.erb within layouts/application
+  Rendered home/index.html.erb within layouts/application (Duration: 0.1ms | GC: 0.0ms)
+  Rendered layout layouts/application.html.erb (Duration: 2.4ms | GC: 0.3ms)
+Completed 200 OK in 28ms (Views: 2.8ms | GC: 2.5ms)
+
+
+Started GET "/" for ::1 at 2025-10-18 08:15:18 -0700
+Processing by HomeController#index as */*
+  Rendering layout layouts/application.html.erb
+  Rendering home/index.html.erb within layouts/application
+  Rendered home/index.html.erb within layouts/application (Duration: 0.0ms | GC: 0.0ms)
+  Rendered layout layouts/application.html.erb (Duration: 0.3ms | GC: 0.0ms)
+Completed 200 OK in 11ms (Views: 0.4ms | GC: 0.0ms)
+
+
+Started GET "/" for ::1 at 2025-10-18 08:15:36 -0700
+Processing by HomeController#index as */*
+  Rendering layout layouts/application.html.erb
+  Rendering home/index.html.erb within layouts/application
+  Rendered home/index.html.erb within layouts/application (Duration: 0.0ms | GC: 0.0ms)
+  Rendered layout layouts/application.html.erb (Duration: 0.3ms | GC: 0.0ms)
+Completed 200 OK in 11ms (Views: 0.5ms | GC: 0.0ms)
+
+
+Started GET "/" for ::1 at 2025-10-18 08:29:43 -0700
+Processing by HomeController#index as */*
+  Rendering layout layouts/application.html.erb
+  Rendering home/index.html.erb within layouts/application
+  Rendered home/index.html.erb within layouts/application (Duration: 0.1ms | GC: 0.0ms)
+  Rendered layout layouts/application.html.erb (Duration: 0.5ms | GC: 0.0ms)
+Completed 200 OK in 11ms (Views: 1.0ms | GC: 0.0ms)
+
+
+Started GET "/" for ::1 at 2025-10-18 08:30:52 -0700
+  
+LoadError (cannot load such file -- /Users/tido/code/setgame/config/routes.rb):
+  
+railties (8.0.3) lib/rails/application/routes_reloader.rb:64:in `load'
+railties (8.0.3) lib/rails/application/routes_reloader.rb:64:in `block in load_paths'
+railties (8.0.3) lib/rails/application/routes_reloader.rb:64:in `each'
+railties (8.0.3) lib/rails/application/routes_reloader.rb:64:in `load_paths'
+railties (8.0.3) lib/rails/application/routes_reloader.rb:25:in `reload!'
+railties (8.0.3) lib/rails/application/routes_reloader.rb:52:in `block in updater'
+activesupport (8.0.3) lib/active_support/file_update_checker.rb:85:in `execute'
+railties (8.0.3) lib/rails/application/routes_reloader.rb:34:in `execute'
+railties (8.0.3) lib/rails/application/finisher.rb:175:in `block (2 levels) in <module:Finisher>'
+activesupport (8.0.3) lib/active_support/callbacks.rb:406:in `instance_exec'
+activesupport (8.0.3) lib/active_support/callbacks.rb:406:in `block in make_lambda'
+activesupport (8.0.3) lib/active_support/callbacks.rb:178:in `block in call'
+activesupport (8.0.3) lib/active_support/callbacks.rb:668:in `block (2 levels) in default_terminator'
+activesupport (8.0.3) lib/active_support/callbacks.rb:667:in `catch'
+activesupport (8.0.3) lib/active_support/callbacks.rb:667:in `block in default_terminator'
+activesupport (8.0.3) lib/active_support/callbacks.rb:179:in `call'
+activesupport (8.0.3) lib/active_support/callbacks.rb:559:in `block in invoke_before'
+activesupport (8.0.3) lib/active_support/callbacks.rb:559:in `each'
+activesupport (8.0.3) lib/active_support/callbacks.rb:559:in `invoke_before'
+activesupport (8.0.3) lib/active_support/callbacks.rb:108:in `run_callbacks'
+activesupport (8.0.3) lib/active_support/execution_wrapper.rb:128:in `run'
+activesupport (8.0.3) lib/active_support/execution_wrapper.rb:124:in `run!'
+activesupport (8.0.3) lib/active_support/reloader.rb:122:in `run!'
+activesupport (8.0.3) lib/active_support/execution_wrapper.rb:77:in `block in run!'
+<internal:kernel>:90:in `tap'
+activesupport (8.0.3) lib/active_support/execution_wrapper.rb:74:in `run!'
+activesupport (8.0.3) lib/active_support/reloader.rb:64:in `run!'
+actionpack (8.0.3) lib/action_dispatch/middleware/executor.rb:14:in `call'
+actionpack (8.0.3) lib/action_dispatch/middleware/actionable_exceptions.rb:18:in `call'
+actionpack (8.0.3) lib/action_dispatch/middleware/debug_exceptions.rb:31:in `call'
+web-console (4.2.1) lib/web_console/middleware.rb:132:in `call_app'
+web-console (4.2.1) lib/web_console/middleware.rb:28:in `block in call'
+web-console (4.2.1) lib/web_console/middleware.rb:17:in `catch'
+web-console (4.2.1) lib/web_console/middleware.rb:17:in `call'
+actionpack (8.0.3) lib/action_dispatch/middleware/show_exceptions.rb:32:in `call'
+railties (8.0.3) lib/rails/rack/logger.rb:41:in `call_app'
+railties (8.0.3) lib/rails/rack/logger.rb:29:in `call'
+actionpack (8.0.3) lib/action_dispatch/middleware/remote_ip.rb:96:in `call'
+actionpack (8.0.3) lib/action_dispatch/middleware/request_id.rb:34:in `call'
+rack (3.2.3) lib/rack/method_override.rb:28:in `call'
+rack (3.2.3) lib/rack/runtime.rb:24:in `call'
+actionpack (8.0.3) lib/action_dispatch/middleware/server_timing.rb:61:in `block in call'
+actionpack (8.0.3) lib/action_dispatch/middleware/server_timing.rb:26:in `collect_events'
+actionpack (8.0.3) lib/action_dispatch/middleware/server_timing.rb:60:in `call'
+actionpack (8.0.3) lib/action_dispatch/middleware/executor.rb:16:in `call'
+propshaft (1.3.1) lib/propshaft/server.rb:37:in `call'
+actionpack (8.0.3) lib/action_dispatch/middleware/static.rb:27:in `call'
+rack (3.2.3) lib/rack/sendfile.rb:131:in `call'
+actionpack (8.0.3) lib/action_dispatch/middleware/host_authorization.rb:143:in `call'
+railties (8.0.3) lib/rails/engine.rb:535:in `call'
+puma (7.1.0) lib/puma/configuration.rb:300:in `call'
+puma (7.1.0) lib/puma/request.rb:101:in `block in handle_request'
+puma (7.1.0) lib/puma/thread_pool.rb:355:in `with_force_shutdown'
+puma (7.1.0) lib/puma/request.rb:100:in `handle_request'
+puma (7.1.0) lib/puma/server.rb:503:in `process_client'
+puma (7.1.0) lib/puma/server.rb:262:in `block in run'
+puma (7.1.0) lib/puma/thread_pool.rb:182:in `block in spawn_thread'

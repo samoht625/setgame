@@ -1,87 +1,151 @@
-# Set Card Game - Web Version
+# Set Game - Realtime Multiplayer
 
-A TypeScript web implementation of the classic Set card game. Find sets of three cards where each feature (number, shape, shading, color) is either all the same or all different across the three cards.
-
-## Features
-
-- 🎮 **Interactive Web Game** - Play directly in your browser
-- ⏱️ **Timer & Scoring** - Track your time and sets found
-- 💾 **High Scores** - Local storage of best times
-- ⏸️ **Pause/Resume** - Pause the game anytime
-- 💡 **Hints** - Get hints when stuck
-- 📱 **Responsive Design** - Works on desktop and mobile
-- 🎨 **Modern UI** - Clean, intuitive interface
-
-## How to Play
-
-1. **Goal**: Find sets of three cards
-2. **Valid Set**: Each feature (number, shape, shading, color) must be either:
-   - All the same across the three cards, OR
-   - All different across the three cards
-3. **Controls**: Click cards to select them (max 3)
-4. **Auto-check**: When you select 3 cards, the game automatically checks if it's a valid set
-
-## Running the Game
-
-### Option 1: Direct Play
-1. Open `index.html` in your web browser
-2. Start playing immediately!
-
-### Option 2: Local Server (Recommended)
-1. Install dependencies: `npm install -g typescript`
-2. Compile TypeScript: `npm run build` (or just `tsc`)
-3. Start server: `npm run serve` (or `python3 -m http.server 8000`)
-4. Open `http://localhost:8000` in your browser
-
-## Development
-
-### Prerequisites
-- Node.js and npm
-- TypeScript (`npm install -g typescript`)
-
-### Building from Source
-```bash
-# Compile TypeScript
-npm run build
-# or
-tsc
-
-# Watch for changes during development
-npm run watch
-# or
-tsc --watch
-```
-
-### Project Structure
-```
-├── card.ts          # Card class and enums
-├── gameLogic.ts     # Game logic and rules
-├── game.ts          # UI and game interface
-├── main.ts          # Application entry point
-├── index.html       # Main HTML page
-├── style.css        # Game styling
-├── cards/           # Card images (PNG files)
-└── README.md        # This file
-```
+A real-time multiplayer implementation of the classic Set card game using Rails and ActionCable.
 
 ## Game Rules
 
-### Valid Set Examples
-- **All Same**: 3 red solid ovals
-- **All Different**: 1 red solid diamond, 2 green striped ovals, 3 purple open squiggles
+The game consists of 81 unique cards with four features:
+- **Number**: 1, 2, or 3 shapes
+- **Shape**: diamond, squiggle, or oval
+- **Shading**: solid, striped, or open
+- **Color**: red, green, or purple
 
-### Invalid Set Examples
-- **Mixed**: 1 red solid diamond, 1 red solid oval, 1 green solid diamond
-  - ❌ Color is red, red, green (not all same, not all different)
+A valid set consists of three cards where, for each feature, the three cards are either:
+- All the same, OR
+- All different
 
-## Technologies Used
+## Features
 
-- **TypeScript** - Type-safe JavaScript
-- **HTML5** - Modern web markup
-- **CSS3** - Responsive styling with Flexbox/Grid
-- **ES6 Modules** - Modern JavaScript modules
-- **LocalStorage** - Client-side high score persistence
+- Real-time multiplayer gameplay using ActionCable WebSockets
+- Automatic game progression (no manual controls needed)
+- Ephemeral player management (automatic assignment on connect)
+- Score tracking per connection
+- Automatic round restart when deck is exhausted
+
+## Local Development
+
+### Prerequisites
+
+- Ruby 3.2.2 (managed via rbenv)
+- Node.js and Yarn
+- PostgreSQL (for production, SQLite for development)
+
+### Setup
+
+1. Install dependencies:
+```bash
+bundle install
+yarn install
+```
+
+2. Build assets:
+```bash
+yarn build
+yarn build:css
+```
+
+3. Start the server:
+```bash
+bin/rails server
+```
+
+4. Open http://localhost:3000 in your browser
+
+### Testing Multiplayer Locally
+
+Open multiple browser tabs or windows to http://localhost:3000 to test multiplayer functionality.
+
+## Deployment to Render
+
+### Prerequisites
+
+1. Create a Render account at https://render.com
+2. Connect your GitHub repository
+
+### Deployment Steps
+
+1. Push your code to GitHub:
+```bash
+git add .
+git commit -m "Initial commit"
+git push origin main
+```
+
+2. Create a new Web Service on Render:
+   - Connect your GitHub repository
+   - Use the `render.yaml` configuration file
+   - Render will automatically detect the configuration
+
+3. Configure Environment Variables:
+   - `RAILS_ENV`: `production`
+   - `RAILS_LOG_TO_STDOUT`: `enabled`
+   - `RAILS_MASTER_KEY`: Copy from `config/master.key` (keep this secret!)
+
+4. Update ActionCable Allowed Origins:
+   After deployment, update `config/environments/production.rb`:
+   ```ruby
+   config.action_cable.allowed_request_origins = [
+     "https://your-app-name.onrender.com"
+   ]
+   ```
+
+5. Deploy!
+
+### Render Configuration
+
+The `render.yaml` file is configured for:
+- Single web service (no Redis needed for single instance)
+- Automatic builds on git push
+- Production Rails environment
+- ActionCable WebSocket support
+
+## Architecture
+
+- **Backend**: Rails 8 with ActionCable for WebSockets
+- **Frontend**: React + TypeScript bundled with esbuild
+- **Styling**: Tailwind CSS
+- **Game Engine**: In-memory singleton service managing game state
+- **Rules Engine**: Set validation logic
+
+## File Structure
+
+```
+app/
+  channels/
+    application_cable/
+      connection.rb      # Player identification
+    game_channel.rb      # WebSocket channel for game
+  controllers/
+    home_controller.rb   # Root route controller
+  javascript/
+    components/          # React components
+      App.tsx           # Main app component
+      Board.tsx          # Card board display
+      Scoreboard.tsx     # Player scores
+    application.js       # Entry point
+    cable.ts             # ActionCable consumer
+  services/
+    game_engine.rb       # Game state management
+    rules.rb             # Set validation logic
+  views/
+    home/
+      index.html.erb     # Root view
+config/
+  initializers/
+    game_engine.rb       # Initialize global game engine
+public/
+  cards/                 # Card images (1.png through 81.png)
+```
+
+## How It Works
+
+1. **Connection**: Each browser connection gets a unique ephemeral player ID
+2. **Game State**: Single authoritative game state in `GAME_ENGINE` service
+3. **Set Claims**: Players select 3 cards and submit claims via WebSocket
+4. **Validation**: Server验证s if cards form a valid set
+5. **Scoring**: First valid claim gets 1 point
+6. **Auto-progression**: Game automatically deals new cards and starts new rounds
 
 ## License
 
-MIT License - Feel free to use and modify! 
+Copyright Anysphere Inc.
