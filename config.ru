@@ -4,3 +4,6 @@ require_relative "config/environment"
 
 run Rails.application
 Rails.application.load_server
+
+# Mount ActionCable
+Rails.application.config.action_cable.mount_path = '/cable'
