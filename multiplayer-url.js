@@ -26,7 +26,7 @@ class URLBasedMultiplayerSetGame {
         this.setHighlighting = false;
         
         // Backend URL
-        this.BACKEND_URL = (window.__BACKEND_URL__ || (location.hostname.includes('onrender.com') ? 'https://setgame-backend.onrender.com' : 'http://localhost:3000'));
+        this.BACKEND_URL = (window.__BACKEND_URL__ || (location.hostname.includes('onrender.com') ? 'https://setgame-backend.onrender.com' : 'http://localhost:3001'));
         // this.gameLogic = new GameLogic(); // Commented out for now
         
         this.preloadImages().then(() => {

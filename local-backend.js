@@ -126,6 +126,48 @@ io.on('connection', (socket) => {
         }
     });
     
+    socket.on('start_new_game', async (data) => {
+        try {
+            const roomCode = socket.roomCode;
+            
+            if (!roomCode) {
+                socket.emit('error', { message: 'Not in a room' });
+                return;
+            }
+            
+            const room = rooms.get(roomCode);
+            if (!room) {
+                socket.emit('error', { message: 'Room not found' });
+                return;
+            }
+            
+            // Generate 12 random cards (Set game typically starts with 12 cards)
+            const allCards = Array.from({ length: 81 }, (_, i) => i + 1);
+            const shuffled = allCards.sort(() => Math.random() - 0.5);
+            const selectedCards = shuffled.slice(0, 12);
+            
+            // Update game state
+            room.gameState = {
+                cards: selectedCards,
+                selectedCards: [],
+                gamePhase: 'playing',
+                setsFound: 0
+            };
+            
+            console.log(`Started new game in room ${roomCode} with ${selectedCards.length} cards`);
+            
+            // Broadcast game state to all players in room
+            io.to(roomCode).emit('game_state_update', {
+                gameState: room.gameState,
+                players: room.players
+            });
+            
+        } catch (error) {
+            console.error('Error starting new game:', error);
+            socket.emit('error', { message: 'Failed to start new game' });
+        }
+    });
+    
     socket.on('select_card', async (data) => {
         try {
             const { cardId } = data;
@@ -200,6 +242,11 @@ server.listen(PORT, () => {
 });
 
 export default app;
+
+
+
+
+
 
 
 
