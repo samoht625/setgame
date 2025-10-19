@@ -1,1 +1,4 @@
 *node_modules*
+
+# Bootsnap cache
+tmp/cache/bootsnap/
