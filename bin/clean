@@ -16,6 +16,11 @@ echo "  ✓ Removed tmp/cache/"
 rm -f log/*.log
 echo "  ✓ Removed log files"
 
+# Remove node_modules
+rm -rf node_modules
+echo "  ✓ Removed node_modules/"
+
 echo ""
 echo "Clean complete! Build artifacts removed."
+echo "Run 'yarn install' to restore dependencies."
 

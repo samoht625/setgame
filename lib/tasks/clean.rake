@@ -17,7 +17,12 @@ namespace :clean do
     FileUtils.rm(Dir.glob("log/*.log"))
     puts "  ✓ Removed log files"
     
+    # Remove node_modules
+    FileUtils.rm_rf("node_modules")
+    puts "  ✓ Removed node_modules/"
+    
     puts "\nClean complete! Build artifacts removed."
+    puts "Run 'yarn install' to restore dependencies."
   end
 end
 
