@@ -1222,18 +1222,18 @@ var require_react_jsx_runtime_development = __commonJS({
       function isValidElement(object) {
         return "object" === typeof object && null !== object && object.$$typeof === REACT_ELEMENT_TYPE;
       }
-      var React = require_react(), REACT_ELEMENT_TYPE = Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = Symbol.for("react.profiler"), REACT_CONSUMER_TYPE = Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = Symbol.for("react.memo"), REACT_LAZY_TYPE = Symbol.for("react.lazy"), REACT_ACTIVITY_TYPE = Symbol.for("react.activity"), REACT_CLIENT_REFERENCE = Symbol.for("react.client.reference"), ReactSharedInternals = React.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, hasOwnProperty = Object.prototype.hasOwnProperty, isArrayImpl = Array.isArray, createTask = console.createTask ? console.createTask : function() {
+      var React2 = require_react(), REACT_ELEMENT_TYPE = Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = Symbol.for("react.profiler"), REACT_CONSUMER_TYPE = Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = Symbol.for("react.memo"), REACT_LAZY_TYPE = Symbol.for("react.lazy"), REACT_ACTIVITY_TYPE = Symbol.for("react.activity"), REACT_CLIENT_REFERENCE = Symbol.for("react.client.reference"), ReactSharedInternals = React2.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, hasOwnProperty = Object.prototype.hasOwnProperty, isArrayImpl = Array.isArray, createTask = console.createTask ? console.createTask : function() {
         return null;
       };
-      React = {
+      React2 = {
         react_stack_bottom_frame: function(callStackForError) {
           return callStackForError();
         }
       };
       var specialPropKeyWarningShown;
       var didWarnAboutElementRef = {};
-      var unknownOwnerDebugStack = React.react_stack_bottom_frame.bind(
-        React,
+      var unknownOwnerDebugStack = React2.react_stack_bottom_frame.bind(
+        React2,
         UnknownOwner
       )();
       var unknownOwnerDebugTask = createTask(getTaskName(UnknownOwner));
@@ -1278,35 +1278,85 @@ var require_jsx_runtime = __commonJS({
 });
 
 // app/javascript/components/Scoreboard.tsx
+var import_react = __toESM(require_react());
 var import_jsx_runtime = __toESM(require_jsx_runtime());
-var Scoreboard = ({ scores, playerId, deckCount, status }) => {
-  const sortedScores = Object.entries(scores).sort(([, a], [, b]) => b - a);
+var Scoreboard = ({ scores, names, playerId, deckCount, status, onUpdateName }) => {
+  const [isEditing, setIsEditing] = (0, import_react.useState)(false);
+  const [tempName, setTempName] = (0, import_react.useState)("");
+  const inputRef = (0, import_react.useRef)(null);
+  (0, import_react.useEffect)(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+  const startEditing = () => {
+    setTempName(names[playerId] || "");
+    setIsEditing(true);
+  };
+  const commit = () => {
+    const next = tempName.trim().slice(0, 20);
+    if (onUpdateName) onUpdateName(next);
+    setIsEditing(false);
+  };
+  const cancel = () => {
+    setIsEditing(false);
+  };
+  const allPlayerIds = /* @__PURE__ */ new Set([...Object.keys(scores), ...Object.keys(names)]);
+  const sortedPlayers = Array.from(allPlayerIds).map((pid) => ({ pid, score: scores[pid] || 0 })).sort((a, b) => b.score - a.score);
   return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "bg-white p-6 rounded-lg shadow-lg", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { className: "text-2xl font-semibold mb-4", children: "Scoreboard" }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "space-y-2 mb-6", children: sortedScores.length > 0 ? sortedScores.map(([pid, score], index) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-      "div",
-      {
-        className: `p-3 rounded ${pid === playerId ? "bg-blue-100 border-2 border-blue-500" : "bg-gray-50"}`,
-        children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "flex justify-between items-center", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "font-medium", children: pid === playerId ? "You" : `Player ${index + 1}` }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "text-xl font-bold", children: score })
-        ] })
-      },
-      pid
-    )) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "text-gray-500 text-center py-4", children: "No scores yet" }) }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "border-t pt-4 space-y-2", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "flex justify-between", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "text-gray-600", children: "Deck:" }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { className: "font-semibold", children: [
-          deckCount,
-          " cards"
-        ] })
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "space-y-2 mb-6", children: sortedPlayers.length > 0 ? sortedPlayers.map(({ pid, score }, index) => {
+      const isYou = pid === playerId;
+      const canEdit = isYou;
+      return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+        "div",
+        {
+          className: `p-3 rounded ${isYou ? "bg-blue-100 border-2 border-blue-500" : "bg-gray-50"}`,
+          children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "flex justify-between items-center", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "flex items-center gap-2", children: canEdit && isEditing ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+              "input",
+              {
+                ref: inputRef,
+                value: tempName,
+                onChange: (e) => setTempName(e.target.value),
+                onBlur: commit,
+                onKeyDown: (e) => {
+                  if (e.key === "Enter") commit();
+                  if (e.key === "Escape") cancel();
+                },
+                placeholder: "Your name",
+                maxLength: 20,
+                className: "px-2 py-1 border rounded text-sm bg-white"
+              }
+            ) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+              "button",
+              {
+                type: "button",
+                onClick: canEdit ? startEditing : void 0,
+                className: `font-medium ${canEdit ? "hover:underline" : ""}`,
+                title: canEdit ? "Click to edit your name" : void 0,
+                children: names[pid] || (pid === playerId ? "You" : `Player ${index + 1}`)
+              }
+            ) }),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "text-xl font-bold", children: score })
+          ] })
+        },
+        pid
+      );
+    }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "text-gray-500 text-center py-4", children: "No scores yet" }) }),
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "border-t pt-4", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "flex items-center justify-between text-sm text-gray-700", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 24 24", fill: "currentColor", className: "w-4 h-4", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M3 6a2 2 0 012-2h7a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V6z" }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M10 6a2 2 0 012-2h4a2 2 0 012 2v8a2 2 0 01-2 2h-4" })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "font-semibold", children: deckCount })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "flex justify-between", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "text-gray-600", children: "Status:" }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: `font-semibold ${status === "playing" ? "text-green-600" : "text-yellow-600"}`, children: status === "playing" ? "Playing" : "Round Over" })
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: `inline-block w-2 h-2 rounded-full ${status === "playing" ? "bg-green-500" : "bg-yellow-500"}` }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: `font-semibold ${status === "playing" ? "text-green-700" : "text-yellow-700"}`, children: status === "playing" ? "Playing" : "Round over" })
       ] })
-    ] })
+    ] }) })
   ] });
 };
 var Scoreboard_default = Scoreboard;

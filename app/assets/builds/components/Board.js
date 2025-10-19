@@ -1280,26 +1280,22 @@ var require_jsx_runtime = __commonJS({
 // app/javascript/components/Board.tsx
 var import_jsx_runtime = __toESM(require_jsx_runtime());
 var Board = ({ cards, selectedCards, onCardClick, claiming }) => {
-  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "bg-white p-6 rounded-lg shadow-lg", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { className: "text-2xl font-semibold mb-4", children: "Board" }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4", children: cards.map((cardId) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-      "div",
-      {
-        onClick: () => onCardClick(cardId),
-        className: `cursor-pointer transition-all duration-200 rounded-lg overflow-hidden border-4 ${selectedCards.includes(cardId) ? "border-blue-600 shadow-lg scale-105" : "border-gray-300 hover:border-gray-400"} ${claiming ? "opacity-50 cursor-not-allowed" : ""}`,
-        children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-          "img",
-          {
-            src: `/cards/${cardId}.png`,
-            alt: `Card ${cardId}`,
-            className: "w-full h-auto"
-          }
-        )
-      },
-      cardId
-    )) }),
-    cards.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "text-center py-12 text-gray-500", children: "No cards on board. Waiting for next round..." })
-  ] });
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "bg-white p-6 rounded-lg shadow-lg", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "grid grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-4", children: cards.map((cardId) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+    "div",
+    {
+      onClick: () => onCardClick(cardId),
+      className: `group cursor-pointer transition-transform duration-150 rounded-xl overflow-hidden border-2 ${selectedCards.includes(cardId) ? "border-blue-600 ring-4 ring-blue-200 scale-[1.02]" : "border-gray-200 hover:border-gray-300 hover:scale-[1.01]"} ${claiming ? "opacity-50 cursor-not-allowed" : ""}`,
+      children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "aspect-[5/3] bg-white flex items-center justify-center", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+        "img",
+        {
+          src: `/cards/${cardId}.png`,
+          alt: `Card ${cardId}`,
+          className: "max-w-full max-h-full object-contain"
+        }
+      ) })
+    },
+    cardId
+  )) }) });
 };
 var Board_default = Board;
 export {

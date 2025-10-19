@@ -4,12 +4,13 @@
 class GameEngine
   include Rules
   
-  attr_reader :board, :deck, :scores, :status
+  attr_reader :board, :deck, :scores, :status, :names
   
   def initialize
     @board = []
     @deck = []
     @scores = {} # player_id => score
+    @names = {}  # player_id => display name
     @status = 'playing'
     @mutex = Mutex.new
     start_new_round
@@ -98,6 +99,7 @@ class GameEngine
       board: @board,
       deck_count: @deck.length,
       scores: @scores.dup,
+      names: @names.dup,
       status: @status
     }
   end
@@ -106,6 +108,47 @@ class GameEngine
   def broadcast_state
     # This will be called from the channel
     current_state
+  end
+
+  # Register a player with a default name if not present
+  def register_player(player_id)
+    @mutex.synchronize do
+      @names[player_id] ||= default_name_for(player_id)
+    end
+  end
+
+  # Remove a player's name when they disconnect
+  def unregister_player(player_id)
+    @mutex.synchronize do
+      @names.delete(player_id)
+    end
+  end
+
+  # Update a player's display name
+  # Returns: { success: bool, message: string, new_state: hash }
+  def update_name(player_id, new_name)
+    @mutex.synchronize do
+      name = new_name.to_s.strip
+      if name.length < 1 || name.length > 20
+        return { success: false, message: 'Name must be between 1 and 20 characters' }
+      end
+
+      # Allow letters, numbers, spaces, underscore and hyphen
+      unless name.match?(/\A[\p{L}\p{Nd} _\-]+\z/u)
+        return { success: false, message: 'Name contains invalid characters' }
+      end
+
+      @names[player_id] = name
+      { success: true, message: 'Name updated', new_state: current_state }
+    end
+  end
+
+  private
+
+  def default_name_for(player_id)
+    # Use first segment of UUID as a short identifier
+    short = player_id.to_s.split('-').first.to_s.upcase
+    "Player #{short}"
   end
 end
 

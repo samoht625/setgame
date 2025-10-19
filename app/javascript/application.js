@@ -2,6 +2,9 @@
 import "@hotwired/turbo-rails"
 import "./controllers"
 
+// Initialize ActionCable consumer (exposes window.debugConsumer)
+import "./cable"
+
 // Mount React app
 import { createRoot } from 'react-dom/client'
 import App from './components/App'
