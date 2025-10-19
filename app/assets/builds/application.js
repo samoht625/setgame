@@ -1921,7 +1921,7 @@ var require_react_dom_development = __commonJS({
         return dispatcher;
       }
       "undefined" !== typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ && "function" === typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart(Error());
-      var React2 = require_react(), Internals = {
+      var React3 = require_react(), Internals = {
         d: {
           f: noop,
           r: function() {
@@ -1939,7 +1939,7 @@ var require_react_dom_development = __commonJS({
         },
         p: 0,
         findDOMNode: null
-      }, REACT_PORTAL_TYPE = Symbol.for("react.portal"), ReactSharedInternals = React2.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+      }, REACT_PORTAL_TYPE = Symbol.for("react.portal"), ReactSharedInternals = React3.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
       "function" === typeof Map && null != Map.prototype && "function" === typeof Map.prototype.forEach && "function" === typeof Set && null != Set.prototype && "function" === typeof Set.prototype.clear && "function" === typeof Set.prototype.forEach || console.error(
         "React depends on Map and Set built-in types. Make sure that you load a polyfill in older browsers. https://reactjs.org/link/react-polyfills"
       );
@@ -3474,7 +3474,7 @@ var require_react_dom_client_development = __commonJS({
         "number" === type && getActiveElement(node.ownerDocument) === node || node.defaultValue === "" + value || (node.defaultValue = "" + value);
       }
       function validateOptionProps(element, props) {
-        null == props.value && ("object" === typeof props.children && null !== props.children ? React2.Children.forEach(props.children, function(child) {
+        null == props.value && ("object" === typeof props.children && null !== props.children ? React3.Children.forEach(props.children, function(child) {
           null == child || "string" === typeof child || "number" === typeof child || "bigint" === typeof child || didWarnInvalidChild || (didWarnInvalidChild = true, console.error(
             "Cannot infer the option value of complex children. Pass a `value` prop or use a plain string as children to <option>."
           ));
@@ -19106,14 +19106,14 @@ var require_react_dom_client_development = __commonJS({
         ));
       }
       "undefined" !== typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ && "function" === typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart(Error());
-      var Scheduler = require_scheduler(), React2 = require_react(), ReactDOM = require_react_dom(), assign = Object.assign, REACT_LEGACY_ELEMENT_TYPE = Symbol.for("react.element"), REACT_ELEMENT_TYPE = Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = Symbol.for("react.profiler"), REACT_CONSUMER_TYPE = Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = Symbol.for("react.memo"), REACT_LAZY_TYPE = Symbol.for("react.lazy");
+      var Scheduler = require_scheduler(), React3 = require_react(), ReactDOM = require_react_dom(), assign = Object.assign, REACT_LEGACY_ELEMENT_TYPE = Symbol.for("react.element"), REACT_ELEMENT_TYPE = Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = Symbol.for("react.profiler"), REACT_CONSUMER_TYPE = Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = Symbol.for("react.memo"), REACT_LAZY_TYPE = Symbol.for("react.lazy");
       Symbol.for("react.scope");
       var REACT_ACTIVITY_TYPE = Symbol.for("react.activity");
       Symbol.for("react.legacy_hidden");
       Symbol.for("react.tracing_marker");
       var REACT_MEMO_CACHE_SENTINEL = Symbol.for("react.memo_cache_sentinel");
       Symbol.for("react.view_transition");
-      var MAYBE_ITERATOR_SYMBOL = Symbol.iterator, REACT_CLIENT_REFERENCE = Symbol.for("react.client.reference"), isArrayImpl = Array.isArray, ReactSharedInternals = React2.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, ReactDOMSharedInternals = ReactDOM.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, NotPending = Object.freeze({
+      var MAYBE_ITERATOR_SYMBOL = Symbol.iterator, REACT_CLIENT_REFERENCE = Symbol.for("react.client.reference"), isArrayImpl = Array.isArray, ReactSharedInternals = React3.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, ReactDOMSharedInternals = ReactDOM.__DOM_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, NotPending = Object.freeze({
         pending: false,
         data: null,
         method: null,
@@ -21901,7 +21901,7 @@ var require_react_dom_client_development = __commonJS({
         }
       };
       (function() {
-        var isomorphicReactPackageVersion = React2.version;
+        var isomorphicReactPackageVersion = React3.version;
         if ("19.2.0" !== isomorphicReactPackageVersion)
           throw Error(
             'Incompatible React versions: The "react" and "react-dom" packages must have the exact same version. Instead got:\n  - react:      ' + (isomorphicReactPackageVersion + "\n  - react-dom:  19.2.0\nLearn more: https://react.dev/warnings/version-mismatch")
@@ -22255,18 +22255,18 @@ var require_react_jsx_runtime_development = __commonJS({
       function isValidElement(object) {
         return "object" === typeof object && null !== object && object.$$typeof === REACT_ELEMENT_TYPE;
       }
-      var React2 = require_react(), REACT_ELEMENT_TYPE = Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = Symbol.for("react.profiler"), REACT_CONSUMER_TYPE = Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = Symbol.for("react.memo"), REACT_LAZY_TYPE = Symbol.for("react.lazy"), REACT_ACTIVITY_TYPE = Symbol.for("react.activity"), REACT_CLIENT_REFERENCE = Symbol.for("react.client.reference"), ReactSharedInternals = React2.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, hasOwnProperty = Object.prototype.hasOwnProperty, isArrayImpl = Array.isArray, createTask = console.createTask ? console.createTask : function() {
+      var React3 = require_react(), REACT_ELEMENT_TYPE = Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = Symbol.for("react.profiler"), REACT_CONSUMER_TYPE = Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = Symbol.for("react.memo"), REACT_LAZY_TYPE = Symbol.for("react.lazy"), REACT_ACTIVITY_TYPE = Symbol.for("react.activity"), REACT_CLIENT_REFERENCE = Symbol.for("react.client.reference"), ReactSharedInternals = React3.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE, hasOwnProperty = Object.prototype.hasOwnProperty, isArrayImpl = Array.isArray, createTask = console.createTask ? console.createTask : function() {
         return null;
       };
-      React2 = {
+      React3 = {
         react_stack_bottom_frame: function(callStackForError) {
           return callStackForError();
         }
       };
       var specialPropKeyWarningShown;
       var didWarnAboutElementRef = {};
-      var unknownOwnerDebugStack = React2.react_stack_bottom_frame.bind(
-        React2,
+      var unknownOwnerDebugStack = React3.react_stack_bottom_frame.bind(
+        React3,
         UnknownOwner
       )();
       var unknownOwnerDebugTask = createTask(getTaskName(UnknownOwner));
@@ -30303,12 +30303,6 @@ var hello_controller_default = class extends Controller {
 // app/javascript/controllers/index.js
 application.register("hello", hello_controller_default);
 
-// app/javascript/application.js
-var import_client = __toESM(require_client());
-
-// app/javascript/components/App.tsx
-var import_react = __toESM(require_react());
-
 // node_modules/@rails/actioncable/app/assets/javascripts/actioncable.esm.js
 var adapters = {
   logger: typeof console !== "undefined" ? console : void 0,
@@ -30797,64 +30791,122 @@ function getConfig2(name) {
 }
 
 // app/javascript/cable.ts
+console.log("[cable] Creating ActionCable consumer");
 var consumer2 = createConsumer3();
+console.log("[cable] Consumer created:", consumer2);
+if (typeof window !== "undefined") {
+  window.debugConsumer = consumer2;
+  console.log("[cable] Consumer exposed globally as window.debugConsumer");
+}
+
+// app/javascript/application.js
+var import_client = __toESM(require_client());
+
+// app/javascript/components/App.tsx
+var import_react2 = __toESM(require_react());
 
 // app/javascript/components/Board.tsx
 var import_jsx_runtime = __toESM(require_jsx_runtime());
 var Board = ({ cards, selectedCards, onCardClick, claiming }) => {
-  return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "bg-white p-6 rounded-lg shadow-lg", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { className: "text-2xl font-semibold mb-4", children: "Board" }),
-    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4", children: cards.map((cardId) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-      "div",
-      {
-        onClick: () => onCardClick(cardId),
-        className: `cursor-pointer transition-all duration-200 rounded-lg overflow-hidden border-4 ${selectedCards.includes(cardId) ? "border-blue-600 shadow-lg scale-105" : "border-gray-300 hover:border-gray-400"} ${claiming ? "opacity-50 cursor-not-allowed" : ""}`,
-        children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-          "img",
-          {
-            src: `/cards/${cardId}.png`,
-            alt: `Card ${cardId}`,
-            className: "w-full h-auto"
-          }
-        )
-      },
-      cardId
-    )) }),
-    cards.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "text-center py-12 text-gray-500", children: "No cards on board. Waiting for next round..." })
-  ] });
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "bg-white p-6 rounded-lg shadow-lg", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "grid grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-4", children: cards.map((cardId) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+    "div",
+    {
+      onClick: () => onCardClick(cardId),
+      className: `group cursor-pointer transition-transform duration-150 rounded-xl overflow-hidden border-2 ${selectedCards.includes(cardId) ? "border-blue-600 ring-4 ring-blue-200 scale-[1.02]" : "border-gray-200 hover:border-gray-300 hover:scale-[1.01]"} ${claiming ? "opacity-50 cursor-not-allowed" : ""}`,
+      children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "aspect-[5/3] bg-white flex items-center justify-center", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+        "img",
+        {
+          src: `/cards/${cardId}.png`,
+          alt: `Card ${cardId}`,
+          className: "max-w-full max-h-full object-contain"
+        }
+      ) })
+    },
+    cardId
+  )) }) });
 };
 var Board_default = Board;
 
 // app/javascript/components/Scoreboard.tsx
+var import_react = __toESM(require_react());
 var import_jsx_runtime2 = __toESM(require_jsx_runtime());
-var Scoreboard = ({ scores, playerId, deckCount, status }) => {
-  const sortedScores = Object.entries(scores).sort(([, a], [, b]) => b - a);
+var Scoreboard = ({ scores, names, playerId, deckCount, status, onUpdateName }) => {
+  const [isEditing, setIsEditing] = (0, import_react.useState)(false);
+  const [tempName, setTempName] = (0, import_react.useState)("");
+  const inputRef = (0, import_react.useRef)(null);
+  (0, import_react.useEffect)(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+  const startEditing = () => {
+    setTempName(names[playerId] || "");
+    setIsEditing(true);
+  };
+  const commit = () => {
+    const next = tempName.trim().slice(0, 20);
+    if (onUpdateName) onUpdateName(next);
+    setIsEditing(false);
+  };
+  const cancel = () => {
+    setIsEditing(false);
+  };
+  const allPlayerIds = /* @__PURE__ */ new Set([...Object.keys(scores), ...Object.keys(names)]);
+  const sortedPlayers = Array.from(allPlayerIds).map((pid) => ({ pid, score: scores[pid] || 0 })).sort((a, b) => b.score - a.score);
   return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "bg-white p-6 rounded-lg shadow-lg", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h2", { className: "text-2xl font-semibold mb-4", children: "Scoreboard" }),
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "space-y-2 mb-6", children: sortedScores.length > 0 ? sortedScores.map(([pid, score], index) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-      "div",
-      {
-        className: `p-3 rounded ${pid === playerId ? "bg-blue-100 border-2 border-blue-500" : "bg-gray-50"}`,
-        children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "flex justify-between items-center", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "font-medium", children: pid === playerId ? "You" : `Player ${index + 1}` }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "text-xl font-bold", children: score })
-        ] })
-      },
-      pid
-    )) : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "text-gray-500 text-center py-4", children: "No scores yet" }) }),
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "border-t pt-4 space-y-2", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "flex justify-between", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "text-gray-600", children: "Deck:" }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("span", { className: "font-semibold", children: [
-          deckCount,
-          " cards"
-        ] })
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "space-y-2 mb-6", children: sortedPlayers.length > 0 ? sortedPlayers.map(({ pid, score }, index) => {
+      const isYou = pid === playerId;
+      const canEdit = isYou;
+      return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+        "div",
+        {
+          className: `p-3 rounded ${isYou ? "bg-blue-100 border-2 border-blue-500" : "bg-gray-50"}`,
+          children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "flex justify-between items-center", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "flex items-center gap-2", children: canEdit && isEditing ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+              "input",
+              {
+                ref: inputRef,
+                value: tempName,
+                onChange: (e) => setTempName(e.target.value),
+                onBlur: commit,
+                onKeyDown: (e) => {
+                  if (e.key === "Enter") commit();
+                  if (e.key === "Escape") cancel();
+                },
+                placeholder: "Your name",
+                maxLength: 20,
+                className: "px-2 py-1 border rounded text-sm bg-white"
+              }
+            ) : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+              "button",
+              {
+                type: "button",
+                onClick: canEdit ? startEditing : void 0,
+                className: `font-medium ${canEdit ? "hover:underline" : ""}`,
+                title: canEdit ? "Click to edit your name" : void 0,
+                children: names[pid] || (pid === playerId ? "You" : `Player ${index + 1}`)
+              }
+            ) }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "text-xl font-bold", children: score })
+          ] })
+        },
+        pid
+      );
+    }) : /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "text-gray-500 text-center py-4", children: "No scores yet" }) }),
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "border-t pt-4", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "flex items-center justify-between text-sm text-gray-700", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 24 24", fill: "currentColor", className: "w-4 h-4", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M3 6a2 2 0 012-2h7a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V6z" }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M10 6a2 2 0 012-2h4a2 2 0 012 2v8a2 2 0 01-2 2h-4" })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "font-semibold", children: deckCount })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "flex justify-between", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "text-gray-600", children: "Status:" }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: `font-semibold ${status === "playing" ? "text-green-600" : "text-yellow-600"}`, children: status === "playing" ? "Playing" : "Round Over" })
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: `inline-block w-2 h-2 rounded-full ${status === "playing" ? "bg-green-500" : "bg-yellow-500"}` }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: `font-semibold ${status === "playing" ? "text-green-700" : "text-yellow-700"}`, children: status === "playing" ? "Playing" : "Round over" })
       ] })
-    ] })
+    ] }) })
   ] });
 };
 var Scoreboard_default = Scoreboard;
@@ -30862,36 +30914,71 @@ var Scoreboard_default = Scoreboard;
 // app/javascript/components/App.tsx
 var import_jsx_runtime3 = __toESM(require_jsx_runtime());
 var App = () => {
-  const [gameState, setGameState] = (0, import_react.useState)({
+  const [gameState, setGameState] = (0, import_react2.useState)({
     board: [],
     deck_count: 0,
     scores: {},
+    names: {},
     status: "playing"
   });
-  const [selectedCards, setSelectedCards] = (0, import_react.useState)([]);
-  const [claiming, setClaiming] = (0, import_react.useState)(false);
-  const [message, setMessage] = (0, import_react.useState)(null);
-  const [playerId, setPlayerId] = (0, import_react.useState)("");
-  (0, import_react.useEffect)(() => {
-    const subscription = consumer2.subscriptions.create("GameChannel", {
+  const [selectedCards, setSelectedCards] = (0, import_react2.useState)([]);
+  const [claiming, setClaiming] = (0, import_react2.useState)(false);
+  const [message, setMessage] = (0, import_react2.useState)(null);
+  const [playerId, setPlayerId] = (0, import_react2.useState)("");
+  const [isConnected, setIsConnected] = (0, import_react2.useState)(false);
+  const subscriptionRef = (0, import_react2.useRef)(null);
+  const timeoutRef = (0, import_react2.useRef)(null);
+  (0, import_react2.useEffect)(() => {
+    console.log("[App] Setting up WebSocket subscription");
+    console.log("[App] Consumer object:", consumer2);
+    console.log("[App] Consumer subscriptions:", consumer2.subscriptions);
+    const handleError = (e) => {
+      console.error("[GLOBAL ERROR]", e.error, e.message);
+    };
+    const handleRejection = (e) => {
+      console.error("[UNHANDLED REJECTION]", e.reason);
+    };
+    window.addEventListener("error", handleError);
+    window.addEventListener("unhandledrejection", handleRejection);
+    const sub = consumer2.subscriptions.create("GameChannel", {
       connected() {
-        console.log("Connected to game channel");
+        console.log("[App] Connected to game channel");
+        console.log("[App] Subscription identifier:", JSON.stringify(sub.identifier));
+        console.log("[App] Subscription object:", sub);
+        console.log("[App] Has perform method:", typeof sub.perform === "function");
+        setIsConnected(true);
+      },
+      disconnected() {
+        console.log("[App] Disconnected from game channel");
+        setIsConnected(false);
       },
       received(data) {
+        console.log("[App] Received data:", data);
+        if ("your_id" in data) {
+          setPlayerId(data.your_id);
+          return;
+        }
         if ("error" in data) {
+          console.log("[App] Received error message:", data.error);
           setMessage(data.error);
           setClaiming(false);
           setTimeout(() => setMessage(null), 3e3);
         } else {
+          console.log("[App] Received game state update");
           setGameState(data);
           setSelectedCards([]);
           setClaiming(false);
         }
       }
     });
-    setPlayerId(subscription.identifier);
+    subscriptionRef.current = sub;
+    console.log("[App] Subscription created and stored in ref");
+    console.log("[App] Subscription ref value:", subscriptionRef.current);
     return () => {
-      subscription.unsubscribe();
+      console.log("[App] Cleaning up subscription");
+      window.removeEventListener("error", handleError);
+      window.removeEventListener("unhandledrejection", handleRejection);
+      sub.unsubscribe();
     };
   }, []);
   const handleCardClick = (cardId) => {
@@ -30905,14 +30992,59 @@ var App = () => {
       return prev;
     });
   };
+  const updatePlayerName = (name) => {
+    if (!subscriptionRef.current) return;
+    subscriptionRef.current.perform("update_name", { name });
+  };
   const handleClaimSet = () => {
     if (selectedCards.length !== 3 || claiming) return;
+    console.log("[handleClaimSet] Called with cards:", selectedCards);
+    console.log("[handleClaimSet] Is connected:", isConnected);
+    console.log("[handleClaimSet] Subscription ref:", subscriptionRef.current);
+    if (!isConnected) {
+      console.error("[handleClaimSet] ERROR: Not connected to game channel");
+      setMessage("Not connected to server. Please refresh the page.");
+      return;
+    }
+    if (!subscriptionRef.current) {
+      console.error("[handleClaimSet] ERROR: No subscription available");
+      setMessage("Subscription not available. Please refresh the page.");
+      return;
+    }
+    if (typeof subscriptionRef.current.perform !== "function") {
+      console.error("[handleClaimSet] ERROR: perform is not a function");
+      console.error("[handleClaimSet] Subscription object:", subscriptionRef.current);
+      setMessage("Subscription error. Please refresh the page.");
+      return;
+    }
     setClaiming(true);
-    const subscription = consumer2.subscriptions.subscriptions.find(
-      (sub) => sub.identifier === "GameChannel"
-    );
-    if (subscription) {
-      subscription.send({ claim_set: { card_ids: selectedCards } });
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = setTimeout(() => {
+      console.error("[handleClaimSet] TIMEOUT: No response received after 5 seconds");
+      setMessage("Request timed out. Please try again.");
+      setClaiming(false);
+      setSelectedCards([]);
+      timeoutRef.current = null;
+    }, 5e3);
+    try {
+      console.log("[handleClaimSet] Performing claim_set action:", { card_ids: selectedCards });
+      console.log("[handleClaimSet] Subscription details:", {
+        identifier: subscriptionRef.current.identifier,
+        connection: subscriptionRef.current.connection,
+        hasPerform: typeof subscriptionRef.current.perform === "function"
+      });
+      const result = subscriptionRef.current.perform("claim_set", { card_ids: selectedCards });
+      console.log("[handleClaimSet] Perform dispatched successfully, result:", result);
+    } catch (error2) {
+      console.error("[handleClaimSet] ERROR sending message:", error2);
+      setMessage("Failed to send claim. Please try again.");
+      setClaiming(false);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
     }
   };
   return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "min-h-screen bg-gray-100 p-8", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "max-w-7xl mx-auto", children: [
@@ -30943,9 +31075,11 @@ var App = () => {
         Scoreboard_default,
         {
           scores: gameState.scores,
+          names: gameState.names,
           playerId,
           deckCount: gameState.deck_count,
-          status: gameState.status
+          status: gameState.status,
+          onUpdateName: updatePlayerName
         }
       ) })
     ] })

@@ -486,7 +486,13 @@ function getConfig(name) {
 }
 
 // app/javascript/cable.ts
+console.log("[cable] Creating ActionCable consumer");
 var consumer = createConsumer();
+console.log("[cable] Consumer created:", consumer);
+if (typeof window !== "undefined") {
+  window.debugConsumer = consumer;
+  console.log("[cable] Consumer exposed globally as window.debugConsumer");
+}
 export {
   consumer
 };

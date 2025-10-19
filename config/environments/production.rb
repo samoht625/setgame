@@ -66,6 +66,7 @@ Rails.application.configure do
   config.action_cable.allowed_request_origins = [
     # Add your Render URL here after deployment
     # "https://your-app.onrender.com"
+    "http://localhost:3000"  # Allow localhost for local testing
   ]
   
   # Mount ActionCable at /cable
