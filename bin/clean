@@ -1,0 +1,21 @@
+#!/bin/bash
+# Clean build artifacts
+
+echo "Cleaning build artifacts..."
+
+# Remove compiled assets
+rm -rf app/assets/builds/*
+echo "  ✓ Removed app/assets/builds/"
+
+# Remove temporary files (but keep .keep files)
+find tmp/cache -type f ! -name ".keep" -delete 2>/dev/null
+rm -f tmp/pids/*.pid tmp/restart.txt
+echo "  ✓ Removed tmp/cache/"
+
+# Remove log files
+rm -f log/*.log
+echo "  ✓ Removed log files"
+
+echo ""
+echo "Clean complete! Build artifacts removed."
+
