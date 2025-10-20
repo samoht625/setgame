@@ -5,14 +5,17 @@ class GameEngine
   include Rules
   
   attr_reader :board, :deck, :scores, :status, :names
+  attr_writer :broadcaster
   
   def initialize
     @board = []
     @deck = []
     @scores = {} # player_id => score
     @names = {}  # player_id => display name
+    @active_connections = Hash.new(0) # player_id => connection count
     @status = 'playing'
     @mutex = Mutex.new
+    @broadcaster = nil
     start_new_round
   end
   
@@ -26,6 +29,11 @@ class GameEngine
       # If no set exists, add 3 more cards (up to 15, then 18)
       while @board.length < 18 && !Rules.set_exists?(@board)
         deal_cards(3)
+      end
+      
+      # If still no sets at 18 cards, reshuffle and redeal
+      if @board.length >= 18 && !Rules.set_exists?(@board)
+        reshuffle_and_redeal_12!
       end
       
       @status = 'playing'
@@ -70,6 +78,11 @@ class GameEngine
         deal_cards(3)
       end
       
+      # If still no sets at 18 cards, reshuffle and redeal
+      if @board.length >= 18 && !Rules.set_exists?(@board)
+        reshuffle_and_redeal_12!
+      end
+      
       # Award point
       @scores[player_id] ||= 0
       @scores[player_id] += 1
@@ -81,7 +94,7 @@ class GameEngine
         Thread.new do
           sleep 5
           start_new_round
-          broadcast_state
+          @broadcaster&.call(current_state)
         end
       end
       
@@ -110,17 +123,39 @@ class GameEngine
     current_state
   end
 
-  # Register a player with a default name if not present
-  def register_player(player_id)
+  # Register a connection for a player
+  # Increments connection count and ensures default name exists
+  def register_connection(player_id)
     @mutex.synchronize do
-      @names[player_id] ||= default_name_for(player_id)
+      @active_connections[player_id] += 1
+      
+      # Ensure default name exists if this is the first connection
+      if @active_connections[player_id] == 1 && !@names[player_id]
+        @names[player_id] = default_name_for(player_id)
+      end
+      
+      # Broadcast updated state to all clients
+      @broadcaster&.call(current_state)
     end
   end
-
-  # Remove a player's name when they disconnect
-  def unregister_player(player_id)
+  
+  # Unregister a connection for a player
+  # Decrements connection count and removes player when last connection closes
+  def unregister_connection(player_id)
     @mutex.synchronize do
-      @names.delete(player_id)
+      @active_connections[player_id] -= 1
+      
+      # Remove player from active connections when all connections are closed
+      # BUT keep their score and name so they persist across reconnections
+      if @active_connections[player_id] <= 0
+        @active_connections.delete(player_id)
+        # Don't delete scores and names - they should persist across reconnections
+        # @scores.delete(player_id)
+        # @names.delete(player_id)
+      end
+      
+      # Broadcast updated state to all clients
+      @broadcaster&.call(current_state)
     end
   end
 
@@ -146,9 +181,41 @@ class GameEngine
   private
 
   def default_name_for(player_id)
-    # Use first segment of UUID as a short identifier
-    short = player_id.to_s.split('-').first.to_s.upcase
-    "Player #{short}"
+    # Generate adjective-animal name based on UUID
+    adjectives = %w[Wily Clever Swift Bold Bright Quick Silent Brave Noble Wise Fierce Gentle Mighty Agile Sharp Keen Bold Quick Silent Brave Noble Wise Fierce Gentle Mighty Agile Sharp Keen]
+    animals = %w[Coyote Cheetah Wolf Eagle Falcon Hawk Panther Tiger Lion Bear Fox Deer Elk Moose Raven Owl Hawk Panther Tiger Lion Bear Fox Deer Elk Moose Raven Owl]
+    
+    # Use UUID to deterministically select adjective and animal
+    uuid_bytes = player_id.to_s.gsub('-', '').scan(/../).map { |hex| hex.to_i(16) }
+    adj_index = uuid_bytes[0] % adjectives.length
+    animal_index = uuid_bytes[1] % animals.length
+    
+    name = "#{adjectives[adj_index]} #{animals[animal_index]}"
+    
+    # Ensure uniqueness by appending short UUID if name already exists
+    if @names.values.include?(name)
+      short = player_id.to_s.split('-').first.to_s.upcase
+      name = "#{adjectives[adj_index]} #{animals[animal_index]} #{short}"
+    end
+    
+    name
+  end
+  
+  # Reshuffle board + deck and redeal 12 cards
+  # Used when board reaches 18 cards with no sets
+  def reshuffle_and_redeal_12!
+    # Combine board and deck, shuffle
+    pool = (@board + @deck).shuffle
+    @deck = pool
+    @board = []
+    
+    # Deal 12 cards
+    deal_cards(12)
+    
+    # If still no sets, add more cards up to 18
+    while @board.length < 18 && !Rules.set_exists?(@board) && !@deck.empty?
+      deal_cards(3)
+    end
   end
 end
 

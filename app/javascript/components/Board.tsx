@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useRef } from 'react'
 
 interface BoardProps {
   cards: number[]
@@ -8,28 +8,108 @@ interface BoardProps {
 }
 
 const Board: React.FC<BoardProps> = ({ cards, selectedCards, onCardClick, claiming }) => {
+  const [pointerState, setPointerState] = useState<{ cardId: number | null; startX: number; startY: number; maxDelta: number }>({
+    cardId: null,
+    startX: 0,
+    startY: 0,
+    maxDelta: 0
+  })
+  const pointerThreshold = 8 // pixels of movement allowed
+  
+  const handlePointerDown = (e: React.PointerEvent, cardId: number) => {
+    if (claiming) return
+    e.preventDefault()
+    setPointerState({
+      cardId,
+      startX: e.clientX,
+      startY: e.clientY,
+      maxDelta: 0
+    })
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+  }
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (pointerState.cardId === null) return
+    const deltaX = Math.abs(e.clientX - pointerState.startX)
+    const deltaY = Math.abs(e.clientY - pointerState.startY)
+    const maxDelta = Math.max(deltaX, deltaY)
+    setPointerState(prev => ({ ...prev, maxDelta }))
+  }
+
+  const handlePointerUp = (e: React.PointerEvent, cardId: number) => {
+    if (pointerState.cardId === null) return
+    ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
+    
+    if (pointerState.maxDelta < pointerThreshold && e.button === 0) {
+      onCardClick(cardId)
+    }
+    
+    setPointerState({ cardId: null, startX: 0, startY: 0, maxDelta: 0 })
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent, cardId: number) => {
+    if (claiming) return
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onCardClick(cardId)
+    }
+  }
+
+  // Calculate grid columns sized tightly to card width so layout stays compact
+  const getGridCols = () => {
+    const count = cards.length
+    if (count <= 12) return 'grid-cols-[repeat(3,max-content)]' // 3 tight columns
+    if (count <= 15) return 'grid-cols-[repeat(3,max-content)] md:grid-cols-[repeat(5,max-content)]'
+    if (count <= 18) return 'grid-cols-[repeat(3,max-content)] md:grid-cols-[repeat(6,max-content)] lg:grid-cols-[repeat(9,max-content)]'
+    return 'grid-cols-[repeat(3,max-content)]'
+  }
+
+  // Reduce padding and gaps when there are more cards; keep horizontal padding tighter
+  const getPaddingAndGap = () => {
+    const count = cards.length
+    if (count <= 12) return { paddingX: 'px-4', paddingY: 'py-6', gap: 'gap-4' }
+    if (count <= 15) return { paddingX: 'px-3', paddingY: 'py-4', gap: 'gap-3' }
+    if (count <= 18) return { paddingX: 'px-2', paddingY: 'py-3', gap: 'gap-2' }
+    return { paddingX: 'px-4', paddingY: 'py-6', gap: 'gap-4' }
+  }
+
+  const { paddingX, paddingY, gap } = getPaddingAndGap()
+
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg">
-      <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {cards.map(cardId => (
-          <div
-            key={cardId}
-            onClick={() => onCardClick(cardId)}
-            className={`group cursor-pointer transition-transform duration-150 rounded-xl overflow-hidden border-2 ${
-              selectedCards.includes(cardId)
-                ? 'border-blue-600 ring-4 ring-blue-200 scale-[1.02]'
-                : 'border-gray-200 hover:border-gray-300 hover:scale-[1.01]'
-            } ${claiming ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            <div className="aspect-[5/3] bg-white flex items-center justify-center">
-              <img
-                src={`/cards/${cardId}.png`}
-                alt={`Card ${cardId}`}
-                className="max-w-full max-h-full object-contain"
-              />
+    <div className={`bg-white ${paddingY} ${paddingX} rounded-lg shadow-sm w-fit mx-auto`}>
+      <div className={`grid ${getGridCols()} ${gap} justify-center`}>
+        {cards.map(cardId => {
+          const isSelected = selectedCards.includes(cardId)
+          return (
+            <div
+              key={cardId}
+              role="button"
+              tabIndex={claiming ? -1 : 0}
+              aria-pressed={isSelected}
+              onPointerDown={(e) => handlePointerDown(e, cardId)}
+              onPointerMove={handlePointerMove}
+              onPointerUp={(e) => handlePointerUp(e, cardId)}
+              onKeyDown={(e) => handleKeyDown(e, cardId)}
+              className={`select-none touch-manipulation flex items-center justify-center ${
+                claiming ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+              }`}
+            >
+              <div
+                className={`rounded-xl overflow-hidden border-2 bg-white aspect-[5/3] w-40 md:w-48 lg:w-56 flex items-center justify-center transition-colors ${
+                  isSelected
+                    ? 'border-blue-600'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <img
+                  src={`/cards/${cardId}.png`}
+                  alt={`Card ${cardId}`}
+                  className="max-w-full max-h-full object-contain pointer-events-none"
+                />
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

@@ -1,8 +1,5 @@
 // Entry point for the build script in your package.json
-import "@hotwired/turbo-rails"
-import "./controllers"
-
-// Initialize ActionCable consumer (exposes window.debugConsumer)
+// Initialize ActionCable consumer
 import "./cable"
 
 // Mount React app

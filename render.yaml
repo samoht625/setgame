@@ -2,7 +2,7 @@ services:
   - type: web
     name: setgame
     env: ruby
-    buildCommand: bin/rails assets:precompile && yarn build && yarn build:css
+    buildCommand: yarn build && yarn build:css && bin/rails assets:precompile
     startCommand: bundle exec puma -C config/puma.rb
     envVars:
       - key: RAILS_ENV

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { consumer } from '../cable'
 import Board from './Board'
-import Scoreboard from './Scoreboard'
 import Toast from './Toast'
+import Scoreboard from './Scoreboard'
 
 interface GameState {
   board: number[]
@@ -45,34 +45,13 @@ const App: React.FC = () => {
   }
 
   useEffect(() => {
-    console.log('[App] Setting up WebSocket subscription')
-    console.log('[App] Consumer object:', consumer)
-    console.log('[App] Consumer subscriptions:', consumer.subscriptions)
-    
-    // Add global error handlers
-    const handleError = (e: ErrorEvent) => {
-      console.error('[GLOBAL ERROR]', e.error, e.message)
-    }
-    
-    const handleRejection = (e: PromiseRejectionEvent) => {
-      console.error('[UNHANDLED REJECTION]', e.reason)
-    }
-    
-    window.addEventListener('error', handleError)
-    window.addEventListener('unhandledrejection', handleRejection)
-    
     // Subscribe to game channel
     const sub = consumer.subscriptions.create('GameChannel', {
       connected() {
-        console.log('[App] Connected to game channel')
-        console.log('[App] Subscription identifier:', JSON.stringify(sub.identifier))
-        console.log('[App] Subscription object:', sub)
-        console.log('[App] Has perform method:', typeof sub.perform === 'function')
         setIsConnected(true)
       },
       
       disconnected() {
-        console.log('[App] Disconnected from game channel')
         setIsConnected(false)
         // Clear any pending claim timeout on disconnect
         if (timeoutRef.current) {
@@ -82,7 +61,6 @@ const App: React.FC = () => {
       },
       
       received(data: GameState | { error: string } | { your_id: string }) {
-        console.log('[App] Received data:', data)
         // Any message from server means the request cycle progressed; clear timeout
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current)
@@ -95,12 +73,11 @@ const App: React.FC = () => {
         }
         
         if ('error' in data) {
-          console.log('[App] Received error message:', data.error)
           setMessage(data.error)
+          setSelectedCards([])
           setClaiming(false)
-          setTimeout(() => setMessage(null), 3000)
+          setTimeout(() => setMessage(null), 2000)
         } else {
-          console.log('[App] Received game state update')
           if (claiming) {
             setMessage('Set found!')
             setTimeout(() => setMessage(null), 2000)
@@ -114,13 +91,8 @@ const App: React.FC = () => {
 
     // Store subscription reference
     subscriptionRef.current = sub
-    console.log('[App] Subscription created and stored in ref')
-    console.log('[App] Subscription ref value:', subscriptionRef.current)
 
     return () => {
-      console.log('[App] Cleaning up subscription')
-      window.removeEventListener('error', handleError)
-      window.removeEventListener('unhandledrejection', handleRejection)
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
         timeoutRef.current = null
@@ -132,14 +104,18 @@ const App: React.FC = () => {
   const handleCardClick = (cardId: number) => {
     if (claiming) return
     
-    setSelectedCards(prev => {
-      if (prev.includes(cardId)) {
-        return prev.filter(id => id !== cardId)
-      } else if (prev.length < 3) {
-        return [...prev, cardId]
-      }
-      return prev
-    })
+    const nextSelected = selectedCards.includes(cardId)
+      ? selectedCards.filter(id => id !== cardId)
+      : selectedCards.length < 3
+        ? [...selectedCards, cardId]
+        : selectedCards
+    
+    setSelectedCards(nextSelected)
+    
+    // Auto-claim when third card is selected
+    if (nextSelected.length === 3) {
+      handleClaimSet(nextSelected)
+    }
   }
 
   const updatePlayerName = (name: string) => {
@@ -147,29 +123,21 @@ const App: React.FC = () => {
     subscriptionRef.current.perform('update_name', { name })
   }
 
-  const handleClaimSet = () => {
-    if (selectedCards.length !== 3 || claiming) return
-    
-    console.log('[handleClaimSet] Called with cards:', selectedCards)
-    console.log('[handleClaimSet] Is connected:', isConnected)
-    console.log('[handleClaimSet] Subscription ref:', subscriptionRef.current)
+  const handleClaimSet = (cardIds?: number[]) => {
+    const ids = cardIds ?? selectedCards
+    if (ids.length !== 3 || claiming) return
     
     if (!isConnected) {
-      console.error('[handleClaimSet] ERROR: Not connected to game channel')
       setMessage('Not connected to server. Please refresh the page.')
       return
     }
     
     if (!subscriptionRef.current) {
-      console.error('[handleClaimSet] ERROR: No subscription available')
       setMessage('Subscription not available. Please refresh the page.')
       return
     }
     
-    // Check if perform method exists
     if (typeof subscriptionRef.current.perform !== 'function') {
-      console.error('[handleClaimSet] ERROR: perform is not a function')
-      console.error('[handleClaimSet] Subscription object:', subscriptionRef.current)
       setMessage('Subscription error. Please refresh the page.')
       return
     }
@@ -183,7 +151,6 @@ const App: React.FC = () => {
     
     // Set timeout to reset claiming state if no response
     timeoutRef.current = setTimeout(() => {
-      console.error('[handleClaimSet] TIMEOUT: No response received after 5 seconds')
       setMessage('Request timed out. Please try again.')
       setClaiming(false)
       setSelectedCards([])
@@ -191,18 +158,8 @@ const App: React.FC = () => {
     }, 5000)
     
     try {
-      console.log('[handleClaimSet] Performing claim_set action:', { card_ids: selectedCards })
-      console.log('[handleClaimSet] Subscription details:', {
-        identifier: subscriptionRef.current.identifier,
-        connection: subscriptionRef.current.connection,
-        hasPerform: typeof subscriptionRef.current.perform === 'function'
-      })
-      
-      // Use ActionCable perform to invoke channel method `claim_set`
-      const result = subscriptionRef.current.perform('claim_set', { card_ids: selectedCards })
-      console.log('[handleClaimSet] Perform dispatched successfully, result:', result)
+      subscriptionRef.current.perform('claim_set', { card_ids: ids })
     } catch (error) {
-      console.error('[handleClaimSet] ERROR sending message:', error)
       setMessage('Failed to send claim. Please try again.')
       setClaiming(false)
       if (timeoutRef.current) {
@@ -215,8 +172,6 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl font-bold text-center mb-8">Set Game</h1>
-        
         {message && (
           <Toast
             message={message}
@@ -233,18 +188,6 @@ const App: React.FC = () => {
               onCardClick={handleCardClick}
               claiming={claiming}
             />
-            
-            {selectedCards.length === 3 && (
-              <div className="mt-4 text-center">
-                <button
-                  onClick={handleClaimSet}
-                  disabled={claiming}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {claiming ? 'Claiming...' : 'Claim Set'}
-                </button>
-              </div>
-            )}
           </div>
           
           <div className="lg:col-span-1">

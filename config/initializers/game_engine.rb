@@ -5,4 +5,5 @@
 require_relative '../../app/services/rules'
 require_relative '../../app/services/game_engine'
 GAME_ENGINE = GameEngine.new
+GAME_ENGINE.broadcaster = ->(state) { ActionCable.server.broadcast('game', state) }
 
