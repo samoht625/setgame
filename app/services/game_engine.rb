@@ -21,6 +21,8 @@ class GameEngine
     @status = 'playing'
     @mutex = Mutex.new
     @broadcaster = nil
+    @countdown = 0
+    @placements = []
     start_new_round
     
     # Start presence sweeper thread after all initialization is complete
@@ -35,6 +37,9 @@ class GameEngine
   # Start a new round: shuffle deck, deal initial board
   def start_new_round
     @mutex.synchronize do
+      # Reset scores for a fresh game as requested
+      @scores = {}
+
       @deck = (1..81).to_a.shuffle
       @board = []
       deal_cards(12)
@@ -50,6 +55,8 @@ class GameEngine
       end
       
       @status = 'playing'
+      @countdown = 0
+      @placements = []
     end
   end
   
@@ -127,11 +134,28 @@ class GameEngine
       # Check if round is over (deck empty and no sets on board)
       if @deck.empty? && !Rules.set_exists?(@board)
         @status = 'round_over'
-        # Schedule new round after 5 seconds
+        # Compute placements (top 3 if available)
+        @placements = compute_top_placements(3)
+        # Begin a 10-second countdown and broadcast each second
+        @countdown = 10
+        @broadcaster&.call(current_state)
+
         Thread.new do
-          sleep 5
-          start_new_round
-          @broadcaster&.call(current_state)
+          loop do
+            sleep 1
+            should_start = false
+            @mutex.synchronize do
+              @countdown -= 1 if @countdown > 0
+              should_start = @countdown <= 0
+              @broadcaster&.call(current_state)
+            end
+            break if should_start
+          end
+
+          @mutex.synchronize do
+            start_new_round
+            @broadcaster&.call(current_state)
+          end
         end
       end
       
@@ -151,7 +175,9 @@ class GameEngine
       scores: @scores.dup,
       names: @names.dup,
       status: @status,
-      online_player_ids: @online_player_ids.to_a
+      online_player_ids: @online_player_ids.to_a,
+      countdown: @countdown,
+      placements: @placements
     }
   end
   
@@ -287,6 +313,25 @@ class GameEngine
     while @board.length < 18 && !Rules.set_exists?(@board) && !@deck.empty?
       deal_cards(3)
     end
+  end
+
+  # Return array of up to `limit` placement hashes sorted by score desc
+  # Each element: { player_id:, name:, score:, place: }
+  def compute_top_placements(limit)
+    # Sort by score desc, then by name for deterministic order
+    sorted = @scores.to_a.sort_by { |(pid, score)| [-score, (@names[pid] || '')] }
+    placements = []
+    place = 1
+    sorted.first(limit).each do |(pid, score)|
+      placements << {
+        player_id: pid,
+        name: @names[pid] || pid,
+        score: score,
+        place: place
+      }
+      place += 1
+    end
+    placements
   end
 end
 

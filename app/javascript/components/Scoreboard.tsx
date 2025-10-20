@@ -7,10 +7,12 @@ interface ScoreboardProps {
   deckCount: number
   status: string
   onlinePlayerIds: string[]
+  countdown?: number
+  placements?: { player_id: string; name: string; score: number; place: number }[]
   onUpdateName?: (name: string) => void
 }
 
-const Scoreboard: React.FC<ScoreboardProps> = ({ scores, names, playerId, deckCount, status, onlinePlayerIds, onUpdateName }) => {
+const Scoreboard: React.FC<ScoreboardProps> = ({ scores, names, playerId, deckCount, status, onlinePlayerIds, countdown = 0, placements = [], onUpdateName }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [tempName, setTempName] = useState('')
   const inputRef = useRef<HTMLInputElement | null>(null)
@@ -45,7 +47,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ scores, names, playerId, deckCo
   if (sortedPlayers.length === 0) return null
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg">
+    <div className="bg-white p-4 md:p-6 rounded-lg shadow-lg">
       
       <div className="space-y-2 mb-6">
         {sortedPlayers.map(({ pid, score }, index) => {
@@ -113,11 +115,32 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ scores, names, playerId, deckCo
           <span className="font-semibold">{deckCount} cards left</span>
           <div className="flex items-center gap-2">
             <span className={`inline-block w-2 h-2 rounded-full ${status === 'playing' ? 'bg-green-500' : 'bg-yellow-500'}`} />
-            <span className={`font-semibold ${status === 'playing' ? 'text-green-700' : 'text-yellow-700'}`}>
-              {status === 'playing' ? 'Playing' : 'Round over'}
-            </span>
+            {status === 'playing' ? (
+              <span className="font-semibold text-green-700">Playing</span>
+            ) : (
+              <span className="font-semibold text-yellow-700">Round over</span>
+            )}
           </div>
         </div>
+        {status !== 'playing' && (
+          <div className="mt-3 space-y-2">
+            {placements.length > 0 && (
+              <div className="text-sm">
+                <div className="font-semibold mb-1">Results</div>
+                <ol className="list-decimal ml-5 space-y-0.5">
+                  {placements.map(p => (
+                    <li key={p.player_id}>
+                      <span className="font-medium">{p.name}</span> — {p.score}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+            <div className="text-sm font-semibold">
+              Starting new game in {Math.max(0, countdown)}...
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

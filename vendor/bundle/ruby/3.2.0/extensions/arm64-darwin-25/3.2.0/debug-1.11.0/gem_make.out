@@ -1,0 +1,20 @@
+current directory: /Users/tido/code/setgame/vendor/bundle/ruby/3.2.0/gems/debug-1.11.0/ext/debug
+/Users/tido/.rbenv/versions/3.2.2/bin/ruby extconf.rb
+creating Makefile
+
+current directory: /Users/tido/code/setgame/vendor/bundle/ruby/3.2.0/gems/debug-1.11.0/ext/debug
+make DESTDIR\= sitearchdir\=./.gem.20251019-60236-zv1ofb sitelibdir\=./.gem.20251019-60236-zv1ofb clean
+
+current directory: /Users/tido/code/setgame/vendor/bundle/ruby/3.2.0/gems/debug-1.11.0/ext/debug
+make DESTDIR\= sitearchdir\=./.gem.20251019-60236-zv1ofb sitelibdir\=./.gem.20251019-60236-zv1ofb
+compiling debug.c
+compiling iseq_collector.c
+linking shared-object debug/debug.bundle
+ld: warning: ignoring duplicate libraries: '-lruby.3.2'
+
+current directory: /Users/tido/code/setgame/vendor/bundle/ruby/3.2.0/gems/debug-1.11.0/ext/debug
+make DESTDIR\= sitearchdir\=./.gem.20251019-60236-zv1ofb sitelibdir\=./.gem.20251019-60236-zv1ofb install
+/opt/homebrew/bin/ginstall -c -m 0755 debug.bundle ./.gem.20251019-60236-zv1ofb/debug
+
+current directory: /Users/tido/code/setgame/vendor/bundle/ruby/3.2.0/gems/debug-1.11.0/ext/debug
+make DESTDIR\= sitearchdir\=./.gem.20251019-60236-zv1ofb sitelibdir\=./.gem.20251019-60236-zv1ofb clean
