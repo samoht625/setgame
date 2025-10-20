@@ -2,7 +2,7 @@ services:
   - type: web
     name: setgame
     env: ruby
-    buildCommand: yarn build && yarn build:css && bin/rails assets:precompile
+    buildCommand: yarn install --frozen-lockfile && yarn build && yarn build:css && bin/rails assets:precompile
     startCommand: bundle exec puma -C config/puma.rb
     envVars:
       - key: YARN_PRODUCTION
