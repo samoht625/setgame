@@ -55,14 +55,9 @@ const Board: React.FC<BoardProps> = ({ cards, selectedCards, onCardClick, claimi
     }
   }
 
-  // Calculate grid columns sized tightly to card width so layout stays compact
-  const getGridCols = () => {
-    const count = cards.length
-    if (count <= 12) return 'grid-cols-[repeat(3,max-content)]' // 3 tight columns
-    if (count <= 15) return 'grid-cols-[repeat(3,max-content)] md:grid-cols-[repeat(5,max-content)]'
-    if (count <= 18) return 'grid-cols-[repeat(3,max-content)] md:grid-cols-[repeat(6,max-content)] lg:grid-cols-[repeat(9,max-content)]'
-    return 'grid-cols-[repeat(3,max-content)]'
-  }
+  // Always keep 3 columns; additional cards add rows (15 → 5 rows, 18 → 6 rows)
+  // Use max-content tracks so columns size to card width rather than stretching
+  const getGridCols = () => 'grid-cols-[repeat(3,max-content)]'
 
   // Reduce padding and gaps when there are more cards; keep horizontal padding tighter
   const getPaddingAndGap = () => {
