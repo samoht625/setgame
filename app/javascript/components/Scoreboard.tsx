@@ -24,6 +24,30 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ scores, names, playerId, deckCo
     }
   }, [isEditing])
 
+  // On mount, if we have a stored name for this player and it's not already set server-side, send it up once
+  useEffect(() => {
+    try {
+      // Prefer per-playerId key; migrate from legacy generic key if present
+      const perIdKey = `setgame_player_name:${playerId}`
+      let stored = localStorage.getItem(perIdKey) || ''
+      if (!stored) {
+        const legacy = localStorage.getItem('setgame_player_name') || ''
+        if (legacy) {
+          stored = legacy
+          try { localStorage.setItem(perIdKey, legacy) } catch (_) {}
+        }
+      }
+      const current = names[playerId] || ''
+      if (stored && !current && onUpdateName) {
+        onUpdateName(stored)
+      }
+    } catch (_) {
+      // ignore storage failures
+    }
+    // Only run when playerId changes or names updates for this id
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playerId, names[playerId]])
+
   const startEditing = () => {
     setTempName(names[playerId] || '')
     setIsEditing(true)
