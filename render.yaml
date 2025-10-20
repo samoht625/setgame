@@ -5,6 +5,8 @@ services:
     buildCommand: yarn build && yarn build:css && bin/rails assets:precompile
     startCommand: bundle exec puma -C config/puma.rb
     envVars:
+      - key: YARN_PRODUCTION
+        value: false
       - key: RAILS_ENV
         value: production
       - key: RAILS_LOG_TO_STDOUT
