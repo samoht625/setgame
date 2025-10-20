@@ -6,10 +6,11 @@ interface ScoreboardProps {
   playerId: string
   deckCount: number
   status: string
+  onlinePlayerIds: string[]
   onUpdateName?: (name: string) => void
 }
 
-const Scoreboard: React.FC<ScoreboardProps> = ({ scores, names, playerId, deckCount, status, onUpdateName }) => {
+const Scoreboard: React.FC<ScoreboardProps> = ({ scores, names, playerId, deckCount, status, onlinePlayerIds, onUpdateName }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [tempName, setTempName] = useState('')
   const inputRef = useRef<HTMLInputElement | null>(null)
@@ -35,11 +36,8 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ scores, names, playerId, deckCo
   const cancel = () => {
     setIsEditing(false)
   }
-  // Get all unique player IDs from both scores and names
-  const allPlayerIds = new Set([...Object.keys(scores), ...Object.keys(names)])
-  
-  // Sort players by score (0 if no score exists)
-  const sortedPlayers = Array.from(allPlayerIds)
+  // Filter to only online players and sort by score (0 if no score exists)
+  const sortedPlayers = onlinePlayerIds
     .map(pid => ({ pid, score: scores[pid] || 0 }))
     .sort((a, b) => b.score - a.score)
   
