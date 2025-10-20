@@ -152,8 +152,10 @@ class GameEngine
             break if should_start
           end
 
+          # Call start_new_round outside of a held mutex to avoid deadlock
+          # since start_new_round acquires @mutex internally.
+          start_new_round
           @mutex.synchronize do
-            start_new_round
             @broadcaster&.call(current_state)
           end
         end
