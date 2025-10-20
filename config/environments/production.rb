@@ -64,8 +64,7 @@ Rails.application.configure do
   
   # ActionCable configuration
   config.action_cable.allowed_request_origins = [
-    # Add your Render URL here after deployment
-    # "https://your-app.onrender.com"
+    "https://setgame-2bgj.onrender.com",
     "http://localhost:3000"  # Allow localhost for local testing
   ]
   
