@@ -1,1 +1,27 @@
 @import "tailwindcss";
+
+/* Safe-area and dynamic viewport helpers */
+:root {
+  /* iOS safe-area env variables */
+  --safe-area-top: env(safe-area-inset-top);
+  --safe-area-right: env(safe-area-inset-right);
+  --safe-area-bottom: env(safe-area-inset-bottom);
+  --safe-area-left: env(safe-area-inset-left);
+}
+
+/* Use dynamic viewport height to avoid iOS 100vh issues */
+.min-h-dvh { min-height: 100dvh; }
+
+/* Padding helpers that respect safe areas */
+.pb-safe {
+  /* Fallback for older iOS */
+  padding-bottom: calc(constant(safe-area-inset-bottom) + 1rem);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+}
+
+/* Position helper for elements near the bottom (e.g., toasts) */
+.bottom-safe-8 {
+  /* Fallback for older iOS */
+  bottom: calc(constant(safe-area-inset-bottom) + 2rem);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 2rem);
+}

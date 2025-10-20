@@ -4,6 +4,13 @@ import Board from './Board'
 import Toast from './Toast'
 import Scoreboard from './Scoreboard'
 
+interface Placement {
+  player_id: string
+  name: string
+  score: number
+  place: number
+}
+
 interface GameState {
   board: number[]
   deck_count: number
@@ -11,6 +18,8 @@ interface GameState {
   names: Record<string, string>
   status: string
   online_player_ids: string[]
+  countdown: number
+  placements: Placement[]
 }
 
 const App: React.FC = () => {
@@ -20,7 +29,9 @@ const App: React.FC = () => {
     scores: {},
     names: {},
     status: 'playing',
-    online_player_ids: []
+    online_player_ids: [],
+    countdown: 0,
+    placements: []
   })
   const [selectedCards, setSelectedCards] = useState<number[]>([])
   const [claiming, setClaiming] = useState(false)
@@ -202,7 +213,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
+    <div className="min-h-dvh bg-gray-100 px-3 pt-4 pb-safe md:p-8">
       <div className="max-w-7xl mx-auto">
         {message && (
           <Toast
@@ -212,7 +223,7 @@ const App: React.FC = () => {
           />
         )}
         
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8">
           <div className="lg:col-span-3">
             <Board
               cards={gameState.board}
@@ -230,6 +241,8 @@ const App: React.FC = () => {
               deckCount={gameState.deck_count}
               status={gameState.status}
               onlinePlayerIds={gameState.online_player_ids}
+              countdown={gameState.countdown}
+              placements={gameState.placements}
               onUpdateName={updatePlayerName}
             />
           </div>

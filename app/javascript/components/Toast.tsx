@@ -11,7 +11,7 @@ const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
   const bgColor = type === 'error' ? 'bg-[rgb(244,219,218)]' : 'bg-[#d1e7dd]'
   
   return (
-    <div className={`fixed bottom-8 left-1/2 transform -translate-x-1/2 ${bgColor} text-gray-900 px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in`}>
+    <div className={`fixed bottom-safe-8 left-1/2 transform -translate-x-1/2 ${bgColor} text-gray-900 px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in`}>
       <div className="flex items-center justify-between gap-4">
         <span>{message}</span>
         <button

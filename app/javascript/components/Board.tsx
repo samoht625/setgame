@@ -90,7 +90,7 @@ const Board: React.FC<BoardProps> = ({ cards, selectedCards, onCardClick, claimi
               }`}
             >
               <div
-                className={`rounded-xl overflow-hidden border-2 bg-white aspect-[5/3] w-40 md:w-48 lg:w-56 flex items-center justify-center transition-colors ${
+                className={`rounded-xl overflow-hidden border-2 bg-white aspect-[5/3] w-[clamp(7.5rem,28vw,11rem)] md:w-48 lg:w-56 flex items-center justify-center transition-colors ${
                   isSelected
                     ? 'border-blue-600'
                     : 'border-gray-200 hover:border-gray-300'
