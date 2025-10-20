@@ -48,6 +48,26 @@ class GameEngine
     end
   end
   
+  # Replace given card ids at their indices with new cards from the deck.
+  # If deck is exhausted, delete those positions so the board shrinks.
+  def replace_cards_in_place(card_ids)
+    positions = card_ids.map { |id| @board.index(id) }
+    return false if positions.any?(&:nil?)
+    
+    missing = []
+    positions.each do |pos|
+      if @deck.any?
+        @board[pos] = @deck.shift
+      else
+        missing << pos
+      end
+    end
+    
+    # Remove positions where deck was empty (delete from end to preserve indices)
+    missing.sort.reverse.each { |pos| @board.delete_at(pos) }
+    true
+  end
+  
   # Player claims a set of three cards
   # Returns: { success: bool, message: string, new_state: hash }
   def claim_set(player_id, card_ids)
@@ -67,11 +87,8 @@ class GameEngine
         return { success: false, message: 'Not a valid set' }
       end
       
-      # Remove cards from board
-      card_ids.each { |id| @board.delete(id) }
-      
-      # Deal replacement cards (3 cards)
-      deal_cards(3)
+      # Replace cards in place
+      replace_cards_in_place(card_ids)
       
       # If no set exists and we have cards left, add more
       while @board.length < 18 && !Rules.set_exists?(@board) && !@deck.empty?
