@@ -73,11 +73,11 @@ const Board: React.FC<BoardProps> = ({ cards, selectedCards, onCardClick, claimi
   return (
     <div className={`bg-white ${paddingY} ${paddingX} rounded-lg shadow-sm w-fit mx-auto`}>
       <div className={`grid ${getGridCols()} ${gap} justify-center`}>
-        {cards.map(cardId => {
+        {cards.map((cardId, index) => {
           const isSelected = selectedCards.includes(cardId)
           return (
             <div
-              key={cardId}
+              key={index}
               role="button"
               tabIndex={claiming ? -1 : 0}
               aria-pressed={isSelected}
@@ -86,7 +86,7 @@ const Board: React.FC<BoardProps> = ({ cards, selectedCards, onCardClick, claimi
               onPointerUp={(e) => handlePointerUp(e, cardId)}
               onKeyDown={(e) => handleKeyDown(e, cardId)}
               className={`select-none touch-manipulation flex items-center justify-center ${
-                claiming ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                claiming ? 'cursor-not-allowed' : 'cursor-pointer'
               }`}
             >
               <div
@@ -99,6 +99,9 @@ const Board: React.FC<BoardProps> = ({ cards, selectedCards, onCardClick, claimi
                 <img
                   src={`/cards/${cardId}.png`}
                   alt={`Card ${cardId}`}
+                  loading="eager"
+                  decoding="async"
+                  draggable={false}
                   className="max-w-full max-h-full object-contain pointer-events-none"
                 />
               </div>

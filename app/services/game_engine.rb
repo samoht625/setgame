@@ -100,8 +100,15 @@ class GameEngine
         return { success: false, message: 'Not a valid set' }
       end
       
-      # Replace cards in place
-      replace_cards_in_place(card_ids)
+      # If we were at 15 cards, collapse back to 12 by removing the set
+      # (It's okay to re-arrange the board in this case.)
+      pre_length = @board.length
+      if pre_length >= 15
+        remove_cards_from_board(card_ids)
+      else
+        # Otherwise, replace cards in place (preserve positions when possible)
+        replace_cards_in_place(card_ids)
+      end
       
       # If no set exists and we have cards left, add more
       while @board.length < 18 && !Rules.set_exists?(@board) && !@deck.empty?
@@ -254,6 +261,15 @@ class GameEngine
     end
     
     name
+  end
+  
+  # Remove the given card ids from the board without drawing replacements
+  # Used to collapse from 15 -> 12 after a successful set claim
+  def remove_cards_from_board(card_ids)
+    card_ids.each do |id|
+      idx = @board.index(id)
+      @board.delete_at(idx) if idx
+    end
   end
   
   # Reshuffle board + deck and redeal 12 cards
