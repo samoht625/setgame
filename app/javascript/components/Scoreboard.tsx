@@ -127,10 +127,13 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ scores, names, playerId, deckCo
             {placements.length > 0 && (
               <div className="text-sm">
                 <div className="font-semibold mb-1">Results</div>
-                <ol className="list-decimal ml-5 space-y-0.5">
+                <ol className="ml-0 space-y-0.5 list-none">
                   {placements.map(p => (
-                    <li key={p.player_id}>
-                      <span className="font-medium">{p.name}</span> — {p.score}
+                    <li key={p.player_id} className="flex items-center gap-2">
+                      <span className="w-5 text-center">
+                        {p.place === 1 ? '🥇' : p.place === 2 ? '🥈' : p.place === 3 ? '🥉' : `${p.place}.`}
+                      </span>
+                      <span className="flex-1"><span className="font-medium">{p.name}</span> — {p.score}</span>
                     </li>
                   ))}
                 </ol>
