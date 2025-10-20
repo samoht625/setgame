@@ -10,6 +10,7 @@ interface GameState {
   scores: Record<string, number>
   names: Record<string, string>
   status: string
+  online_player_ids: string[]
 }
 
 const App: React.FC = () => {
@@ -18,7 +19,8 @@ const App: React.FC = () => {
     deck_count: 0,
     scores: {},
     names: {},
-    status: 'playing'
+    status: 'playing',
+    online_player_ids: []
   })
   const [selectedCards, setSelectedCards] = useState<number[]>([])
   const [claiming, setClaiming] = useState(false)
@@ -28,6 +30,8 @@ const App: React.FC = () => {
   // name editing is inline in Scoreboard now
   const subscriptionRef = useRef<any>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const claimingRef = useRef(false)
 
   const getToastType = (msg: string): 'success' | 'error' | 'info' => {
     const lower = msg.toLowerCase()
@@ -49,10 +53,24 @@ const App: React.FC = () => {
     const sub = consumer.subscriptions.create('GameChannel', {
       connected() {
         setIsConnected(true)
+        
+        // Start heartbeat interval (5 seconds)
+        heartbeatIntervalRef.current = setInterval(() => {
+          if (subscriptionRef.current) {
+            subscriptionRef.current.perform('heartbeat', {})
+          }
+        }, 5000)
       },
       
       disconnected() {
         setIsConnected(false)
+        
+        // Clear heartbeat interval
+        if (heartbeatIntervalRef.current) {
+          clearInterval(heartbeatIntervalRef.current)
+          heartbeatIntervalRef.current = null
+        }
+        
         // Clear any pending claim timeout on disconnect
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current)
@@ -60,7 +78,7 @@ const App: React.FC = () => {
         }
       },
       
-      received(data: GameState | { error: string } | { your_id: string }) {
+      received(data: GameState | { error: string } | { your_id: string } | { success: boolean } & GameState) {
         // Any message from server means the request cycle progressed; clear timeout
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current)
@@ -76,15 +94,22 @@ const App: React.FC = () => {
           setMessage(data.error)
           setSelectedCards([])
           setClaiming(false)
+          claimingRef.current = false
           setTimeout(() => setMessage(null), 2000)
-        } else {
-          if (claiming) {
-            setMessage('Set found!')
-            setTimeout(() => setMessage(null), 2000)
-          }
+        } else if ('success' in data && data.success) {
+          // Success response to our own claim
+          setMessage('Set found!')
+          setTimeout(() => setMessage(null), 2000)
           setGameState(data)
           setSelectedCards([])
           setClaiming(false)
+          claimingRef.current = false
+        } else {
+          // Broadcast from other players' claims or other state updates
+          setGameState(data)
+          setSelectedCards([])
+          setClaiming(false)
+          claimingRef.current = false
         }
       }
     })
@@ -93,6 +118,10 @@ const App: React.FC = () => {
     subscriptionRef.current = sub
 
     return () => {
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current)
+        heartbeatIntervalRef.current = null
+      }
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
         timeoutRef.current = null
@@ -143,6 +172,7 @@ const App: React.FC = () => {
     }
     
     setClaiming(true)
+    claimingRef.current = true
     
     // Clear any existing timeout
     if (timeoutRef.current) {
@@ -153,6 +183,7 @@ const App: React.FC = () => {
     timeoutRef.current = setTimeout(() => {
       setMessage('Request timed out. Please try again.')
       setClaiming(false)
+      claimingRef.current = false
       setSelectedCards([])
       timeoutRef.current = null
     }, 5000)
@@ -162,6 +193,7 @@ const App: React.FC = () => {
     } catch (error) {
       setMessage('Failed to send claim. Please try again.')
       setClaiming(false)
+      claimingRef.current = false
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
         timeoutRef.current = null
@@ -197,6 +229,7 @@ const App: React.FC = () => {
               playerId={playerId}
               deckCount={gameState.deck_count}
               status={gameState.status}
+              onlinePlayerIds={gameState.online_player_ids}
               onUpdateName={updatePlayerName}
             />
           </div>

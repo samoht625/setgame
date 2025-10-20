@@ -40,6 +40,8 @@ class GameChannel < ApplicationCable::Channel
       Rails.logger.info "[GameChannel] Broadcasting new state to all clients"
       # Broadcast new state to all clients
       ActionCable.server.broadcast('game', result[:new_state])
+      # Send success confirmation to the claiming client
+      transmit({ success: true }.merge(result[:new_state]))
     else
       Rails.logger.info "[GameChannel] Sending error to client: #{result[:message]}"
       # Send error message back to the requesting client
@@ -61,6 +63,10 @@ class GameChannel < ApplicationCable::Channel
       Rails.logger.info "[GameChannel] Sending name update error to client: #{result[:message]}"
       transmit({ error: result[:message] })
     end
+  end
+
+  def heartbeat(_data)
+    GAME_ENGINE.heartbeat(connection.player_id)
   end
 end
 

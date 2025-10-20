@@ -22,12 +22,12 @@ module ApplicationCable
       end
       
       # Register this connection (tracks active connections)
-      GAME_ENGINE.register_connection(player_id)
+      GAME_ENGINE.register_connection(self.player_id)
     end
     
     def disconnect
       # Unregister this connection (will remove player if last connection)
-      GAME_ENGINE.unregister_connection(player_id)
+      GAME_ENGINE.unregister_connection(self.player_id)
     end
   end
 end

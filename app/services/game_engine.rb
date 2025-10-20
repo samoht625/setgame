@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'set'
+
 # Game engine manages the state of the Set game
 class GameEngine
   include Rules
@@ -13,10 +15,21 @@ class GameEngine
     @scores = {} # player_id => score
     @names = {}  # player_id => display name
     @active_connections = Hash.new(0) # player_id => connection count
+    @last_seen = {} # player_id => Time
+    @presence_timeout_seconds = 15
+    @online_player_ids = Set.new
     @status = 'playing'
     @mutex = Mutex.new
     @broadcaster = nil
     start_new_round
+    
+    # Start presence sweeper thread after all initialization is complete
+    @presence_sweeper_thread = Thread.new do
+      loop do
+        sleep 5
+        @mutex.synchronize { update_online_set! }
+      end
+    end
   end
   
   # Start a new round: shuffle deck, deal initial board
@@ -130,7 +143,8 @@ class GameEngine
       deck_count: @deck.length,
       scores: @scores.dup,
       names: @names.dup,
-      status: @status
+      status: @status,
+      online_player_ids: @online_player_ids.to_a
     }
   end
   
@@ -145,14 +159,15 @@ class GameEngine
   def register_connection(player_id)
     @mutex.synchronize do
       @active_connections[player_id] += 1
+      @last_seen[player_id] = Time.now
       
       # Ensure default name exists if this is the first connection
       if @active_connections[player_id] == 1 && !@names[player_id]
         @names[player_id] = default_name_for(player_id)
       end
       
-      # Broadcast updated state to all clients
-      @broadcaster&.call(current_state)
+      # Update online set and broadcast if changed
+      update_online_set!
     end
   end
   
@@ -166,13 +181,14 @@ class GameEngine
       # BUT keep their score and name so they persist across reconnections
       if @active_connections[player_id] <= 0
         @active_connections.delete(player_id)
+        @last_seen.delete(player_id)
         # Don't delete scores and names - they should persist across reconnections
         # @scores.delete(player_id)
         # @names.delete(player_id)
       end
       
-      # Broadcast updated state to all clients
-      @broadcaster&.call(current_state)
+      # Update online set and broadcast if changed
+      update_online_set!
     end
   end
 
@@ -193,6 +209,28 @@ class GameEngine
       @names[player_id] = name
       { success: true, message: 'Name updated', new_state: current_state }
     end
+  end
+
+  # Mark heartbeat and update online set
+  # Returns true if presence set changed
+  def heartbeat(player_id)
+    @mutex.synchronize do
+      @last_seen[player_id] = Time.now
+      update_online_set!
+    end
+  end
+
+  # Recompute online set (active connection AND recent heartbeat)
+  # Returns true if changed
+  def update_online_set!
+    cutoff = Time.now - @presence_timeout_seconds
+    next_online = @active_connections.keys.select { |pid|
+      @active_connections[pid] > 0 && (@last_seen[pid] && @last_seen[pid] >= cutoff)
+    }
+    changed = next_online.sort != @online_player_ids.to_a.sort
+    @online_player_ids = Set.new(next_online)
+    @broadcaster&.call(current_state) if changed
+    changed
   end
 
   private
