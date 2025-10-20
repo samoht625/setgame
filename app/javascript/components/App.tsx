@@ -160,6 +160,13 @@ const App: React.FC = () => {
 
   const updatePlayerName = (name: string) => {
     if (!subscriptionRef.current) return
+    // Persist locally so names survive reloads/restarts/deploys from the client side
+    try {
+      const key = playerId ? `setgame_player_name:${playerId}` : 'setgame_player_name'
+      localStorage.setItem(key, name)
+    } catch (_) {
+      // ignore storage failures
+    }
     subscriptionRef.current.perform('update_name', { name })
   }
 
