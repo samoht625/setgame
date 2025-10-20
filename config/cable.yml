@@ -1,0 +1,13 @@
+development:
+  adapter: async
+
+test:
+  adapter: test
+
+production:
+  adapter: async
+  # For multi-instance deployments, use Redis:
+  # adapter: redis
+  # url: <%= ENV.fetch("REDIS_URL") { "redis://localhost:6379/1" } %>
+  # channel_prefix: setgame_production
+
