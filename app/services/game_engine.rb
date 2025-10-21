@@ -23,6 +23,7 @@ class GameEngine
     @broadcaster = nil
     @countdown = 0
     @placements = []
+    @recent_claims = [] # { player_id:, name:, cards: [] }
     start_new_round
     
     # Start presence sweeper thread after all initialization is complete
@@ -57,6 +58,7 @@ class GameEngine
       @status = 'playing'
       @countdown = 0
       @placements = []
+      @recent_claims = []
     end
   end
   
@@ -131,6 +133,16 @@ class GameEngine
       @scores[player_id] ||= 0
       @scores[player_id] += 1
       
+      # Add to recent claims (newest first)
+      Rails.logger.info "[GameEngine] Adding recent claim: player=#{player_id}, cards=#{card_ids.inspect}"
+      @recent_claims.unshift({
+        player_id: player_id,
+        name: @names[player_id] || default_name_for(player_id),
+        cards: card_ids
+      })
+      @recent_claims = @recent_claims.first(8)
+      Rails.logger.info "[GameEngine] Recent claims count: #{@recent_claims.length}"
+      
       # Check if round is over (deck empty and no sets on board)
       if @deck.empty? && !Rules.set_exists?(@board)
         @status = 'round_over'
@@ -179,7 +191,8 @@ class GameEngine
       status: @status,
       online_player_ids: @online_player_ids.to_a,
       countdown: @countdown,
-      placements: @placements
+      placements: @placements,
+      recent_claims: @recent_claims
     }
   end
   
