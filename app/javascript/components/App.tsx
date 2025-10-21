@@ -11,6 +11,12 @@ interface Placement {
   place: number
 }
 
+interface RecentClaim {
+  player_id: string
+  name: string
+  cards: number[]
+}
+
 interface GameState {
   board: number[]
   deck_count: number
@@ -20,6 +26,7 @@ interface GameState {
   online_player_ids: string[]
   countdown: number
   placements: Placement[]
+  recent_claims: RecentClaim[]
 }
 
 const App: React.FC = () => {
@@ -31,7 +38,8 @@ const App: React.FC = () => {
     status: 'playing',
     online_player_ids: [],
     countdown: 0,
-    placements: []
+    placements: [],
+    recent_claims: []
   })
   const [selectedCards, setSelectedCards] = useState<number[]>([])
   const [claiming, setClaiming] = useState(false)
@@ -251,6 +259,7 @@ const App: React.FC = () => {
               onlinePlayerIds={gameState.online_player_ids}
               countdown={gameState.countdown}
               placements={gameState.placements}
+              recentClaims={gameState.recent_claims || []}
               onUpdateName={updatePlayerName}
             />
           </div>

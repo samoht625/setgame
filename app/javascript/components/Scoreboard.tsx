@@ -1,5 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
 
+interface RecentClaim {
+  player_id: string
+  name: string
+  cards: number[]
+}
+
 interface ScoreboardProps {
   scores: Record<string, number>
   names: Record<string, string>
@@ -9,10 +15,11 @@ interface ScoreboardProps {
   onlinePlayerIds: string[]
   countdown?: number
   placements?: { player_id: string; name: string; score: number; place: number }[]
+  recentClaims?: RecentClaim[]
   onUpdateName?: (name: string) => void
 }
 
-const Scoreboard: React.FC<ScoreboardProps> = ({ scores, names, playerId, deckCount, status, onlinePlayerIds, countdown = 0, placements = [], onUpdateName }) => {
+const Scoreboard: React.FC<ScoreboardProps> = ({ scores, names, playerId, deckCount, status, onlinePlayerIds, countdown = 0, placements = [], recentClaims = [], onUpdateName }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [tempName, setTempName] = useState('')
   const inputRef = useRef<HTMLInputElement | null>(null)
@@ -169,6 +176,34 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ scores, names, playerId, deckCo
           </div>
         )}
       </div>
+      
+      {recentClaims.length > 0 && (
+        <div className="border-t pt-4 mt-4">
+          <div className="text-sm font-semibold mb-2">Last sets found</div>
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {recentClaims.map((claim, index) => (
+              <div key={index} className="text-xs">
+                <div className="font-medium text-gray-800 mb-1">{claim.name}</div>
+                <div className="flex gap-1">
+                  {claim.cards.map((cardId) => (
+                    <div
+                      key={cardId}
+                      className="rounded overflow-hidden border border-gray-200 bg-white aspect-[4/3] h-10 md:h-12 flex items-center justify-center"
+                    >
+                      <img
+                        src={`/cards/${cardId}.png`}
+                        alt={`Card ${cardId}`}
+                        className="max-w-full max-h-full object-contain"
+                        draggable={false}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
