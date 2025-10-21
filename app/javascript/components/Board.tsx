@@ -5,9 +5,10 @@ interface BoardProps {
   selectedCards: number[]
   onCardClick: (cardId: number) => void
   claiming: boolean
+  gameOver?: boolean
 }
 
-const Board: React.FC<BoardProps> = ({ cards, selectedCards, onCardClick, claiming }) => {
+const Board: React.FC<BoardProps> = ({ cards, selectedCards, onCardClick, claiming, gameOver = false }) => {
   const [pointerState, setPointerState] = useState<{ cardId: number | null; startX: number; startY: number; maxDelta: number }>({
     cardId: null,
     startX: 0,
@@ -17,7 +18,7 @@ const Board: React.FC<BoardProps> = ({ cards, selectedCards, onCardClick, claimi
   const pointerThreshold = 8 // pixels of movement allowed
   
   const handlePointerDown = (e: React.PointerEvent, cardId: number) => {
-    if (claiming) return
+    if (claiming || gameOver) return
     e.preventDefault()
     setPointerState({
       cardId,
@@ -48,7 +49,7 @@ const Board: React.FC<BoardProps> = ({ cards, selectedCards, onCardClick, claimi
   }
 
   const handleKeyDown = (e: React.KeyboardEvent, cardId: number) => {
-    if (claiming) return
+    if (claiming || gameOver) return
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
       onCardClick(cardId)
@@ -72,22 +73,31 @@ const Board: React.FC<BoardProps> = ({ cards, selectedCards, onCardClick, claimi
   const { paddingX, paddingY, gap } = getPaddingAndGap()
 
   return (
-    <div className={`bg-white ${paddingY} ${paddingX} rounded-lg shadow-sm w-full max-w-[min(100%,80rem)] mx-auto overflow-x-hidden`}>
-      <div className={`grid ${getGridCols()} ${gap} justify-center`}>
+    <div className={`relative bg-white ${paddingY} ${paddingX} rounded-lg shadow-sm w-full max-w-[min(100%,80rem)] mx-auto overflow-x-hidden`}>
+      {/* Game over overlay */}
+      {gameOver && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+          <div className="px-4 py-2 rounded-full bg-white/90 border border-gray-200 shadow text-gray-900 font-semibold">
+            Round over
+          </div>
+        </div>
+      )}
+
+      <div className={`grid ${getGridCols()} ${gap} justify-center ${gameOver ? 'opacity-50 saturate-50' : ''}`}>
         {cards.map((cardId, index) => {
           const isSelected = selectedCards.includes(cardId)
           return (
             <div
               key={index}
               role="button"
-              tabIndex={claiming ? -1 : 0}
+              tabIndex={claiming || gameOver ? -1 : 0}
               aria-pressed={isSelected}
               onPointerDown={(e) => handlePointerDown(e, cardId)}
               onPointerMove={handlePointerMove}
               onPointerUp={(e) => handlePointerUp(e, cardId)}
               onKeyDown={(e) => handleKeyDown(e, cardId)}
               className={`select-none touch-manipulation flex items-center justify-center ${
-                claiming ? 'cursor-not-allowed' : 'cursor-pointer'
+                claiming || gameOver ? 'cursor-not-allowed' : 'cursor-pointer'
               }`}
             >
               <div
