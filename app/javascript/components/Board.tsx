@@ -62,8 +62,9 @@ const Board: React.FC<BoardProps> = ({ cards, selectedCards, onCardClick, claimi
   // Reduce padding and gaps when there are more cards; keep horizontal padding tighter
   const getPaddingAndGap = () => {
     const count = cards.length
-    if (count <= 12) return { paddingX: 'px-4', paddingY: 'py-6', gap: 'gap-4' }
-    if (count <= 15) return { paddingX: 'px-3', paddingY: 'py-4', gap: 'gap-3' }
+    // Tighter defaults on mobile so the grid never crowds the right edge
+    if (count <= 12) return { paddingX: 'px-3 md:px-4', paddingY: 'py-5 md:py-6', gap: 'gap-3 md:gap-4' }
+    if (count <= 15) return { paddingX: 'px-2 md:px-3', paddingY: 'py-4', gap: 'gap-2 md:gap-3' }
     if (count <= 18) return { paddingX: 'px-2', paddingY: 'py-3', gap: 'gap-2' }
     return { paddingX: 'px-4', paddingY: 'py-6', gap: 'gap-4' }
   }
@@ -71,7 +72,7 @@ const Board: React.FC<BoardProps> = ({ cards, selectedCards, onCardClick, claimi
   const { paddingX, paddingY, gap } = getPaddingAndGap()
 
   return (
-    <div className={`bg-white ${paddingY} ${paddingX} rounded-lg shadow-sm w-fit mx-auto`}>
+    <div className={`bg-white ${paddingY} ${paddingX} rounded-lg shadow-sm w-full max-w-[min(100%,80rem)] mx-auto overflow-x-hidden`}>
       <div className={`grid ${getGridCols()} ${gap} justify-center`}>
         {cards.map((cardId, index) => {
           const isSelected = selectedCards.includes(cardId)
@@ -90,7 +91,7 @@ const Board: React.FC<BoardProps> = ({ cards, selectedCards, onCardClick, claimi
               }`}
             >
               <div
-                className={`rounded-xl overflow-hidden border-2 bg-white aspect-[5/3] w-[clamp(7.5rem,28vw,11rem)] md:w-48 lg:w-56 flex items-center justify-center transition-colors ${
+                className={`rounded-xl overflow-hidden border-2 bg-white aspect-[5/3] w-[clamp(7.25rem,26vw,11rem)] md:w-48 lg:w-56 flex items-center justify-center transition-colors ${
                   isSelected
                     ? 'border-blue-600'
                     : 'border-gray-200 hover:border-gray-300'
