@@ -237,6 +237,7 @@ const App: React.FC = () => {
               selectedCards={selectedCards}
               onCardClick={handleCardClick}
               claiming={claiming}
+              gameOver={gameState.status !== 'playing'}
             />
           </div>
           
