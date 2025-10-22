@@ -1,8 +1,5 @@
 *node_modules*
 
-# Bootsnap cache
-tmp/cache/bootsnap/
-
 # Build artifacts
 app/assets/builds/*
 !app/assets/builds/.keep
@@ -30,3 +27,7 @@ tmp/*
 /spec/examples.txt
 /test/tmp/
 /test/version_tmp/
+
+# Bootsnap cache
+tmp/cache/bootsnap/
+
