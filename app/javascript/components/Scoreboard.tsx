@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react'
 
 interface RecentClaim {
   player_id: string
-  name: string
   cards: number[]
 }
 
@@ -183,7 +182,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ scores, names, playerId, deckCo
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {recentClaims.map((claim, index) => (
               <div key={index} className="text-xs">
-                <div className="font-medium text-gray-800 mb-1">{claim.name}</div>
+                <div className="font-medium text-gray-800 mb-1">{names[claim.player_id] || 'Player'}</div>
                 <div className="flex gap-1">
                   {claim.cards.map((cardId) => (
                     <div
