@@ -72,6 +72,13 @@ const App: React.FC = () => {
       connected() {
         setIsConnected(true)
         
+        // Immediately send a heartbeat to establish presence as a real JS client
+        try {
+          ;(this as any).perform('heartbeat', {})
+        } catch (_) {
+          // ignore if perform isn't available yet
+        }
+        
         // Start heartbeat interval (5 seconds)
         heartbeatIntervalRef.current = setInterval(() => {
           if (subscriptionRef.current) {
