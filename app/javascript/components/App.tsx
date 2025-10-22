@@ -3,6 +3,7 @@ import { consumer } from '../cable'
 import Board from './Board'
 import Toast from './Toast'
 import Scoreboard from './Scoreboard'
+import { useHeartbeat } from '../hooks/useHeartbeat'
 
 interface Placement {
   player_id: string
@@ -48,7 +49,6 @@ const App: React.FC = () => {
   // name editing is inline in Scoreboard now
   const subscriptionRef = useRef<any>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const claimingRef = useRef(false)
 
   const getToastType = (msg: string): 'success' | 'error' | 'info' => {
@@ -71,30 +71,12 @@ const App: React.FC = () => {
     const sub = consumer.subscriptions.create('GameChannel', {
       connected() {
         setIsConnected(true)
-        
-        // Immediately send a heartbeat to establish presence as a real JS client
-        try {
-          ;(this as any).perform('heartbeat', {})
-        } catch (_) {
-          // ignore if perform isn't available yet
-        }
-        
-        // Start heartbeat interval (5 seconds)
-        heartbeatIntervalRef.current = setInterval(() => {
-          if (subscriptionRef.current) {
-            subscriptionRef.current.perform('heartbeat', {})
-          }
-        }, 5000)
+        // Heartbeat will be managed by useHeartbeat
       },
       
       disconnected() {
         setIsConnected(false)
-        
-        // Clear heartbeat interval
-        if (heartbeatIntervalRef.current) {
-          clearInterval(heartbeatIntervalRef.current)
-          heartbeatIntervalRef.current = null
-        }
+        // Interval will be cleared by useHeartbeat cleanup
         
         // Clear any pending claim timeout on disconnect
         if (timeoutRef.current) {
@@ -143,10 +125,7 @@ const App: React.FC = () => {
     subscriptionRef.current = sub
 
     return () => {
-      if (heartbeatIntervalRef.current) {
-        clearInterval(heartbeatIntervalRef.current)
-        heartbeatIntervalRef.current = null
-      }
+      // Clear intervals/timeouts
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
         timeoutRef.current = null
@@ -154,6 +133,9 @@ const App: React.FC = () => {
       sub.unsubscribe()
     }
   }, [])
+
+  // Manage heartbeats outside of channel callbacks
+  useHeartbeat(subscriptionRef, isConnected)
 
   const handleCardClick = (cardId: number) => {
     if (claiming) return
