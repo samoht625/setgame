@@ -203,16 +203,11 @@ class GameEngine
   end
 
   # Register a connection for a player
-  # Increments connection count and ensures default name exists
+  # Increments connection count only. Does NOT mark presence or create a name.
+  # Presence (and lazy name creation) are established on heartbeat from a JS client.
   def register_connection(player_id)
     @mutex.synchronize do
       @active_connections[player_id] += 1
-      @last_seen[player_id] = Time.now
-      
-      # Ensure default name exists if this is the first connection
-      if @active_connections[player_id] == 1 && !@names[player_id]
-        @names[player_id] = default_name_for(player_id)
-      end
       
       # Update online set and broadcast if changed
       update_online_set!
@@ -260,9 +255,12 @@ class GameEngine
   end
 
   # Mark heartbeat and update online set
+  # Creates a default name lazily on first heartbeat so non-JS clients aren't registered
   # Returns true if presence set changed
   def heartbeat(player_id)
     @mutex.synchronize do
+      # Ensure default name exists only when a real client heartbeats
+      @names[player_id] ||= default_name_for(player_id)
       @last_seen[player_id] = Time.now
       update_online_set!
     end
