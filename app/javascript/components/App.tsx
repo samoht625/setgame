@@ -13,7 +13,6 @@ interface Placement {
 
 interface RecentClaim {
   player_id: string
-  name: string
   cards: number[]
 }
 

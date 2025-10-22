@@ -23,7 +23,8 @@ class GameEngine
     @broadcaster = nil
     @countdown = 0
     @placements = []
-    @recent_claims = [] # { player_id:, name:, cards: [] }
+    # Store only player_id and cards so UI always resolves latest name
+    @recent_claims = [] # { player_id:, cards: [] }
     start_new_round
     
     # Start presence sweeper thread after all initialization is complete
@@ -137,7 +138,6 @@ class GameEngine
       Rails.logger.info "[GameEngine] Adding recent claim: player=#{player_id}, cards=#{card_ids.inspect}"
       @recent_claims.unshift({
         player_id: player_id,
-        name: @names[player_id] || default_name_for(player_id),
         cards: card_ids
       })
       @recent_claims = @recent_claims.first(8)
