@@ -140,7 +140,6 @@ class GameEngine
         player_id: player_id,
         cards: card_ids
       })
-      @recent_claims = @recent_claims.first(8)
       Rails.logger.info "[GameEngine] Recent claims count: #{@recent_claims.length}"
       
       # Check if round is over (deck empty and no sets on board)

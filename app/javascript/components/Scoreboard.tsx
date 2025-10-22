@@ -179,7 +179,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ scores, names, playerId, deckCo
       {recentClaims.length > 0 && (
         <div className="border-t pt-4 mt-4">
           <div className="text-sm font-semibold mb-2">Last sets found</div>
-          <div className="space-y-2 max-h-64 overflow-y-auto">
+          <div className="space-y-2 max-h-[calc(100vh-32rem)] overflow-y-auto">
             {recentClaims.map((claim, index) => (
               <div key={index} className="text-xs">
                 <div className="font-medium text-gray-800 mb-1">{names[claim.player_id] || 'Player'}</div>
