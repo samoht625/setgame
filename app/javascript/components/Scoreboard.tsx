@@ -12,13 +12,14 @@ interface ScoreboardProps {
   deckCount: number
   status: string
   onlinePlayerIds: string[]
+  idlePlayerIds?: string[]
   countdown?: number
   placements?: { player_id: string; name: string; score: number; place: number }[]
   recentClaims?: RecentClaim[]
   onUpdateName?: (name: string) => void
 }
 
-const Scoreboard: React.FC<ScoreboardProps> = ({ scores, names, playerId, deckCount, status, onlinePlayerIds, countdown = 0, placements = [], recentClaims = [], onUpdateName }) => {
+const Scoreboard: React.FC<ScoreboardProps> = ({ scores, names, playerId, deckCount, status, onlinePlayerIds, idlePlayerIds = [], countdown = 0, placements = [], recentClaims = [], onUpdateName }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [tempName, setTempName] = useState('')
   const inputRef = useRef<HTMLInputElement | null>(null)
@@ -37,7 +38,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ scores, names, playerId, deckCo
       const perIdKey = `setgame_player_name:${playerId}`
       let stored = localStorage.getItem(perIdKey) || ''
       if (!stored) {
-        const legacy = localStorage.getItem('setgame_player_name') || ''
+        const legacy = localStorage.getItem('setgame_name') || ''
         if (legacy) {
           stored = legacy
           try { localStorage.setItem(perIdKey, legacy) } catch (_) {}
@@ -113,8 +114,16 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ scores, names, playerId, deckCo
                     className={`group inline-flex items-center gap-1.5 font-medium ${canEdit ? '' : ''}`}
                     title={canEdit ? 'Click to edit your name' : undefined}
                   >
-                    <span>
-                      {names[pid] || (pid === playerId ? 'You' : `Player ${index + 1}`)}
+                    <span className="inline-flex items-center gap-1.5">
+                      <span>
+                        {names[pid] || (pid === playerId ? 'You' : `Player ${index + 1}`)}
+                      </span>
+                      {idlePlayerIds.includes(pid) && (
+                        <span className="inline-flex items-center text-xs text-gray-500">
+                          <span className="w-2 h-2 rounded-full bg-gray-300 mr-1" />
+                          idle
+                        </span>
+                      )}
                     </span>
                     {canEdit && (
                       <svg
