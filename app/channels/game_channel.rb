@@ -74,6 +74,11 @@ class GameChannel < ApplicationCable::Channel
 
   def heartbeat(_data)
     GAME_ENGINE.heartbeat(connection.player_id)
+    # Emit an inline heartbeat log for diagnostics (no secrets)
+    begin
+      Rails.logger.info "[GameChannel] Heartbeat from #{connection.player_id}"
+    rescue => _
+    end
   end
 end
 
