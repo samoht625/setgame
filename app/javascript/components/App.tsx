@@ -24,6 +24,7 @@ interface GameState {
   names: Record<string, string>
   status: string
   online_player_ids: string[]
+  idle_player_ids: string[]
   countdown: number
   placements: Placement[]
   recent_claims: RecentClaim[]
@@ -37,6 +38,7 @@ const App: React.FC = () => {
     names: {},
     status: 'playing',
     online_player_ids: [],
+    idle_player_ids: [],
     countdown: 0,
     placements: [],
     recent_claims: []
@@ -245,6 +247,7 @@ const App: React.FC = () => {
               deckCount={gameState.deck_count}
               status={gameState.status}
               onlinePlayerIds={gameState.online_player_ids}
+              idlePlayerIds={gameState.idle_player_ids}
               countdown={gameState.countdown}
               placements={gameState.placements}
               recentClaims={gameState.recent_claims || []}
