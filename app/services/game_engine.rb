@@ -17,7 +17,9 @@ class GameEngine
     @active_connections = Hash.new(0) # player_id => connection count
     @last_seen = {} # player_id => Time
     @presence_timeout_seconds = 15
+    @idle_timeout_seconds = 60
     @online_player_ids = Set.new
+    @idle_player_ids = Set.new
     @status = 'playing'
     @mutex = Mutex.new
     @broadcaster = nil
@@ -95,6 +97,7 @@ class GameEngine
   # Returns: { success: bool, message: string, new_state: hash }
   def claim_set(player_id, card_ids)
     @mutex.synchronize do
+      @last_seen[player_id] = Time.now
       # Validate input
       if card_ids.length != 3
         return { success: false, message: 'Must select exactly 3 cards' }
@@ -189,6 +192,7 @@ class GameEngine
       names: @names.dup,
       status: @status,
       online_player_ids: @online_player_ids.to_a,
+      idle_player_ids: @idle_player_ids.to_a,
       countdown: @countdown,
       placements: @placements,
       recent_claims: @recent_claims
@@ -202,13 +206,24 @@ class GameEngine
   end
 
   # Register a connection for a player
-  # Increments connection count only. Does NOT mark presence or create a name.
-  # Presence (and lazy name creation) are established on heartbeat from a JS client.
+  # Increments connection count and establishes presence based on open connections.
+  # Also ensures a default name exists on first connection so clients are registered
+  # even when heartbeats are throttled or not sent (e.g., on mobile background tabs).
   def register_connection(player_id)
     @mutex.synchronize do
       @active_connections[player_id] += 1
       connection_count = @active_connections[player_id]
       
+      # Ensure default name exists on first connection (heartbeat optional)
+      unless @names[player_id]
+        @names[player_id] = default_name_for(player_id)
+        Rails.logger.info "[GameEngine] Created name for player #{player_id}: #{@names[player_id]}"
+        if @names[player_id].include?('Bold Raven')
+          Rails.logger.warn "[GameEngine] *** PHANTOM PLAYER ALERT: Bold Raven detected! player_id=#{player_id} ***"
+        end
+      end
+
+      @last_seen[player_id] = Time.now
       Rails.logger.info "[GameEngine] Registered connection for player_id=#{player_id}, total connections=#{connection_count}"
       
       # Update online set and broadcast if changed
@@ -246,6 +261,7 @@ class GameEngine
   # Returns: { success: bool, message: string, new_state: hash }
   def update_name(player_id, new_name)
     @mutex.synchronize do
+      @last_seen[player_id] = Time.now
       name = new_name.to_s.strip
       if name.length < 1 || name.length > 20
         return { success: false, message: 'Name must be between 1 and 20 characters' }
@@ -262,36 +278,34 @@ class GameEngine
   end
 
   # Mark heartbeat and update online set
-  # Creates a default name lazily on first heartbeat so non-JS clients aren't registered
-  # Returns true if presence set changed
+  # Heartbeats are optional; presence is determined by open connections.
+  # Kept for compatibility and potential future use.
   def heartbeat(player_id)
     @mutex.synchronize do
-      # Ensure default name exists only when a real client heartbeats
-      old_name = @names[player_id]
-      @names[player_id] ||= default_name_for(player_id)
-      
-      # Log name creation with alert for "Bold Raven"
-      if !old_name && @names[player_id]
-        Rails.logger.info "[GameEngine] Created name for player #{player_id}: #{@names[player_id]}"
-        if @names[player_id].include?('Bold Raven')
-          Rails.logger.warn "[GameEngine] *** PHANTOM PLAYER ALERT: Bold Raven detected! player_id=#{player_id} ***"
-        end
-      end
-      
+      # Record last seen for diagnostics (not required for presence)
       @last_seen[player_id] = Time.now
       update_online_set!
     end
   end
 
-  # Recompute online set (active connection AND recent heartbeat)
+  # Recompute online set (based solely on active connections)
   # Returns true if changed
   def update_online_set!
-    cutoff = Time.now - @presence_timeout_seconds
-    next_online = @active_connections.keys.select { |pid|
-      @active_connections[pid] > 0 && (@last_seen[pid] && @last_seen[pid] >= cutoff)
-    }
-    changed = next_online.sort != @online_player_ids.to_a.sort
+    # Presence is now determined entirely by whether the player has one or more
+    # active WebSocket connections. Heartbeats are not required.
+    next_online = @active_connections.keys.select { |pid| @active_connections[pid] > 0 }
+    changed_online = next_online.sort != @online_player_ids.to_a.sort
     @online_player_ids = Set.new(next_online)
+
+    idle_cutoff = Time.now - @idle_timeout_seconds
+    next_idle = next_online.select { |pid|
+      last = @last_seen[pid]
+      last.nil? || last < idle_cutoff
+    }
+    changed_idle = next_idle.sort != @idle_player_ids.to_a.sort
+    @idle_player_ids = Set.new(next_idle)
+
+    changed = changed_online || changed_idle
     @broadcaster&.call(current_state) if changed
     changed
   end
