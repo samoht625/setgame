@@ -33,7 +33,24 @@ module ApplicationCable
         true_client_ip: headers['HTTP_TRUE_CLIENT_IP'],
         x_forwarded_for: headers['HTTP_X_FORWARDED_FOR'],
         threat_score: headers['HTTP_X_RENDER_THREAT_SCORE'],
-        cf_country: headers['HTTP_CF_IPCOUNTRY']
+        cf_country: headers['HTTP_CF_IPCOUNTRY'],
+        cf_ray: headers['HTTP_CF_RAY'],
+        x_forwarded_proto: headers['HTTP_X_FORWARDED_PROTO'],
+        x_forwarded_port: headers['HTTP_X_FORWARDED_PORT'],
+        x_render_as_num: headers['HTTP_X_RENDER_AS_NUM'],
+        render_proxy_ttl: headers['HTTP_RENDER_PROXY_TTL'],
+        sec_fetch_dest: headers['HTTP_SEC_FETCH_DEST'],
+        sec_fetch_mode: headers['HTTP_SEC_FETCH_MODE'],
+        sec_fetch_site: headers['HTTP_SEC_FETCH_SITE'],
+        sec_fetch_user: headers['HTTP_SEC_FETCH_USER'],
+        sec_ch_ua: headers['HTTP_SEC_CH_UA'],
+        sec_ch_ua_mobile: headers['HTTP_SEC_CH_UA_MOBILE'],
+        sec_ch_ua_platform: headers['HTTP_SEC_CH_UA_PLATFORM'],
+        accept: headers['HTTP_ACCEPT'],
+        accept_language: headers['HTTP_ACCEPT_LANGUAGE'],
+        accept_encoding: headers['HTTP_ACCEPT_ENCODING'],
+        priority: headers['HTTP_PRIORITY'],
+        purpose: headers['HTTP_PURPOSE']
       }.compact
       
       # Try to get player_id from query params or signed cookie
