@@ -207,6 +207,9 @@ class GameEngine
   def register_connection(player_id)
     @mutex.synchronize do
       @active_connections[player_id] += 1
+      connection_count = @active_connections[player_id]
+      
+      Rails.logger.info "[GameEngine] Registered connection for player_id=#{player_id}, total connections=#{connection_count}"
       
       # Update online set and broadcast if changed
       update_online_set!
@@ -217,13 +220,18 @@ class GameEngine
   # Decrements connection count and removes player when last connection closes
   def unregister_connection(player_id)
     @mutex.synchronize do
+      old_count = @active_connections[player_id] || 0
       @active_connections[player_id] -= 1
+      new_count = @active_connections[player_id]
+      
+      Rails.logger.info "[GameEngine] Unregistered connection for player_id=#{player_id}, connections: #{old_count} -> #{new_count}"
       
       # Remove player from active connections when all connections are closed
       # BUT keep their score and name so they persist across reconnections
       if @active_connections[player_id] <= 0
         @active_connections.delete(player_id)
         @last_seen.delete(player_id)
+        Rails.logger.info "[GameEngine] Removed player_id=#{player_id} from active connections (last connection closed)"
         # Don't delete scores and names - they should persist across reconnections
         # @scores.delete(player_id)
         # @names.delete(player_id)
@@ -259,7 +267,17 @@ class GameEngine
   def heartbeat(player_id)
     @mutex.synchronize do
       # Ensure default name exists only when a real client heartbeats
+      old_name = @names[player_id]
       @names[player_id] ||= default_name_for(player_id)
+      
+      # Log name creation with alert for "Bold Raven"
+      if !old_name && @names[player_id]
+        Rails.logger.info "[GameEngine] Created name for player #{player_id}: #{@names[player_id]}"
+        if @names[player_id].include?('Bold Raven')
+          Rails.logger.warn "[GameEngine] *** PHANTOM PLAYER ALERT: Bold Raven detected! player_id=#{player_id} ***"
+        end
+      end
+      
       @last_seen[player_id] = Time.now
       update_online_set!
     end
@@ -290,14 +308,18 @@ class GameEngine
     adj_index = uuid_bytes[0] % adjectives.length
     animal_index = uuid_bytes[1] % animals.length
     
+    Rails.logger.info "[GameEngine] Generating name for player_id=#{player_id}, uuid_bytes[0]=#{uuid_bytes[0]}, uuid_bytes[1]=#{uuid_bytes[1]}, adj_index=#{adj_index}, animal_index=#{animal_index}"
+    
     name = "#{adjectives[adj_index]} #{animals[animal_index]}"
     
     # Ensure uniqueness by appending short UUID if name already exists
     if @names.values.include?(name)
       short = player_id.to_s.split('-').first.to_s.upcase
       name = "#{adjectives[adj_index]} #{animals[animal_index]} #{short}"
+      Rails.logger.info "[GameEngine] Name collision, appending UUID: #{name}"
     end
     
+    Rails.logger.info "[GameEngine] Generated name '#{name}' for player_id=#{player_id}"
     name
   end
   
