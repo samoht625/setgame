@@ -87,7 +87,7 @@ const App: React.FC = () => {
         }
       },
       
-      received(data: GameState | { error: string } | { your_id: string } | { success: boolean } & GameState) {
+      received(data: GameState | { error: string } | { your_id: string } | { success: boolean } & GameState | { your_id: string, debug: any }) {
         // Any message from server means the request cycle progressed; clear timeout
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current)
@@ -96,6 +96,29 @@ const App: React.FC = () => {
         
         if ('your_id' in data) {
           setPlayerId(data.your_id)
+          // If debug meta present, forward to NDJSON ingest (no secrets)
+          try {
+            const debug = (data as any).debug
+            if (debug && typeof fetch !== 'undefined') {
+              fetch('http://127.0.0.1:7242/ingest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  sessionId: 'debug-session',
+                  runId: 'prod-meta',
+                  hypothesisId: 'meta',
+                  location: 'App.tsx:received',
+                  message: 'Server connection debug meta',
+                  data: {
+                    id_source: debug.id_source,
+                    request_meta: debug.request_meta,
+                    your_id: data.your_id
+                  },
+                  timestamp: Date.now()
+                })
+              }).catch(() => {})
+            }
+          } catch (_) {}
           return
         }
         

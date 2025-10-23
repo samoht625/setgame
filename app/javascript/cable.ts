@@ -20,6 +20,22 @@ function getPlayerId(): string {
 
 // Create consumer with player_id in query params
 const playerId = getPlayerId()
+// DEBUG: emit player id used by client
+try {
+  fetch('http://127.0.0.1:7242/ingest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      sessionId: 'debug-session',
+      runId: 'prod-meta',
+      hypothesisId: 'client-player-id',
+      location: 'cable.ts:playerId',
+      message: 'Client local playerId',
+      data: { playerId },
+      timestamp: Date.now()
+    })
+  }).catch(() => {})
+} catch (_) {}
 export const consumer = createConsumer(`/cable?player_id=${encodeURIComponent(playerId)}`)
 
 // Expose consumer globally for debugging in development
