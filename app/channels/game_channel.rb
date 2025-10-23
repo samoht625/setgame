@@ -15,7 +15,14 @@ class GameChannel < ApplicationCable::Channel
     transmit initial_state
 
     # Send the connecting client's own player_id (not broadcast)
-    transmit({ your_id: connection.player_id })
+    debug_meta = {
+      your_id: connection.player_id,
+      debug: {
+        id_source: (connection.respond_to?(:id_source) ? connection.id_source : nil),
+        request_meta: (connection.respond_to?(:request_meta) ? connection.request_meta : nil)
+      }
+    }
+    transmit(debug_meta)
   end
   
   def unsubscribed
