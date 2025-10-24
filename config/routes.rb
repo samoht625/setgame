@@ -12,6 +12,12 @@ Rails.application.routes.draw do
   # ActionCable WebSocket endpoint
   mount ActionCable.server => '/cable'
 
+  # Solitaire game route
+  get '/s' => 'home#solitaire', as: :solitaire
+
+  # Shortcut icon route (common favicon shortcut)
+  get '/favicon.ico' => redirect('/icon.png')
+
   # Defines the root path route ("/")
   root "home#index"
 end

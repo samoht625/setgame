@@ -1,3 +1,4 @@
 web: env RUBY_DEBUG_OPEN=true bin/rails server
-js: yarn build --watch=forever
-css: yarn build:css --watch=always
+js: yarn dev:js
+css: yarn dev:css
+livereload: bundle exec guard -i

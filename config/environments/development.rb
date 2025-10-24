@@ -49,4 +49,5 @@ Rails.application.configure do
   # ActionCable configuration for development
   config.action_cable.allowed_request_origins = [/http:\/\/.*/]
   config.action_cable.mount_path = '/cable'
+  
 end
