@@ -39,4 +39,9 @@ group :development do
   
   # Process manager for running multiple processes [https://github.com/ddollar/foreman]
   gem "foreman"
+  
+  # LiveReload for automatic browser refresh [https://github.com/guard/guard-livereload]
+  gem "rack-livereload"
+  gem "guard"
+  gem "guard-livereload", require: false
 end

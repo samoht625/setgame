@@ -3,5 +3,8 @@
 class HomeController < ApplicationController
   def index
   end
+
+  def solitaire
+  end
 end
 

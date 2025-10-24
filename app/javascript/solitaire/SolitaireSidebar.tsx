@@ -151,7 +151,7 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
 
       {/* Last sets found */}
       {recentClaims.length > 0 && (
-        <div className="mt-4">
+        <div className="border-t pt-4 mt-4">
           <div className="text-sm font-semibold mb-2">Last sets found</div>
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {recentClaims.map((claim, index) => (
