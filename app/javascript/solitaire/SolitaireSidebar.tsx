@@ -64,6 +64,20 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
     setBestTimesList(bestTimes())
   }, [isFinished])
 
+  // Compute newest attempt timestamp across the displayed best times
+  const newestAt = React.useMemo(() => {
+    let newest = ''
+    let newestTs = 0
+    for (const t of bestTimesList) {
+      const ts = Date.parse(t.at)
+      if (!Number.isNaN(ts) && ts > newestTs) {
+        newestTs = ts
+        newest = t.at
+      }
+    }
+    return newest
+  }, [bestTimesList])
+
   return (
     <div className="bg-white p-4 md:p-6 rounded-lg shadow-lg">
       {/* Timer with controls */}
@@ -135,7 +149,8 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
           <div className="space-y-1.5 max-h-64 overflow-y-auto">
             {bestTimesList.map((entry, index) => {
               const isBestScore = index === 0
-              const isNewest = entry.at === bestTimesList[bestTimesList.length - 1]?.at
+              // Newest attempt is determined by timestamp, not list order
+              const isNewest = entry.at === newestAt
               const isNewBest = isBestScore && isNewest && isFinished
               const containerBase = 'text-xs p-2 rounded border flex items-center justify-between'
               const containerStyles = isNewBest
