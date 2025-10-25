@@ -15,6 +15,8 @@ interface SolitaireSidebarProps {
   isFinished: boolean
   onRestartRound: () => void
   recentClaims: RecentClaim[]
+  isPaused?: boolean
+  onTogglePause?: () => void
 }
 
 const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
@@ -22,7 +24,9 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
   deckCount,
   isFinished,
   onRestartRound,
-  recentClaims
+  recentClaims,
+  isPaused = false,
+  onTogglePause
 }) => {
   const formatTime = (ms: number): string => {
     const totalSeconds = Math.floor(ms / 1000)
@@ -62,32 +66,52 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
 
   return (
     <div className="bg-white p-4 md:p-6 rounded-lg shadow-lg">
-      {/* Timer with restart button */}
+      {/* Timer with controls */}
       <div className="mb-6">
         <div className="text-sm text-gray-600 mb-2">Time</div>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <div className="text-4xl font-bold text-gray-900">
             {formatTime(elapsedMs)}
           </div>
-          <button
-            onClick={onRestartRound}
-            className="p-1 text-gray-300 hover:text-gray-500 transition-colors"
-            title="Restart round"
-            aria-label="Restart round"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-5 h-5"
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onTogglePause}
+              className="p-1 text-gray-300 hover:text-gray-500 transition-colors"
+              title={isPaused ? 'Resume' : 'Pause'}
+              aria-label={isPaused ? 'Resume' : 'Pause'}
             >
-              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-            </svg>
-          </button>
+              {isPaused ? (
+                // Play icon
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              ) : (
+                // Pause icon
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                  <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
+                </svg>
+              )}
+            </button>
+            <button
+              onClick={onRestartRound}
+              className="p-1 text-gray-300 hover:text-gray-500 transition-colors"
+              title="Restart round"
+              aria-label="Restart round"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-5 h-5"
+              >
+                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -97,8 +121,8 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
           <div className="flex items-center justify-between text-sm text-gray-700">
             <span className="font-semibold">{deckCount} cards left</span>
             <div className="flex items-center gap-2">
-              <span className="inline-block w-2 h-2 rounded-full bg-green-500" />
-              <span className="font-semibold text-green-700">Playing</span>
+              <span className={`inline-block w-2 h-2 rounded-full ${isPaused ? 'bg-yellow-500' : 'bg-green-500'}`} />
+              <span className={`font-semibold ${isPaused ? 'text-yellow-700' : 'text-green-700'}`}>{isPaused ? 'Paused' : 'Playing'}</span>
             </div>
           </div>
         </div>

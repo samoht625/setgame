@@ -13,7 +13,7 @@ interface RecentClaim {
 type SavedSoloState = {
   board: number[]
   deck: number[]
-  status: 'playing' | 'round_over'
+  status: 'playing' | 'paused' | 'round_over'
   recentClaims: RecentClaim[]
   startedAtMs: number
   elapsedMs: number
@@ -30,7 +30,7 @@ function loadSavedGame(): SavedSoloState | null {
     if (
       !Array.isArray(parsed.board) ||
       !Array.isArray(parsed.deck) ||
-      (parsed.status !== 'playing' && parsed.status !== 'round_over') ||
+      (parsed.status !== 'playing' && parsed.status !== 'paused' && parsed.status !== 'round_over') ||
       !Array.isArray(parsed.recentClaims) ||
       typeof parsed.startedAtMs !== 'number' ||
       typeof parsed.elapsedMs !== 'number'
@@ -55,14 +55,13 @@ function saveGame(state: SavedSoloState): void {
 const SolitaireApp: React.FC = () => {
   const [board, setBoard] = useState<number[]>([])
   const [deck, setDeck] = useState<number[]>([])
-  const [status, setStatus] = useState<'playing' | 'round_over'>('playing')
+  const [status, setStatus] = useState<'playing' | 'paused' | 'round_over'>('playing')
   const [selectedCards, setSelectedCards] = useState<number[]>([])
   const [message, setMessage] = useState<string | null>(null)
   const [elapsedMs, setElapsedMs] = useState(0)
   const [recentClaims, setRecentClaims] = useState<RecentClaim[]>([])
   const [startedAtMs, setStartedAtMs] = useState<number>(Date.now())
   const timerRef = useRef<NodeJS.Timeout | null>(null)
-  const startTimeRef = useRef<number>(Date.now())
 
   const shuffle = (array: number[]): number[] => {
     const shuffled = [...array]
@@ -124,7 +123,6 @@ const SolitaireApp: React.FC = () => {
     setElapsedMs(0)
     setRecentClaims([])
     setStartedAtMs(now)
-    startTimeRef.current = now
     
     // Persist the new game state
     saveGame({
@@ -217,7 +215,7 @@ const SolitaireApp: React.FC = () => {
 
     // Check if round is over (deck empty and no sets on board)
     if (newDeck.length === 0 && !setExists(newBoard)) {
-      const finalElapsed = Date.now() - startTimeRef.current
+      const finalElapsed = Date.now() - startedAtMs
       setStatus('round_over')
       setElapsedMs(finalElapsed)
       
@@ -227,7 +225,7 @@ const SolitaireApp: React.FC = () => {
         deck: newDeck,
         status: 'round_over',
         recentClaims: updatedRecentClaims,
-        startedAtMs: startTimeRef.current,
+        startedAtMs: startedAtMs,
         elapsedMs: finalElapsed
       })
       
@@ -289,11 +287,12 @@ const SolitaireApp: React.FC = () => {
       setStatus(saved.status)
       setRecentClaims(saved.recentClaims)
       setStartedAtMs(saved.startedAtMs)
-      startTimeRef.current = saved.startedAtMs
       
       // Calculate elapsed time correctly for playing games
       if (saved.status === 'playing') {
         setElapsedMs(Date.now() - saved.startedAtMs)
+      } else if (saved.status === 'paused') {
+        setElapsedMs(saved.elapsedMs)
       } else {
         setElapsedMs(saved.elapsedMs)
       }
@@ -326,6 +325,19 @@ const SolitaireApp: React.FC = () => {
     return 'success'
   }
 
+  const togglePause = () => {
+    if (status === 'playing') {
+      const nowElapsed = Date.now() - startedAtMs
+      setElapsedMs(nowElapsed)
+      setStatus('paused')
+      setSelectedCards([])
+    } else if (status === 'paused') {
+      const newStart = Date.now() - elapsedMs
+      setStartedAtMs(newStart)
+      setStatus('playing')
+    }
+  }
+
   return (
     <div className="min-h-dvh bg-gray-100 px-3 pt-4 pb-safe md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -344,7 +356,8 @@ const SolitaireApp: React.FC = () => {
               selectedCards={selectedCards}
               onCardClick={handleCardClick}
               claiming={false}
-              gameOver={status !== 'playing'}
+              gameOver={status === 'round_over'}
+              paused={status === 'paused'}
             />
           </div>
           
@@ -355,6 +368,8 @@ const SolitaireApp: React.FC = () => {
               isFinished={status === 'round_over'}
               onRestartRound={startNewGame}
               recentClaims={recentClaims}
+              isPaused={status === 'paused'}
+              onTogglePause={togglePause}
             />
           </div>
         </div>

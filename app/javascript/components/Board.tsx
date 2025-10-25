@@ -6,9 +6,10 @@ interface BoardProps {
   onCardClick: (cardId: number) => void
   claiming: boolean
   gameOver?: boolean
+  paused?: boolean
 }
 
-const Board: React.FC<BoardProps> = ({ cards, selectedCards, onCardClick, claiming, gameOver = false }) => {
+const Board: React.FC<BoardProps> = ({ cards, selectedCards, onCardClick, claiming, gameOver = false, paused = false }) => {
   const [pointerState, setPointerState] = useState<{ cardId: number | null; startX: number; startY: number; maxDelta: number }>({
     cardId: null,
     startX: 0,
@@ -18,7 +19,7 @@ const Board: React.FC<BoardProps> = ({ cards, selectedCards, onCardClick, claimi
   const pointerThreshold = 8 // pixels of movement allowed
   
   const handlePointerDown = (e: React.PointerEvent, cardId: number) => {
-    if (claiming || gameOver) return
+    if (claiming || gameOver || paused) return
     e.preventDefault()
     setPointerState({
       cardId,
@@ -49,7 +50,7 @@ const Board: React.FC<BoardProps> = ({ cards, selectedCards, onCardClick, claimi
   }
 
   const handleKeyDown = (e: React.KeyboardEvent, cardId: number) => {
-    if (claiming || gameOver) return
+    if (claiming || gameOver || paused) return
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
       onCardClick(cardId)
@@ -83,21 +84,30 @@ const Board: React.FC<BoardProps> = ({ cards, selectedCards, onCardClick, claimi
         </div>
       )}
 
-      <div className={`grid ${getGridCols()} ${gap} justify-center ${gameOver ? 'opacity-50 saturate-50' : ''}`}>
+      {/* Paused overlay blocks view and interaction */}
+      {paused && !gameOver && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+          <div className="px-4 py-2 rounded-full bg-white/90 border border-gray-200 shadow text-gray-900 font-semibold">
+            Paused
+          </div>
+        </div>
+      )}
+
+      <div className={`grid ${getGridCols()} ${gap} justify-center ${gameOver || paused ? 'opacity-50 saturate-50' : ''}`}>
         {cards.map((cardId, index) => {
           const isSelected = selectedCards.includes(cardId)
           return (
             <div
               key={index}
               role="button"
-              tabIndex={claiming || gameOver ? -1 : 0}
+              tabIndex={claiming || gameOver || paused ? -1 : 0}
               aria-pressed={isSelected}
               onPointerDown={(e) => handlePointerDown(e, cardId)}
               onPointerMove={handlePointerMove}
               onPointerUp={(e) => handlePointerUp(e, cardId)}
               onKeyDown={(e) => handleKeyDown(e, cardId)}
               className={`select-none touch-manipulation flex items-center justify-center ${
-                claiming || gameOver ? 'cursor-not-allowed' : 'cursor-pointer'
+                claiming || gameOver || paused ? 'cursor-not-allowed' : 'cursor-pointer'
               }`}
             >
               <div
