@@ -18,6 +18,8 @@ tmp/*
 
 # Secrets / local production env
 config/master.key
+config/master.key.*
+config/credentials.yml.enc.compromised.*
 deploy/setgame.env
 .env
 .env.*
