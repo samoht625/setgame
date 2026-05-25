@@ -14,15 +14,7 @@ class GameChannel < ApplicationCable::Channel
     Rails.logger.info "[GameChannel] Transmitting initial state: #{initial_state.inspect}"
     transmit initial_state
 
-    # Send the connecting client's own player_id (not broadcast)
-    debug_meta = {
-      your_id: connection.player_id,
-      debug: {
-        id_source: (connection.respond_to?(:id_source) ? connection.id_source : nil),
-        request_meta: (connection.respond_to?(:request_meta) ? connection.request_meta : nil)
-      }
-    }
-    transmit(debug_meta)
+    transmit({ your_id: connection.player_id })
   end
   
   def unsubscribed
