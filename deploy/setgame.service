@@ -1,0 +1,15 @@
+[Unit]
+Description=Set Game production server (Caddy backend on 127.0.0.1:7778)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/www/setgame
+EnvironmentFile=%h/www/setgame/deploy/setgame.env
+ExecStart=%h/www/setgame/vendor/bundle/ruby/3.2.0/bin/bundle exec puma -C config/puma.rb -b tcp://127.0.0.1:7778
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

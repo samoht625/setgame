@@ -16,6 +16,12 @@ tmp/*
 # macOS
 .DS_Store
 
+# Secrets / local production env
+config/master.key
+deploy/setgame.env
+.env
+.env.*
+
 # Ruby
 *.gem
 *.rbc

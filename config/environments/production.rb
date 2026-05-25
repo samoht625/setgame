@@ -64,9 +64,13 @@ Rails.application.configure do
   
   # ActionCable configuration
   config.action_cable.allowed_request_origins = [
-    "https://setgame-6o3s.onrender.com",
-    "http://localhost:3000"  # Allow localhost for local testing
+    "https://set.tido.site",
+    "http://localhost:3000"
   ]
+
+  config.hosts << "set.tido.site"
+
+  config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
   
   # Mount ActionCable at /cable
   config.action_cable.mount_path = '/cable'
