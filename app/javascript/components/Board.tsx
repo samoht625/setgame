@@ -74,11 +74,11 @@ const Board: React.FC<BoardProps> = ({ cards, selectedCards, onCardClick, claimi
   const { paddingX, paddingY, gap } = getPaddingAndGap()
 
   return (
-    <div className={`relative bg-white ${paddingY} ${paddingX} rounded-lg shadow-sm w-full max-w-[min(100%,80rem)] mx-auto overflow-x-hidden`}>
+    <div className={`relative bg-white ${paddingY} ${paddingX} rounded-2xl border border-neutral-200/80 w-full max-w-[min(100%,80rem)] mx-auto overflow-x-hidden`}>
       {/* Game over overlay */}
       {gameOver && (
         <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-          <div className="px-4 py-2 rounded-full bg-white/90 border border-gray-200 shadow text-gray-900 font-semibold">
+          <div className="px-4 py-1.5 rounded-full bg-white/80 backdrop-blur-sm border border-neutral-200 text-sm font-medium text-neutral-700">
             Round over
           </div>
         </div>
@@ -86,8 +86,8 @@ const Board: React.FC<BoardProps> = ({ cards, selectedCards, onCardClick, claimi
 
       {/* Paused overlay blocks view and interaction */}
       {paused && !gameOver && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80 backdrop-blur-sm">
-          <div className="px-4 py-2 rounded-full bg-white/90 border border-gray-200 shadow text-gray-900 font-semibold">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-sm">
+          <div className="px-4 py-1.5 rounded-full bg-white/80 border border-neutral-200 text-sm font-medium text-neutral-700">
             Paused
           </div>
         </div>
@@ -111,10 +111,10 @@ const Board: React.FC<BoardProps> = ({ cards, selectedCards, onCardClick, claimi
               }`}
             >
               <div
-                className={`rounded-xl overflow-hidden border-2 bg-white aspect-[5/3] w-[clamp(7.25rem,26vw,11rem)] md:w-48 lg:w-56 flex items-center justify-center transition-colors ${
+                className={`rounded-xl overflow-hidden bg-white aspect-[5/3] w-[clamp(7.25rem,26vw,11rem)] md:w-48 lg:w-56 flex items-center justify-center transition-all duration-150 ring-1 ${
                   isSelected
-                    ? 'border-blue-600'
-                    : 'border-gray-200 hover:border-gray-300'
+                    ? 'ring-2 ring-neutral-900 shadow-[0_4px_14px_rgba(0,0,0,0.10)] -translate-y-0.5'
+                    : 'ring-neutral-200 hover:ring-neutral-300'
                 }`}
               >
                 <img

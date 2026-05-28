@@ -79,18 +79,18 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
   }, [bestTimesList])
 
   return (
-    <div className="bg-white p-4 md:p-6 rounded-lg shadow-lg">
+    <div className="bg-white p-5 md:p-6 rounded-2xl border border-neutral-200/80">
       {/* Timer with controls */}
       <div className="mb-6">
-        <div className="text-sm text-gray-600 mb-2">Time</div>
+        <div className="text-xs font-medium uppercase tracking-wider text-neutral-400 mb-2">Time</div>
         <div className="flex items-center justify-between gap-2">
-          <div className="text-4xl font-bold text-gray-900">
+          <div className="text-4xl font-semibold tabular-nums text-neutral-900">
             {formatTime(elapsedMs)}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <button
               onClick={onTogglePause}
-              className="p-1 text-gray-300 hover:text-gray-500 transition-colors"
+              className="p-1.5 rounded-md text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
               title={isPaused ? 'Resume' : 'Pause'}
               aria-label={isPaused ? 'Resume' : 'Pause'}
             >
@@ -108,7 +108,7 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
             </button>
             <button
               onClick={onRestartRound}
-              className="p-1 text-gray-300 hover:text-gray-500 transition-colors"
+              className="p-1.5 rounded-md text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
               title="Restart round"
               aria-label="Restart round"
             >
@@ -131,12 +131,12 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
 
       {/* Cards left (shown when playing) */}
       {!isFinished && (
-        <div className="border-t pt-4 mb-4">
-          <div className="flex items-center justify-between text-sm text-gray-700">
-            <span className="font-semibold">{deckCount} cards left</span>
+        <div className="border-t border-neutral-100 pt-4 mb-4">
+          <div className="flex items-center justify-between text-sm text-neutral-500">
+            <span className="font-medium">{deckCount} cards left</span>
             <div className="flex items-center gap-2">
-              <span className={`inline-block w-2 h-2 rounded-full ${isPaused ? 'bg-yellow-500' : 'bg-green-500'}`} />
-              <span className={`font-semibold ${isPaused ? 'text-yellow-700' : 'text-green-700'}`}>{isPaused ? 'Paused' : 'Playing'}</span>
+              <span className={`inline-block w-1.5 h-1.5 rounded-full ${isPaused ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+              <span className={`font-medium ${isPaused ? 'text-amber-600' : 'text-neutral-600'}`}>{isPaused ? 'Paused' : 'Playing'}</span>
             </div>
           </div>
         </div>
@@ -144,8 +144,8 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
 
       {/* Best times (shown when finished) */}
       {isFinished && bestTimesList.length > 0 && (
-        <div className="border-t pt-4">
-          <div className="text-sm font-semibold mb-2">Best Times</div>
+        <div className="border-t border-neutral-100 pt-4">
+          <div className="text-xs font-medium uppercase tracking-wider text-neutral-400 mb-3">Best Times</div>
           <div className="space-y-1.5 max-h-64 overflow-y-auto">
             {bestTimesList.map((entry, index) => {
               const isBestScore = index === 0
@@ -157,7 +157,7 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
                 ? 'bg-amber-50 border-amber-200'
                 : isNewest && isFinished
                   ? 'bg-blue-50 border-blue-200'
-                  : 'bg-gray-50 border-gray-200'
+                  : 'bg-neutral-50 border-neutral-200'
               return (
                 <div key={index} className={`${containerBase} ${containerStyles}`}>
                   <div className="flex-1 min-w-0">
@@ -190,8 +190,8 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
 
       {/* Last sets found */}
       {recentClaims.length > 0 && (
-        <div className="border-t pt-4 mt-4">
-          <div className="text-sm font-semibold mb-2">Last sets found</div>
+        <div className="border-t border-neutral-100 pt-4 mt-4">
+          <div className="text-xs font-medium uppercase tracking-wider text-neutral-400 mb-3">Last sets found</div>
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {recentClaims.map((claim, index) => (
               <div key={index} className="text-xs">
@@ -199,7 +199,7 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
                   {claim.cards.map((cardId) => (
                     <div
                       key={cardId}
-                      className="rounded overflow-hidden border border-gray-200 bg-white aspect-[4/3] h-10 md:h-12 flex items-center justify-center"
+                      className="rounded-md overflow-hidden ring-1 ring-neutral-200 bg-white aspect-[4/3] h-10 md:h-12 flex items-center justify-center"
                     >
                       <img
                         src={`/cards/${cardId}.png`}

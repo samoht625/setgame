@@ -218,7 +218,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-dvh bg-gray-100 px-3 pt-4 pb-safe md:p-8">
+    <div className="min-h-dvh bg-neutral-50 px-3 pt-5 pb-safe md:p-10">
       <div className="max-w-7xl mx-auto">
         {message && (
           <Toast
@@ -227,8 +227,22 @@ const App: React.FC = () => {
             onClose={() => setMessage(null)}
           />
         )}
-        
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8">
+
+        <header className="mb-5 md:mb-8 flex items-center justify-between">
+          <h1 className="text-sm font-semibold tracking-[0.2em] uppercase text-neutral-400">
+            Set
+          </h1>
+          <span className="flex items-center gap-1.5 text-xs text-neutral-400">
+            <span
+              className={`inline-block w-1.5 h-1.5 rounded-full ${
+                isConnected ? 'bg-emerald-500' : 'bg-neutral-300'
+              }`}
+            />
+            {isConnected ? 'Connected' : 'Connecting'}
+          </span>
+        </header>
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 md:gap-8">
           <div className="lg:col-span-3">
             <Board
               cards={gameState.board}

@@ -78,17 +78,17 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ scores, names, playerId, deckCo
   if (sortedPlayers.length === 0) return null
 
   return (
-    <div className="bg-white p-4 md:p-6 rounded-lg shadow-lg">
-      
-      <div className="space-y-2 mb-6">
+    <div className="bg-white p-5 md:p-6 rounded-2xl border border-neutral-200/80">
+
+      <div className="space-y-1.5 mb-6">
         {sortedPlayers.map(({ pid, score }, index) => {
           const isYou = pid === playerId
           const canEdit = isYou
           return (
           <div
             key={pid}
-            className={`p-3 rounded ${
-              isYou ? 'bg-blue-100 border-2 border-blue-500' : 'bg-gray-50'
+            className={`px-3 py-2.5 rounded-lg transition-colors ${
+              isYou ? 'bg-neutral-100 ring-1 ring-neutral-200' : 'hover:bg-neutral-50'
             }`}
           >
             <div className="flex justify-between items-center">
@@ -105,7 +105,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ scores, names, playerId, deckCo
                     }}
                     placeholder="Your name"
                     maxLength={20}
-                    className="px-2 py-1 border rounded text-sm bg-white"
+                    className="px-2 py-1 border border-neutral-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900/10 focus:border-neutral-400"
                   />
                 ) : (
                   <button
@@ -143,21 +143,21 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ scores, names, playerId, deckCo
                   </button>
                 )}
               </div>
-              <span className="text-xl font-bold">{score}</span>
+              <span className="text-lg font-semibold tabular-nums text-neutral-900">{score}</span>
             </div>
           </div>
         )})}
       </div>
-      
-      <div className="border-t pt-4">
-        <div className="flex items-center justify-between text-sm text-gray-700">
-          <span className="font-semibold">{deckCount} cards left</span>
+
+      <div className="border-t border-neutral-100 pt-4">
+        <div className="flex items-center justify-between text-sm text-neutral-500">
+          <span className="font-medium">{deckCount} cards left</span>
           <div className="flex items-center gap-2">
-            <span className={`inline-block w-2 h-2 rounded-full ${status === 'playing' ? 'bg-green-500' : 'bg-yellow-500'}`} />
+            <span className={`inline-block w-1.5 h-1.5 rounded-full ${status === 'playing' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
             {status === 'playing' ? (
-              <span className="font-semibold text-green-700">Playing</span>
+              <span className="font-medium text-neutral-600">Playing</span>
             ) : (
-              <span className="font-semibold text-yellow-700">Round over</span>
+              <span className="font-medium text-amber-600">Round over</span>
             )}
           </div>
         </div>
@@ -165,7 +165,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ scores, names, playerId, deckCo
           <div className="mt-3 space-y-2">
             {placements.length > 0 && (
               <div className="text-sm">
-                <div className="font-semibold mb-1">Results</div>
+                <div className="text-xs font-medium uppercase tracking-wider text-neutral-400 mb-2">Results</div>
                 <ol className="ml-0 space-y-0.5 list-none">
                   {placements.map(p => (
                     <li key={p.player_id} className="flex items-center gap-2">
@@ -178,25 +178,25 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ scores, names, playerId, deckCo
                 </ol>
               </div>
             )}
-            <div className="text-sm font-semibold">
+            <div className="text-sm font-medium text-neutral-500">
               Starting new game in {Math.max(0, countdown)}...
             </div>
           </div>
         )}
       </div>
-      
+
       {recentClaims.length > 0 && (
-        <div className="border-t pt-4 mt-4">
-          <div className="text-sm font-semibold mb-2">Last sets found</div>
+        <div className="border-t border-neutral-100 pt-4 mt-4">
+          <div className="text-xs font-medium uppercase tracking-wider text-neutral-400 mb-3">Last sets found</div>
           <div className="space-y-2 max-h-[calc(100vh-32rem)] overflow-y-auto">
             {recentClaims.map((claim, index) => (
               <div key={index} className="text-xs">
-                <div className="font-medium text-gray-800 mb-1">{names[claim.player_id] || 'Player'}</div>
+                <div className="font-medium text-neutral-600 mb-1">{names[claim.player_id] || 'Player'}</div>
                 <div className="flex gap-1">
                   {claim.cards.map((cardId) => (
                     <div
                       key={cardId}
-                      className="rounded overflow-hidden border border-gray-200 bg-white aspect-[4/3] h-10 md:h-12 flex items-center justify-center"
+                      className="rounded-md overflow-hidden ring-1 ring-neutral-200 bg-white aspect-[4/3] h-10 md:h-12 flex items-center justify-center"
                     >
                       <img
                         src={`/cards/${cardId}.png`}
