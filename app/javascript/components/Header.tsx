@@ -4,23 +4,37 @@ import type { GameMode } from './App'
 interface HeaderProps {
   mode: GameMode
   onSwitchMode: (mode: GameMode) => void
+  /** How many other people are in the multiplayer game right now. */
+  othersOnline?: number
 }
 
-const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode }) => {
+const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 }) => {
   const segment = (value: GameMode, label: string) => {
     const isActive = mode === value
+    // A little jewel on the Multiplayer pill when others are at the table.
+    const showJewel = value === 'multiplayer' && !isActive && othersOnline > 0
+    const jewelTitle = `${othersOnline} ${othersOnline === 1 ? 'person is' : 'people are'} playing multiplayer right now`
+
     return (
       <button
         type="button"
         onClick={() => onSwitchMode(value)}
         aria-pressed={isActive}
-        className={`rounded-full px-3.5 py-1.5 text-sm transition-colors ${
+        title={showJewel ? jewelTitle : undefined}
+        className={`relative rounded-full px-3.5 py-1.5 text-sm transition-colors ${
           isActive
             ? 'bg-white font-medium text-neutral-900 shadow-sm'
             : 'text-neutral-500 hover:text-neutral-800'
         }`}
       >
         {label}
+        {showJewel && (
+          <span className="absolute -right-0.5 -top-0.5 flex h-2.5 w-2.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" aria-hidden="true" />
+            <span className="relative inline-flex h-2.5 w-2.5 rotate-45 rounded-[3px] bg-emerald-500 shadow-sm ring-1 ring-white" aria-hidden="true" />
+            <span className="sr-only">{jewelTitle}</span>
+          </span>
+        )}
       </button>
     )
   }

@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import App from './components/App'
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Both / (multiplayer) and /s (solitaire) render the same shell;
+  // Both / (solo) and /m (multiplayer) render the same shell;
   // the App decides which mode to show based on the current path.
   const rootElement = document.getElementById('root') || document.getElementById('solitaire-root')
   if (rootElement) {

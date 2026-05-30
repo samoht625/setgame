@@ -1,10 +1,9 @@
 # frozen_string_literal: true
 
 class HomeController < ApplicationController
-  def index
+  def solo
   end
 
-  def solitaire
+  def multiplayer
   end
 end
-

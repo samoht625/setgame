@@ -1,8 +1,9 @@
 # Set Game — Multiplayer & Solo
 
 A real-time implementation of the classic Set card game built with Rails, ActionCable and React.
-Play together on a shared board at `/`, or play a timed solo game at `/s` — you can switch
-between the two modes from the toggle in the header at any time.
+Play a timed solo game at `/` (the default), or play together on a shared board at `/m` — you
+can switch between the two modes from the toggle in the header at any time. When other people
+are at the multiplayer table, a small jewel appears on the Multiplayer toggle.
 
 ## Game Rules
 
@@ -21,16 +22,20 @@ set is present, and the round ends when the deck is exhausted and no sets remain
 
 ## Modes
 
-- **Multiplayer** (`/`): one shared, server-authoritative board for everyone connected.
+- **Solo** (`/`, the default): a private timed game that runs entirely in your browser.
+  Progress, the timer and your best times are persisted in `localStorage`, so you can leave
+  and resume. (`/s` redirects here for old links.)
+- **Multiplayer** (`/m`): one shared, server-authoritative board for everyone connected.
   Scores, presence and recent sets update live over WebSockets. When the deck runs out the
-  round ends, placements are shown, and a new round starts automatically.
-- **Solo** (`/s`): a private timed game that runs entirely in your browser. Progress, the
-  timer and your best times are persisted in `localStorage`, so you can leave and resume.
+  round ends, placements are shown, and a new round starts automatically. While you're in
+  solo mode, a tiny `/presence` poll lights up a jewel on the Multiplayer toggle whenever
+  other people are playing.
 
 ## Features
 
 - Real-time multiplayer gameplay using ActionCable WebSockets
 - Solo mode with timer, pause/resume and local best times
+- Presence jewel on the Multiplayer toggle when other people are playing
 - Clean, board-first UI that works on phones, tablets and desktops
 - Automatic game progression (extra deals, reshuffles, new rounds)
 - Editable display names with sensible defaults, presence and idle indicators
@@ -63,7 +68,7 @@ yarn build:css
 bin/rails server
 ```
 
-4. Open http://localhost:3000 (multiplayer) or http://localhost:3000/s (solo)
+4. Open http://localhost:3000 (solo) or http://localhost:3000/m (multiplayer)
 
 ### Testing
 
@@ -95,11 +100,12 @@ app/
       connection.rb      # Player identification (UUID via query param/cookie)
     game_channel.rb      # WebSocket channel for the multiplayer game
   controllers/
-    home_controller.rb   # Multiplayer (/) and solo (/s) pages
+    home_controller.rb   # Solo (/) and multiplayer (/m) pages
+    presence_controller.rb # Tiny JSON endpoint for the multiplayer jewel
   javascript/
     components/
-      App.tsx            # Shell: header + mode switching (multiplayer/solo)
-      Header.tsx         # Wordmark + mode toggle
+      App.tsx            # Shell: header + mode switching (solo/multiplayer)
+      Header.tsx         # Wordmark + mode toggle (with presence jewel)
       GameLayout.tsx     # Shared board-centered layout
       MultiplayerGame.tsx# Multiplayer state + ActionCable wiring
       Board.tsx          # Card grid
@@ -108,6 +114,7 @@ app/
     solitaire/
       SolitaireGame.tsx  # Solo game state, timer and persistence
       SolitaireSidebar.tsx
+    hooks/usePresence.ts # Polls /presence for the multiplayer jewel (solo mode only)
     lib/rules.ts         # Set validation (client)
     cable.ts             # ActionCable consumer
     application.js       # Entry point

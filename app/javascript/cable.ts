@@ -1,7 +1,7 @@
 import { createConsumer } from "@rails/actioncable"
 
 // Get or create persistent player ID from localStorage
-function getPlayerId(): string {
+export function getPlayerId(): string {
   const key = 'setgame_player_id'
   let playerId = localStorage.getItem(key)
   

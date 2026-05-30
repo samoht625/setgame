@@ -12,12 +12,18 @@ Rails.application.routes.draw do
   # ActionCable WebSocket endpoint
   mount ActionCable.server => '/cable'
 
-  # Solitaire game route
-  get '/s' => 'home#solitaire', as: :solitaire
+  # Multiplayer game ("m" for "meet me at the table")
+  get '/m' => 'home#multiplayer', as: :multiplayer
+
+  # Tiny JSON endpoint: who is at the multiplayer table right now
+  get '/presence' => 'presence#show', defaults: { format: :json }
+
+  # Legacy solo path — solo now lives at the root
+  get '/s' => redirect('/')
 
   # Shortcut icon route (common favicon shortcut)
   get '/favicon.ico' => redirect('/icon.png')
 
-  # Defines the root path route ("/")
-  root "home#index"
+  # Solo is the default experience at the root path
+  root "home#solo"
 end

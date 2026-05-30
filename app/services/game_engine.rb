@@ -202,6 +202,13 @@ class GameEngine
     }
   end
 
+  # Thread-safe snapshot of the player ids currently connected to multiplayer.
+  # Used by the /presence endpoint and the initial page render to power the
+  # "people are playing" jewel without joining the game.
+  def online_player_ids_snapshot
+    @mutex.synchronize { @online_player_ids.to_a }
+  end
+
   # Register a connection for a player
   # Increments connection count and establishes presence based on open connections.
   # Also ensures a default name exists on first connection.

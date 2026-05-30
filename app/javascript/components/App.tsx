@@ -2,19 +2,23 @@ import React, { useEffect, useState } from 'react'
 import Header from './Header'
 import MultiplayerGame from './MultiplayerGame'
 import SolitaireGame from '../solitaire/SolitaireGame'
+import { usePresence } from '../hooks/usePresence'
 
 export type GameMode = 'multiplayer' | 'solo'
 
+// Solo lives at the root; multiplayer at /m. (Legacy /s redirects to /.)
 function modeFromPath(pathname: string): GameMode {
-  return pathname === '/s' || pathname.startsWith('/s/') ? 'solo' : 'multiplayer'
+  return pathname === '/m' || pathname.startsWith('/m/') ? 'multiplayer' : 'solo'
 }
 
 function pathForMode(mode: GameMode): string {
-  return mode === 'solo' ? '/s' : '/'
+  return mode === 'multiplayer' ? '/m' : '/'
 }
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<GameMode>(() => modeFromPath(window.location.pathname))
+  // Only polled while in solo mode; multiplayer already shows the live roster.
+  const othersOnline = usePresence(mode === 'solo')
 
   useEffect(() => {
     const onPopState = () => setMode(modeFromPath(window.location.pathname))
@@ -46,7 +50,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-dvh bg-neutral-100 text-neutral-900 antialiased">
-      <Header mode={mode} onSwitchMode={switchMode} />
+      <Header mode={mode} onSwitchMode={switchMode} othersOnline={othersOnline} />
       {mode === 'solo' ? <SolitaireGame /> : <MultiplayerGame />}
     </div>
   )
