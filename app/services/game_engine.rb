@@ -74,22 +74,23 @@ class GameEngine
   end
 
   # Replace given card ids at their indices with new cards from the deck.
-  # If deck is exhausted, delete those positions so the board shrinks.
+  # If the deck runs out, the remaining gaps are filled with cards taken from
+  # the end of the board (so other cards keep their positions and the board
+  # shrinks from the end).
   def replace_cards_in_place(card_ids)
-    positions = card_ids.map { |id| @board.index(id) }
-    return false if positions.any?(&:nil?)
+    leftover = []
+    card_ids.each do |id|
+      pos = @board.index(id)
+      next if pos.nil?
 
-    missing = []
-    positions.each do |pos|
       if @deck.any?
         @board[pos] = @deck.shift
       else
-        missing << pos
+        leftover << id
       end
     end
 
-    # Remove positions where deck was empty (delete from end to preserve indices)
-    missing.sort.reverse.each { |pos| @board.delete_at(pos) }
+    remove_cards_from_board(leftover) if leftover.any?
     true
   end
 
@@ -319,13 +320,20 @@ class GameEngine
     name
   end
 
-  # Remove the given card ids from the board without drawing replacements
-  # Used to collapse from 15/18 cards back down after a successful set claim
+  # Remove the given card ids from the board without drawing replacements.
+  # Gaps left in the middle of the board are filled with cards taken from the
+  # end, so the rest of the board keeps its positions and only the tail
+  # disappears (mirrors how extra rows are collapsed in the physical game).
   def remove_cards_from_board(card_ids)
-    card_ids.each do |id|
-      idx = @board.index(id)
-      @board.delete_at(idx) if idx
-    end
+    removing = card_ids.to_set
+    final_length = @board.length - @board.count { |id| removing.include?(id) }
+
+    # Cards beyond the new length that aren't being removed fill the gaps
+    fillers = (@board[final_length..] || []).reject { |id| removing.include?(id) }
+
+    @board = @board.first(final_length).map do |id|
+      removing.include?(id) ? fillers.shift : id
+    end.compact
   end
 
   # Reshuffle board + deck and redeal 12 cards

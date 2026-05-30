@@ -77,6 +77,27 @@ function dealCards(count: number, deckToUse: number[], boardToUse: number[]): { 
   return { deck: newDeck, board: newBoard }
 }
 
+// Remove cards from the board, filling any mid-board gaps with cards taken
+// from the end so the remaining cards keep their positions and the board
+// shrinks from the end (mirrors the server's behavior).
+function removeWithGapFill(board: number[], cardIds: number[]): number[] {
+  const removing = new Set(cardIds)
+  const finalLength = board.length - board.filter(id => removing.has(id)).length
+  const fillers = board.slice(finalLength).filter(id => !removing.has(id))
+
+  const result: number[] = []
+  for (let i = 0; i < finalLength; i++) {
+    const id = board[i]
+    if (removing.has(id)) {
+      const filler = fillers.shift()
+      if (filler !== undefined) result.push(filler)
+    } else {
+      result.push(id)
+    }
+  }
+  return result
+}
+
 // Deal a fresh game: 12 cards, extended to 15/18 until a set exists,
 // reshuffling if even 18 cards contain no set.
 function dealNewGame(): { board: number[]; deck: number[] } {
@@ -209,22 +230,24 @@ const SolitaireGame: React.FC = () => {
 
     if (newBoard.length >= 15) {
       // Collapse back down by removing the set without replacement
-      cardIds.forEach(id => {
-        const idx = newBoard.indexOf(id)
-        if (idx !== -1) newBoard.splice(idx, 1)
-      })
+      newBoard = removeWithGapFill(newBoard, cardIds)
     } else {
-      // Replace cards in place to preserve positions
+      // Replace cards in place to preserve positions; if the deck is empty,
+      // fill the gaps with cards from the end of the board instead
+      const leftover: number[] = []
       cardIds.forEach(id => {
         const idx = newBoard.indexOf(id)
         if (idx !== -1) {
           if (newDeck.length > 0) {
             newBoard[idx] = newDeck.shift()!
           } else {
-            newBoard.splice(idx, 1)
+            leftover.push(id)
           }
         }
       })
+      if (leftover.length > 0) {
+        newBoard = removeWithGapFill(newBoard, leftover)
+      }
     }
 
     // If no set exists and we have cards left, add more

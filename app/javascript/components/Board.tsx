@@ -10,14 +10,6 @@ interface BoardProps {
   paused?: boolean
 }
 
-// Column count and width grow with the board so 3 rows stay visible on desktop,
-// while mobile always uses a 3-wide grid.
-const layoutFor = (count: number) => {
-  if (count <= 12) return { cols: 'grid-cols-3 lg:grid-cols-4', maxWidth: 'max-w-2xl lg:max-w-4xl' }
-  if (count <= 15) return { cols: 'grid-cols-3 lg:grid-cols-5', maxWidth: 'max-w-2xl lg:max-w-5xl' }
-  return { cols: 'grid-cols-3 lg:grid-cols-6', maxWidth: 'max-w-2xl lg:max-w-6xl' }
-}
-
 const Board: React.FC<BoardProps> = ({
   cards,
   selectedCards,
@@ -28,10 +20,11 @@ const Board: React.FC<BoardProps> = ({
   paused = false
 }) => {
   const interactionLocked = claiming || gameOver || paused
-  const { cols, maxWidth } = layoutFor(cards.length)
 
   return (
-    <div className={`relative w-full ${maxWidth} mx-auto`}>
+    // Grid geometry stays constant regardless of how many cards are dealt:
+    // extra cards simply add rows below, so existing cards never move or resize.
+    <div className="relative mx-auto w-full max-w-2xl lg:max-w-4xl">
       {/* Round over overlay */}
       {gameOver && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
@@ -51,7 +44,7 @@ const Board: React.FC<BoardProps> = ({
       )}
 
       <div
-        className={`grid ${cols} gap-2 sm:gap-3 ${gameOver || paused ? 'opacity-50 saturate-50' : ''}`}
+        className={`grid grid-cols-3 gap-2 sm:gap-3 lg:grid-cols-4 ${gameOver || paused ? 'opacity-50 saturate-50' : ''}`}
       >
         {cards.map((cardId) => {
           const isSelected = selectedCards.includes(cardId)
@@ -70,7 +63,7 @@ const Board: React.FC<BoardProps> = ({
               disabled={interactionLocked}
               aria-pressed={isSelected}
               onClick={() => onCardClick(cardId)}
-              className={`block w-full touch-manipulation select-none overflow-hidden rounded-xl border-2 bg-white transition-[border-color,box-shadow,transform] duration-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 ${
+              className={`animate-card-in block w-full touch-manipulation select-none overflow-hidden rounded-xl border-2 bg-white transition-[border-color,box-shadow,transform] duration-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 ${
                 interactionLocked ? 'cursor-default' : 'cursor-pointer active:scale-[0.98]'
               } ${borderStyle}`}
             >

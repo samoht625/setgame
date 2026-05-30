@@ -26,6 +26,18 @@ const App: React.FC = () => {
     document.title = mode === 'solo' ? 'Set — Solo' : 'Set — Multiplayer'
   }, [mode])
 
+  // Warm the browser cache with all 81 card images (~0.5 MB total) shortly
+  // after load so replacement cards appear instantly instead of popping in.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      for (let id = 1; id <= 81; id++) {
+        const img = new Image()
+        img.src = `/cards/${id}.png`
+      }
+    }, 1500)
+    return () => window.clearTimeout(timer)
+  }, [])
+
   const switchMode = (next: GameMode) => {
     if (next === mode) return
     window.history.pushState({}, '', pathForMode(next))
