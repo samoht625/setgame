@@ -60,7 +60,7 @@ const Board: React.FC<BoardProps> = ({
           const borderStyle = isRejected
             ? 'border-rose-500 ring-2 ring-rose-500/30 animate-shake'
             : isSelected
-              ? 'border-indigo-500 ring-2 ring-indigo-500/30'
+              ? 'border-neutral-900 ring-2 ring-neutral-900/15 -translate-y-0.5 shadow-md'
               : 'border-neutral-200 hover:border-neutral-300'
 
           return (
@@ -70,7 +70,7 @@ const Board: React.FC<BoardProps> = ({
               disabled={interactionLocked}
               aria-pressed={isSelected}
               onClick={() => onCardClick(cardId)}
-              className={`block w-full touch-manipulation select-none overflow-hidden rounded-xl border-2 bg-white transition-[border-color,box-shadow,transform] duration-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 ${
+              className={`block w-full touch-manipulation select-none overflow-hidden rounded-xl border-2 bg-white transition-[border-color,box-shadow,transform] duration-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 ${
                 interactionLocked ? 'cursor-default' : 'cursor-pointer active:scale-[0.98]'
               } ${borderStyle}`}
             >

@@ -102,7 +102,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
               <li
                 key={pid}
                 className={`flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 ${
-                  isYou ? 'bg-indigo-50' : ''
+                  isYou ? 'bg-neutral-100' : ''
                 }`}
               >
                 <div className="flex min-w-0 items-center gap-1.5">
@@ -118,7 +118,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
                       }}
                       placeholder="Your name"
                       maxLength={20}
-                      className="w-full rounded-md border border-neutral-300 bg-white px-2 py-0.5 text-sm focus:border-indigo-400 focus:outline-none"
+                      className="w-full rounded-md border border-neutral-300 bg-white px-2 py-0.5 text-sm focus:border-neutral-500 focus:outline-none"
                     />
                   ) : (
                     <button
@@ -132,7 +132,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
                       <span className="truncate">{names[pid] || (isYou ? 'You' : 'Player')}</span>
                       {isYou && (
                         <>
-                          <span className="shrink-0 text-[11px] font-normal text-indigo-400">you</span>
+                          <span className="shrink-0 text-[11px] font-normal text-neutral-400">you</span>
                           <svg
                             aria-hidden="true"
                             viewBox="0 0 24 24"
