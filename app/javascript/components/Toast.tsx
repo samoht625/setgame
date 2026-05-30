@@ -1,30 +1,35 @@
 import React from 'react'
 
+export type ToastType = 'success' | 'error'
+
+export interface ToastMessage {
+  text: string
+  type: ToastType
+}
+
 interface ToastProps {
-  message: string
-  type: 'success' | 'error' | 'info'
+  message: ToastMessage
   onClose: () => void
 }
 
-const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
-  const dotColor = type === 'error' ? 'bg-rose-500' : 'bg-emerald-500'
+const Toast: React.FC<ToastProps> = ({ message, onClose }) => {
+  const dotColor = message.type === 'error' ? 'bg-rose-500' : 'bg-emerald-500'
 
   return (
-    <div className="fixed bottom-safe-8 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-md text-neutral-800 text-sm pl-4 pr-3 py-2.5 rounded-full border border-neutral-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.08)] z-50 animate-fade-in">
-      <div className="flex items-center gap-3">
-        <span className={`inline-block w-1.5 h-1.5 rounded-full ${dotColor}`} />
-        <span className="font-medium">{message}</span>
-        <button
-          onClick={onClose}
-          className="ml-1 w-5 h-5 flex items-center justify-center rounded-full text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
-          aria-label="Dismiss"
-        >
-          ×
-        </button>
-      </div>
+    <div
+      role="status"
+      className="fixed bottom-safe-8 left-1/2 z-50 -translate-x-1/2 animate-fade-in-up"
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        className="flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-800 shadow-lg"
+      >
+        <span className={`h-2 w-2 shrink-0 rounded-full ${dotColor}`} aria-hidden="true" />
+        {message.text}
+      </button>
     </div>
   )
 }
 
 export default Toast
-

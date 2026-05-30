@@ -1,132 +1,88 @@
-import React, { useState, useRef } from 'react'
+import React from 'react'
 
 interface BoardProps {
   cards: number[]
   selectedCards: number[]
+  rejectedCards?: number[]
   onCardClick: (cardId: number) => void
   claiming: boolean
   gameOver?: boolean
   paused?: boolean
 }
 
-const Board: React.FC<BoardProps> = ({ cards, selectedCards, onCardClick, claiming, gameOver = false, paused = false }) => {
-  const [pointerState, setPointerState] = useState<{ cardId: number | null; startX: number; startY: number; maxDelta: number }>({
-    cardId: null,
-    startX: 0,
-    startY: 0,
-    maxDelta: 0
-  })
-  const pointerThreshold = 8 // pixels of movement allowed
-  
-  const handlePointerDown = (e: React.PointerEvent, cardId: number) => {
-    if (claiming || gameOver || paused) return
-    e.preventDefault()
-    setPointerState({
-      cardId,
-      startX: e.clientX,
-      startY: e.clientY,
-      maxDelta: 0
-    })
-    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
-  }
+// Column count and width grow with the board so 3 rows stay visible on desktop,
+// while mobile always uses a 3-wide grid.
+const layoutFor = (count: number) => {
+  if (count <= 12) return { cols: 'grid-cols-3 lg:grid-cols-4', maxWidth: 'max-w-2xl lg:max-w-4xl' }
+  if (count <= 15) return { cols: 'grid-cols-3 lg:grid-cols-5', maxWidth: 'max-w-2xl lg:max-w-5xl' }
+  return { cols: 'grid-cols-3 lg:grid-cols-6', maxWidth: 'max-w-2xl lg:max-w-6xl' }
+}
 
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (pointerState.cardId === null) return
-    const deltaX = Math.abs(e.clientX - pointerState.startX)
-    const deltaY = Math.abs(e.clientY - pointerState.startY)
-    const maxDelta = Math.max(deltaX, deltaY)
-    setPointerState(prev => ({ ...prev, maxDelta }))
-  }
-
-  const handlePointerUp = (e: React.PointerEvent, cardId: number) => {
-    if (pointerState.cardId === null) return
-    ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
-    
-    if (pointerState.maxDelta < pointerThreshold && e.button === 0) {
-      onCardClick(cardId)
-    }
-    
-    setPointerState({ cardId: null, startX: 0, startY: 0, maxDelta: 0 })
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent, cardId: number) => {
-    if (claiming || gameOver || paused) return
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      onCardClick(cardId)
-    }
-  }
-
-  // Always keep 3 columns; additional cards add rows (15 → 5 rows, 18 → 6 rows)
-  // Use max-content tracks so columns size to card width rather than stretching
-  const getGridCols = () => 'grid-cols-[repeat(3,max-content)]'
-
-  // Reduce padding and gaps when there are more cards; keep horizontal padding tighter
-  const getPaddingAndGap = () => {
-    const count = cards.length
-    // Tighter defaults on mobile so the grid never crowds the right edge
-    if (count <= 12) return { paddingX: 'px-3 md:px-4', paddingY: 'py-5 md:py-6', gap: 'gap-3 md:gap-4' }
-    if (count <= 15) return { paddingX: 'px-2 md:px-3', paddingY: 'py-4', gap: 'gap-2 md:gap-3' }
-    if (count <= 18) return { paddingX: 'px-2', paddingY: 'py-3', gap: 'gap-2' }
-    return { paddingX: 'px-4', paddingY: 'py-6', gap: 'gap-4' }
-  }
-
-  const { paddingX, paddingY, gap } = getPaddingAndGap()
+const Board: React.FC<BoardProps> = ({
+  cards,
+  selectedCards,
+  rejectedCards = [],
+  onCardClick,
+  claiming,
+  gameOver = false,
+  paused = false
+}) => {
+  const interactionLocked = claiming || gameOver || paused
+  const { cols, maxWidth } = layoutFor(cards.length)
 
   return (
-    <div className={`relative bg-white ${paddingY} ${paddingX} rounded-2xl border border-neutral-200/80 w-full max-w-[min(100%,80rem)] mx-auto overflow-x-hidden`}>
-      {/* Game over overlay */}
+    <div className={`relative w-full ${maxWidth} mx-auto`}>
+      {/* Round over overlay */}
       {gameOver && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-          <div className="px-4 py-1.5 rounded-full bg-white/80 backdrop-blur-sm border border-neutral-200 text-sm font-medium text-neutral-700">
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+          <div className="rounded-full border border-neutral-200 bg-white/95 px-5 py-2 text-sm font-semibold text-neutral-900 shadow-sm">
             Round over
           </div>
         </div>
       )}
 
-      {/* Paused overlay blocks view and interaction */}
+      {/* Paused overlay hides the board and blocks interaction */}
       {paused && !gameOver && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-sm">
-          <div className="px-4 py-1.5 rounded-full bg-white/80 border border-neutral-200 text-sm font-medium text-neutral-700">
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-neutral-100/70 backdrop-blur-md">
+          <div className="rounded-full border border-neutral-200 bg-white/95 px-5 py-2 text-sm font-semibold text-neutral-900 shadow-sm">
             Paused
           </div>
         </div>
       )}
 
-      <div className={`grid ${getGridCols()} ${gap} justify-center ${gameOver || paused ? 'opacity-50 saturate-50' : ''}`}>
-        {cards.map((cardId, index) => {
+      <div
+        className={`grid ${cols} gap-2 sm:gap-3 ${gameOver || paused ? 'opacity-50 saturate-50' : ''}`}
+      >
+        {cards.map((cardId) => {
           const isSelected = selectedCards.includes(cardId)
+          const isRejected = rejectedCards.includes(cardId)
+
+          const borderStyle = isRejected
+            ? 'border-rose-500 ring-2 ring-rose-500/30 animate-shake'
+            : isSelected
+              ? 'border-indigo-500 ring-2 ring-indigo-500/30'
+              : 'border-neutral-200 hover:border-neutral-300'
+
           return (
-            <div
-              key={index}
-              role="button"
-              tabIndex={claiming || gameOver || paused ? -1 : 0}
+            <button
+              key={cardId}
+              type="button"
+              disabled={interactionLocked}
               aria-pressed={isSelected}
-              onPointerDown={(e) => handlePointerDown(e, cardId)}
-              onPointerMove={handlePointerMove}
-              onPointerUp={(e) => handlePointerUp(e, cardId)}
-              onKeyDown={(e) => handleKeyDown(e, cardId)}
-              className={`select-none touch-manipulation flex items-center justify-center ${
-                claiming || gameOver || paused ? 'cursor-not-allowed' : 'cursor-pointer'
-              }`}
+              onClick={() => onCardClick(cardId)}
+              className={`block w-full touch-manipulation select-none overflow-hidden rounded-xl border-2 bg-white transition-[border-color,box-shadow,transform] duration-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 ${
+                interactionLocked ? 'cursor-default' : 'cursor-pointer active:scale-[0.98]'
+              } ${borderStyle}`}
             >
-              <div
-                className={`rounded-xl overflow-hidden bg-white aspect-[5/3] w-[clamp(7.25rem,26vw,11rem)] md:w-48 lg:w-56 flex items-center justify-center transition-all duration-150 ring-1 ${
-                  isSelected
-                    ? 'ring-2 ring-neutral-900 shadow-[0_4px_14px_rgba(0,0,0,0.10)] -translate-y-0.5'
-                    : 'ring-neutral-200 hover:ring-neutral-300'
-                }`}
-              >
-                <img
-                  src={`/cards/${cardId}.png`}
-                  alt={`Card ${cardId}`}
-                  loading="eager"
-                  decoding="async"
-                  draggable={false}
-                  className="max-w-full max-h-full object-contain pointer-events-none"
-                />
-              </div>
-            </div>
+              <img
+                src={`/cards/${cardId}.png`}
+                alt={`Card ${cardId}`}
+                loading="eager"
+                decoding="async"
+                draggable={false}
+                className="pointer-events-none aspect-[258/167] w-full object-contain"
+              />
+            </button>
           )
         })}
       </div>
@@ -135,4 +91,3 @@ const Board: React.FC<BoardProps> = ({ cards, selectedCards, onCardClick, claimi
 }
 
 export default Board
-

@@ -4,11 +4,11 @@ require 'set'
 
 # Game engine manages the state of the Set game
 class GameEngine
-  include Rules
-  
   attr_reader :board, :deck, :scores, :status, :names
   attr_writer :broadcaster
-  
+
+  RECENT_CLAIMS_LIMIT = 10
+
   def initialize
     @board = []
     @deck = []
@@ -28,7 +28,7 @@ class GameEngine
     # Store only player_id and cards so UI always resolves latest name
     @recent_claims = [] # { player_id:, cards: [] }
     start_new_round
-    
+
     # Start presence sweeper thread after all initialization is complete
     @presence_sweeper_thread = Thread.new do
       loop do
@@ -37,7 +37,7 @@ class GameEngine
       end
     end
   end
-  
+
   # Start a new round: shuffle deck, deal initial board
   def start_new_round
     @mutex.synchronize do
@@ -47,24 +47,24 @@ class GameEngine
       @deck = (1..81).to_a.shuffle
       @board = []
       deal_cards(12)
-      
+
       # If no set exists, add 3 more cards (up to 15, then 18)
       while @board.length < 18 && !Rules.set_exists?(@board)
         deal_cards(3)
       end
-      
+
       # If still no sets at 18 cards, reshuffle and redeal
       if @board.length >= 18 && !Rules.set_exists?(@board)
         reshuffle_and_redeal_12!
       end
-      
+
       @status = 'playing'
       @countdown = 0
       @placements = []
       @recent_claims = []
     end
   end
-  
+
   # Deal cards from deck to board
   def deal_cards(count)
     count.times do
@@ -72,13 +72,13 @@ class GameEngine
       @board << @deck.shift
     end
   end
-  
+
   # Replace given card ids at their indices with new cards from the deck.
   # If deck is exhausted, delete those positions so the board shrinks.
   def replace_cards_in_place(card_ids)
     positions = card_ids.map { |id| @board.index(id) }
     return false if positions.any?(&:nil?)
-    
+
     missing = []
     positions.each do |pos|
       if @deck.any?
@@ -87,64 +87,66 @@ class GameEngine
         missing << pos
       end
     end
-    
+
     # Remove positions where deck was empty (delete from end to preserve indices)
     missing.sort.reverse.each { |pos| @board.delete_at(pos) }
     true
   end
-  
+
   # Player claims a set of three cards
   # Returns: { success: bool, message: string, new_state: hash }
   def claim_set(player_id, card_ids)
     @mutex.synchronize do
       @last_seen[player_id] = Time.now
-      # Validate input
+
+      # Normalize input: ints, no nils, no duplicates
+      card_ids = Array(card_ids).map { |id| Integer(id, exception: false) }.compact.uniq
+
       if card_ids.length != 3
-        return { success: false, message: 'Must select exactly 3 cards' }
+        return { success: false, message: 'Must select exactly 3 different cards' }
       end
-      
+
+      unless @status == 'playing'
+        return { success: false, message: 'Round is over - waiting for the next round' }
+      end
+
       # Check if cards are still on board
       unless card_ids.all? { |id| @board.include?(id) }
         return { success: false, message: 'One or more cards are no longer on the board' }
       end
-      
+
       # Check if it's a valid set
       unless Rules.is_set?(card_ids[0], card_ids[1], card_ids[2])
         return { success: false, message: 'Not a valid set' }
       end
-      
-      # If we were at 15 cards, collapse back to 12 by removing the set
+
+      # If we were at 15+ cards, collapse back down by removing the set
       # (It's okay to re-arrange the board in this case.)
-      pre_length = @board.length
-      if pre_length >= 15
+      if @board.length >= 15
         remove_cards_from_board(card_ids)
       else
         # Otherwise, replace cards in place (preserve positions when possible)
         replace_cards_in_place(card_ids)
       end
-      
+
       # If no set exists and we have cards left, add more
       while @board.length < 18 && !Rules.set_exists?(@board) && !@deck.empty?
         deal_cards(3)
       end
-      
+
       # If still no sets at 18 cards, reshuffle and redeal
       if @board.length >= 18 && !Rules.set_exists?(@board)
         reshuffle_and_redeal_12!
       end
-      
+
       # Award point
       @scores[player_id] ||= 0
       @scores[player_id] += 1
-      
-      # Add to recent claims (newest first)
-      Rails.logger.info "[GameEngine] Adding recent claim: player=#{player_id}, cards=#{card_ids.inspect}"
-      @recent_claims.unshift({
-        player_id: player_id,
-        cards: card_ids
-      })
-      Rails.logger.info "[GameEngine] Recent claims count: #{@recent_claims.length}"
-      
+
+      # Add to recent claims (newest first, capped)
+      @recent_claims.unshift({ player_id: player_id, cards: card_ids })
+      @recent_claims = @recent_claims.first(RECENT_CLAIMS_LIMIT)
+
       # Check if round is over (deck empty and no sets on board)
       if @deck.empty? && !Rules.set_exists?(@board)
         @status = 'round_over'
@@ -174,7 +176,7 @@ class GameEngine
           end
         end
       end
-      
+
       {
         success: true,
         message: 'Set claimed!',
@@ -182,7 +184,7 @@ class GameEngine
       }
     end
   end
-  
+
   # Get current game state
   def current_state
     {
@@ -198,60 +200,42 @@ class GameEngine
       recent_claims: @recent_claims
     }
   end
-  
-  # Broadcast state to all connected clients
-  def broadcast_state
-    # This will be called from the channel
-    current_state
-  end
 
   # Register a connection for a player
   # Increments connection count and establishes presence based on open connections.
-  # Also ensures a default name exists on first connection so clients are registered
-  # even when heartbeats are throttled or not sent (e.g., on mobile background tabs).
+  # Also ensures a default name exists on first connection.
   def register_connection(player_id)
     @mutex.synchronize do
       @active_connections[player_id] += 1
-      connection_count = @active_connections[player_id]
-      
-      # Ensure default name exists on first connection (heartbeat optional)
-      unless @names[player_id]
-        @names[player_id] = default_name_for(player_id)
-        Rails.logger.info "[GameEngine] Created name for player #{player_id}: #{@names[player_id]}"
-        if @names[player_id].include?('Bold Raven')
-          Rails.logger.warn "[GameEngine] *** PHANTOM PLAYER ALERT: Bold Raven detected! player_id=#{player_id} ***"
-        end
-      end
+
+      # Ensure default name exists on first connection
+      @names[player_id] ||= default_name_for(player_id)
 
       @last_seen[player_id] = Time.now
-      Rails.logger.info "[GameEngine] Registered connection for player_id=#{player_id}, total connections=#{connection_count}"
-      
+      Rails.logger.info "[GameEngine] Registered connection for player_id=#{player_id} (#{@active_connections[player_id]} open)"
+
       # Update online set and broadcast if changed
       update_online_set!
     end
   end
-  
+
   # Unregister a connection for a player
   # Decrements connection count and removes player when last connection closes
   def unregister_connection(player_id)
     @mutex.synchronize do
-      old_count = @active_connections[player_id] || 0
-      @active_connections[player_id] -= 1
-      new_count = @active_connections[player_id]
-      
-      Rails.logger.info "[GameEngine] Unregistered connection for player_id=#{player_id}, connections: #{old_count} -> #{new_count}"
-      
-      # Remove player from active connections when all connections are closed
-      # BUT keep their score and name so they persist across reconnections
+      if @active_connections.key?(player_id)
+        @active_connections[player_id] -= 1
+      end
+
+      # Remove player from active connections when all connections are closed,
+      # but keep their score and name so they persist across reconnections.
       if @active_connections[player_id] <= 0
         @active_connections.delete(player_id)
         @last_seen.delete(player_id)
-        Rails.logger.info "[GameEngine] Removed player_id=#{player_id} from active connections (last connection closed)"
-        # Don't delete scores and names - they should persist across reconnections
-        # @scores.delete(player_id)
-        # @names.delete(player_id)
       end
-      
+
+      Rails.logger.info "[GameEngine] Unregistered connection for player_id=#{player_id}"
+
       # Update online set and broadcast if changed
       update_online_set!
     end
@@ -279,10 +263,8 @@ class GameEngine
 
   # Mark heartbeat and update online set
   # Heartbeats are optional; presence is determined by open connections.
-  # Kept for compatibility and potential future use.
   def heartbeat(player_id)
     @mutex.synchronize do
-      # Record last seen for diagnostics (not required for presence)
       @last_seen[player_id] = Time.now
       update_online_set!
     end
@@ -291,8 +273,6 @@ class GameEngine
   # Recompute online set (based solely on active connections)
   # Returns true if changed
   def update_online_set!
-    # Presence is now determined entirely by whether the player has one or more
-    # active WebSocket connections. Heartbeats are not required.
     next_online = @active_connections.keys.select { |pid| @active_connections[pid] > 0 }
     changed_online = next_online.sort != @online_player_ids.to_a.sort
     @online_player_ids = Set.new(next_online)
@@ -312,40 +292,42 @@ class GameEngine
 
   private
 
+  ADJECTIVES = %w[
+    Wily Clever Swift Bold Bright Quick Silent Brave Noble Wise
+    Fierce Gentle Mighty Agile Sharp Keen Lucky Calm Daring Sly
+  ].freeze
+
+  ANIMALS = %w[
+    Coyote Cheetah Wolf Eagle Falcon Hawk Panther Tiger Lion Bear
+    Fox Deer Elk Moose Raven Owl Otter Lynx Badger Heron
+  ].freeze
+
   def default_name_for(player_id)
-    # Generate adjective-animal name based on UUID
-    adjectives = %w[Wily Clever Swift Bold Bright Quick Silent Brave Noble Wise Fierce Gentle Mighty Agile Sharp Keen Bold Quick Silent Brave Noble Wise Fierce Gentle Mighty Agile Sharp Keen]
-    animals = %w[Coyote Cheetah Wolf Eagle Falcon Hawk Panther Tiger Lion Bear Fox Deer Elk Moose Raven Owl Hawk Panther Tiger Lion Bear Fox Deer Elk Moose Raven Owl]
-    
-    # Use UUID to deterministically select adjective and animal
+    # Use UUID bytes to deterministically select adjective and animal
     uuid_bytes = player_id.to_s.gsub('-', '').scan(/../).map { |hex| hex.to_i(16) }
-    adj_index = uuid_bytes[0] % adjectives.length
-    animal_index = uuid_bytes[1] % animals.length
-    
-    Rails.logger.info "[GameEngine] Generating name for player_id=#{player_id}, uuid_bytes[0]=#{uuid_bytes[0]}, uuid_bytes[1]=#{uuid_bytes[1]}, adj_index=#{adj_index}, animal_index=#{animal_index}"
-    
-    name = "#{adjectives[adj_index]} #{animals[animal_index]}"
-    
+    adj_index = (uuid_bytes[0] || 0) % ADJECTIVES.length
+    animal_index = (uuid_bytes[1] || 0) % ANIMALS.length
+
+    name = "#{ADJECTIVES[adj_index]} #{ANIMALS[animal_index]}"
+
     # Ensure uniqueness by appending short UUID if name already exists
     if @names.values.include?(name)
       short = player_id.to_s.split('-').first.to_s.upcase
-      name = "#{adjectives[adj_index]} #{animals[animal_index]} #{short}"
-      Rails.logger.info "[GameEngine] Name collision, appending UUID: #{name}"
+      name = "#{name} #{short}"
     end
-    
-    Rails.logger.info "[GameEngine] Generated name '#{name}' for player_id=#{player_id}"
+
     name
   end
-  
+
   # Remove the given card ids from the board without drawing replacements
-  # Used to collapse from 15 -> 12 after a successful set claim
+  # Used to collapse from 15/18 cards back down after a successful set claim
   def remove_cards_from_board(card_ids)
     card_ids.each do |id|
       idx = @board.index(id)
       @board.delete_at(idx) if idx
     end
   end
-  
+
   # Reshuffle board + deck and redeal 12 cards
   # Used when board reaches 18 cards with no sets
   def reshuffle_and_redeal_12!
@@ -353,10 +335,10 @@ class GameEngine
     pool = (@board + @deck).shuffle
     @deck = pool
     @board = []
-    
+
     # Deal 12 cards
     deal_cards(12)
-    
+
     # If still no sets, add more cards up to 18
     while @board.length < 18 && !Rules.set_exists?(@board) && !@deck.empty?
       deal_cards(3)
@@ -382,4 +364,3 @@ class GameEngine
     placements
   end
 end
-

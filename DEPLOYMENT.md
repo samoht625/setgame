@@ -130,5 +130,5 @@ For issues:
 1. Check Render logs
 2. Review browser console
 3. Test locally with `bin/rails server`
-4. Run `ruby test_rules.rb` to verify game logic
+4. Run `ruby script/test_rules.rb` to verify game logic
 

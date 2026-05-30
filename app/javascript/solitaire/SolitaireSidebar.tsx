@@ -1,4 +1,5 @@
 import React from 'react'
+import type { SoloStatus } from './SolitaireGame'
 
 interface BestTime {
   ms: number
@@ -12,63 +13,71 @@ interface RecentClaim {
 interface SolitaireSidebarProps {
   elapsedMs: number
   deckCount: number
-  isFinished: boolean
-  onRestartRound: () => void
+  setsFound: number
+  status: SoloStatus
+  onTogglePause: () => void
+  onRestart: () => void
   recentClaims: RecentClaim[]
-  isPaused?: boolean
-  onTogglePause?: () => void
+}
+
+const BEST_TIMES_KEY = 'setgame_solo_best_times'
+
+const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="text-xs font-medium uppercase tracking-wide text-neutral-400">{children}</div>
+)
+
+function formatTime(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000)
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+}
+
+function formatDate(isoString: string): string {
+  const date = new Date(isoString)
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  }).format(date)
+}
+
+function loadBestTimes(): BestTime[] {
+  try {
+    const stored = localStorage.getItem(BEST_TIMES_KEY)
+    if (!stored) return []
+    const times = JSON.parse(stored) as BestTime[]
+    return times.sort((a, b) => a.ms - b.ms).slice(0, 5)
+  } catch {
+    return []
+  }
 }
 
 const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
   elapsedMs,
   deckCount,
-  isFinished,
-  onRestartRound,
-  recentClaims,
-  isPaused = false,
-  onTogglePause
+  setsFound,
+  status,
+  onTogglePause,
+  onRestart,
+  recentClaims
 }) => {
-  const formatTime = (ms: number): string => {
-    const totalSeconds = Math.floor(ms / 1000)
-    const minutes = Math.floor(totalSeconds / 60)
-    const seconds = totalSeconds % 60
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`
-  }
+  const isFinished = status === 'round_over'
+  const isPaused = status === 'paused'
 
-  const formatDate = (isoString: string): string => {
-    const date = new Date(isoString)
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    }).format(date)
-  }
-
-  const bestTimes = (): BestTime[] => {
-    try {
-      const stored = localStorage.getItem('setgame_solo_best_times')
-      if (!stored) return []
-      const times = JSON.parse(stored) as BestTime[]
-      return times.sort((a, b) => a.ms - b.ms).slice(0, 10)
-    } catch {
-      return []
-    }
-  }
-
-  const [bestTimesList, setBestTimesList] = React.useState<BestTime[]>(bestTimes())
+  const [bestTimes, setBestTimes] = React.useState<BestTime[]>(loadBestTimes)
 
   React.useEffect(() => {
-    setBestTimesList(bestTimes())
+    setBestTimes(loadBestTimes())
   }, [isFinished])
 
-  // Compute newest attempt timestamp across the displayed best times
+  // The newest entry (by timestamp) gets highlighted after a finished round
   const newestAt = React.useMemo(() => {
     let newest = ''
     let newestTs = 0
-    for (const t of bestTimesList) {
+    for (const t of bestTimes) {
       const ts = Date.parse(t.at)
       if (!Number.isNaN(ts) && ts > newestTs) {
         newestTs = ts
@@ -76,143 +85,154 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
       }
     }
     return newest
-  }, [bestTimesList])
+  }, [bestTimes])
+
+  const statusChip = isFinished
+    ? { label: 'Finished', classes: 'bg-amber-100 text-amber-800' }
+    : isPaused
+      ? { label: 'Paused', classes: 'bg-neutral-200 text-neutral-700' }
+      : { label: 'In play', classes: 'bg-emerald-100 text-emerald-800' }
 
   return (
-    <div className="bg-white p-5 md:p-6 rounded-2xl border border-neutral-200/80">
-      {/* Timer with controls */}
-      <div className="mb-6">
-        <div className="text-xs font-medium uppercase tracking-wider text-neutral-400 mb-2">Time</div>
-        <div className="flex items-center justify-between gap-2">
-          <div className="text-4xl font-semibold tabular-nums text-neutral-900">
-            {formatTime(elapsedMs)}
-          </div>
-          <div className="flex items-center gap-1">
+    <div className="rounded-2xl border border-neutral-200 bg-white p-4 md:p-5">
+      {/* Timer */}
+      <div className="flex items-center justify-between">
+        <SectionLabel>Time</SectionLabel>
+        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusChip.classes}`}>
+          {statusChip.label}
+        </span>
+      </div>
+      <div className="mt-1 flex items-center justify-between gap-2">
+        <div className="text-4xl font-semibold tabular-nums tracking-tight text-neutral-900">
+          {formatTime(elapsedMs)}
+        </div>
+        <div className="flex items-center gap-1">
+          {!isFinished && (
             <button
+              type="button"
               onClick={onTogglePause}
-              className="p-1.5 rounded-md text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
+              className="rounded-full p-2 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700"
               title={isPaused ? 'Resume' : 'Pause'}
               aria-label={isPaused ? 'Resume' : 'Pause'}
             >
               {isPaused ? (
-                // Play icon
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
                   <path d="M8 5v14l11-7z" />
                 </svg>
               ) : (
-                // Pause icon
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
                   <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
                 </svg>
               )}
             </button>
-            <button
-              onClick={onRestartRound}
-              className="p-1.5 rounded-md text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
-              title="Restart round"
-              aria-label="Restart round"
+          )}
+          <button
+            type="button"
+            onClick={onRestart}
+            className="rounded-full p-2 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700"
+            title="New game"
+            aria-label="New game"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-5 w-5"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="w-5 h-5"
-              >
-                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-              </svg>
-            </button>
-          </div>
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+            </svg>
+          </button>
         </div>
       </div>
 
-      {/* Cards left (shown when playing) */}
-      {!isFinished && (
-        <div className="border-t border-neutral-100 pt-4 mb-4">
-          <div className="flex items-center justify-between text-sm text-neutral-500">
-            <span className="font-medium">{deckCount} cards left</span>
-            <div className="flex items-center gap-2">
-              <span className={`inline-block w-1.5 h-1.5 rounded-full ${isPaused ? 'bg-amber-500' : 'bg-emerald-500'}`} />
-              <span className={`font-medium ${isPaused ? 'text-amber-600' : 'text-neutral-600'}`}>{isPaused ? 'Paused' : 'Playing'}</span>
-            </div>
+      {/* Stats */}
+      <div className="mt-4 flex items-center justify-between border-t border-neutral-100 pt-3 text-sm">
+        <span className="text-neutral-500">
+          <span className="font-semibold tabular-nums text-neutral-900">{deckCount}</span> cards left
+        </span>
+        <span className="text-neutral-500">
+          <span className="font-semibold tabular-nums text-neutral-900">{setsFound}</span> sets found
+        </span>
+      </div>
+
+      {/* Finished round summary */}
+      {isFinished && (
+        <div className="mt-3 space-y-2 rounded-xl bg-neutral-50 p-3">
+          <div className="text-sm text-neutral-700">
+            Cleared the deck in <span className="font-semibold tabular-nums">{formatTime(elapsedMs)}</span>
           </div>
+          <button
+            type="button"
+            onClick={onRestart}
+            className="w-full rounded-lg bg-neutral-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-700"
+          >
+            Play again
+          </button>
         </div>
       )}
 
-      {/* Best times (shown when finished) */}
-      {isFinished && bestTimesList.length > 0 && (
-        <div className="border-t border-neutral-100 pt-4">
-          <div className="text-xs font-medium uppercase tracking-wider text-neutral-400 mb-3">Best Times</div>
-          <div className="space-y-1.5 max-h-64 overflow-y-auto">
-            {bestTimesList.map((entry, index) => {
-              const isBestScore = index === 0
-              // Newest attempt is determined by timestamp, not list order
-              const isNewest = entry.at === newestAt
-              const isNewBest = isBestScore && isNewest && isFinished
-              const containerBase = 'text-xs p-2 rounded border flex items-center justify-between'
-              const containerStyles = isNewBest
-                ? 'bg-amber-50 border-amber-200'
-                : isNewest && isFinished
-                  ? 'bg-blue-50 border-blue-200'
-                  : 'bg-neutral-50 border-neutral-200'
+      {/* Best times */}
+      {bestTimes.length > 0 && (
+        <div className="mt-4 border-t border-neutral-100 pt-3">
+          <SectionLabel>Best times</SectionLabel>
+          <ol className="mt-2 space-y-1">
+            {bestTimes.map((entry, index) => {
+              const isBest = index === 0
+              const isNewest = isFinished && entry.at === newestAt
               return (
-                <div key={index} className={`${containerBase} ${containerStyles}`}>
-                  <div className="flex-1 min-w-0">
-                    <div className={`${isBestScore ? 'font-bold text-gray-900' : 'font-medium text-gray-800'}`}>
+                <li
+                  key={`${entry.at}-${entry.ms}`}
+                  className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 text-sm ${
+                    isNewest ? 'bg-amber-50' : ''
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className={`tabular-nums ${isBest ? 'font-semibold text-neutral-900' : 'text-neutral-700'}`}>
                       {formatTime(entry.ms)}
-                    </div>
-                    <div className="text-gray-600 text-[11px] leading-tight">
-                      {formatDate(entry.at)}
-                    </div>
-                  </div>
-                  <div className="w-4 h-4 flex items-center justify-center flex-shrink-0">
-                    {isNewBest && (
+                    </span>
+                    {isBest && isNewest && (
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         viewBox="0 0 24 24"
                         fill="currentColor"
-                        className="w-4 h-4 text-amber-500"
+                        className="h-3.5 w-3.5 text-amber-500"
                         aria-label="New best time"
                       >
-                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
                       </svg>
                     )}
-                  </div>
-                </div>
+                  </span>
+                  <span className="text-xs text-neutral-400">{formatDate(entry.at)}</span>
+                </li>
               )
             })}
-          </div>
+          </ol>
         </div>
       )}
 
-      {/* Last sets found */}
+      {/* Recent sets */}
       {recentClaims.length > 0 && (
-        <div className="border-t border-neutral-100 pt-4 mt-4">
-          <div className="text-xs font-medium uppercase tracking-wider text-neutral-400 mb-3">Last sets found</div>
-          <div className="space-y-2 max-h-96 overflow-y-auto">
+        <div className="mt-4 border-t border-neutral-100 pt-3">
+          <SectionLabel>Last sets found</SectionLabel>
+          <ul className="mt-2 max-h-72 space-y-2 overflow-y-auto">
             {recentClaims.map((claim, index) => (
-              <div key={index} className="text-xs">
-                <div className="flex gap-1">
-                  {claim.cards.map((cardId) => (
-                    <div
-                      key={cardId}
-                      className="rounded-md overflow-hidden ring-1 ring-neutral-200 bg-white aspect-[4/3] h-10 md:h-12 flex items-center justify-center"
-                    >
-                      <img
-                        src={`/cards/${cardId}.png`}
-                        alt={`Card ${cardId}`}
-                        className="max-w-full max-h-full object-contain"
-                        draggable={false}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <li key={index} className="flex gap-1">
+                {claim.cards.map((cardId) => (
+                  <img
+                    key={cardId}
+                    src={`/cards/${cardId}.png`}
+                    alt={`Card ${cardId}`}
+                    draggable={false}
+                    className="h-9 w-auto rounded border border-neutral-200 bg-white object-contain md:h-10"
+                  />
+                ))}
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       )}
     </div>
@@ -220,4 +240,3 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
 }
 
 export default SolitaireSidebar
-
