@@ -44,12 +44,22 @@ set is present, and the round ends when the deck is exhausted and no sets remain
 
 ### Prerequisites
 
-- Ruby 3.2 (see `.ruby-version`)
-- Node.js and Yarn
+- Ruby 3.2+ (see `.ruby-version`; vendored gems target 3.2)
+- Node.js 18+ and Yarn
+- On Linux: `build-essential`, `libyaml-dev` (for native gem extensions)
 
 There is no database; all game state is held in memory by a single server process.
 
 ### Setup
+
+**Quick bootstrap** (installs Linux apt packages when needed, then deps and assets):
+
+```bash
+./script/bootstrap-dev.sh
+bin/dev
+```
+
+**Manual setup:**
 
 1. Install dependencies:
 ```bash
@@ -65,10 +75,21 @@ yarn build:css
 
 3. Start the server (or use `bin/dev` for watchers + livereload):
 ```bash
-bin/rails server
+bin/dev
 ```
 
 4. Open http://localhost:3000 (solo) or http://localhost:3000/m (multiplayer)
+
+### Troubleshooting
+
+| Symptom | Fix |
+| --- | --- |
+| `ruby` / `bundle` not found | Install Ruby 3.2+ and Bundler. On Ubuntu: `sudo apt install ruby3.2 ruby3.2-dev ruby-bundler build-essential libyaml-dev` |
+| `bundle install` fails on `psych` | Install `libyaml-dev` (Linux) or Xcode CLI tools (macOS) |
+| `Could not find ... in locally installed gems` | `.bundle/config` may have deployment settings. Run `bundle config unset deployment without` then `bundle install` |
+| `yarn build:css` / `@parcel/watcher` errors | Run `yarn install` (not `npm install --omit=optional`) so native Tailwind deps install |
+| UI changes not visible | Run `yarn build` and `yarn build:css`, or use `bin/dev` so watchers rebuild automatically |
+| Port 3000 in use | `PORT=3001 bin/dev` |
 
 ### Testing
 
