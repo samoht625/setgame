@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-# Bootstrap local development on a fresh machine (especially Linux cloud VMs).
-# Idempotent — safe to re-run.
+# Bootstrap local development on a fresh machine (especially Linux / Cursor cloud VMs).
+# Idempotent — safe to re-run. Used by .cursor/environment.json "install" on default images.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-ROOT="$PWD"
 
 echo "== Set Game dev bootstrap =="
 

@@ -65,6 +65,9 @@ bin/ruby-parse
 bin/ruby-rewrite
 bin/thor
 
-# Cursor IDE files
-.cursor/
+# Cursor IDE local state (commit cloud agent environment config)
+.cursor/*
+!.cursor/
+!.cursor/environment.json
+!.cursor/Dockerfile
 

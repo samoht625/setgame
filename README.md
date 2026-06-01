@@ -80,6 +80,16 @@ bin/dev
 
 4. Open http://localhost:3000 (solo) or http://localhost:3000/m (multiplayer)
 
+### Cursor Cloud Agents
+
+Commit `.cursor/environment.json` and `.cursor/Dockerfile` so each cloud agent gets Ruby, Bundler, Node, Yarn, and a `bin/dev` terminal on port 3000.
+
+1. Merge the cloud environment config (or run a cloud agent from a branch that includes it).
+2. In [Cloud Agents setup](https://cursor.com/docs/cloud-agent/setup), ensure the repo uses the **repository** environment (`.cursor/environment.json` overrides dashboard defaults).
+3. Optional: after a successful run, save a **snapshot** from the dashboard and add its ID to `environment.json` for faster boots.
+
+See `AGENTS.md` for cloud-only commands and verification.
+
 ### Troubleshooting
 
 | Symptom | Fix |

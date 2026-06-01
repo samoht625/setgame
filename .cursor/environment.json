@@ -1,0 +1,21 @@
+{
+  "name": "Set Game",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "install": "bundle config unset deployment 2>/dev/null || true; bundle config unset without 2>/dev/null || true; bundle install && yarn install --check-files && yarn build && yarn build:css",
+  "ports": [
+    {
+      "name": "Rails",
+      "port": 3000
+    }
+  ],
+  "terminals": [
+    {
+      "name": "dev",
+      "command": "bin/dev",
+      "description": "Rails on port 3000 with JS and CSS watchers (Foreman / Procfile.dev)"
+    }
+  ]
+}
