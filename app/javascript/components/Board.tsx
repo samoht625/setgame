@@ -63,7 +63,7 @@ const Board: React.FC<BoardProps> = ({
               disabled={interactionLocked}
               aria-pressed={isSelected}
               onClick={() => onCardClick(cardId)}
-              className={`animate-card-in block w-full touch-manipulation select-none overflow-hidden rounded-xl border-2 bg-white transition-[border-color,box-shadow,transform] duration-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 dark:bg-neutral-900 dark:focus-visible:outline-neutral-100 ${
+              className={`animate-card-in block w-full touch-manipulation select-none overflow-hidden rounded-xl border-2 bg-white transition-[border-color,box-shadow,transform] duration-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 dark:bg-white dark:focus-visible:outline-neutral-100 ${
                 interactionLocked ? 'cursor-default' : 'cursor-pointer active:scale-[0.98]'
               } ${borderStyle}`}
             >
@@ -73,7 +73,7 @@ const Board: React.FC<BoardProps> = ({
                 loading="eager"
                 decoding="async"
                 draggable={false}
-                className="pointer-events-none aspect-[258/167] w-full object-contain"
+                className="pointer-events-none aspect-[258/167] w-full bg-white object-contain"
               />
             </button>
           )
