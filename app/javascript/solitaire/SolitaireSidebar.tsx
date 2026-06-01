@@ -229,7 +229,7 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
                     src={`/cards/${cardId}.png`}
                     alt={`Card ${cardId}`}
                     draggable={false}
-                    className="h-9 w-auto rounded border border-neutral-200 bg-white object-contain md:h-10 dark:border-neutral-700 dark:bg-neutral-900"
+                    className="h-9 w-auto rounded border border-neutral-200 bg-white object-contain md:h-10 dark:border-neutral-700 dark:bg-white"
                   />
                 ))}
               </li>
