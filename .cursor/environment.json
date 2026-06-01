@@ -4,7 +4,7 @@
     "dockerfile": "Dockerfile",
     "context": ".."
   },
-  "install": "bundle config unset deployment 2>/dev/null || true; bundle config unset without 2>/dev/null || true; bundle install && yarn install --check-files && yarn build && yarn build:css",
+  "install": "./script/bootstrap-dev.sh",
   "ports": [
     {
       "name": "Rails",
