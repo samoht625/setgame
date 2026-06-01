@@ -23,7 +23,7 @@ interface SolitaireSidebarProps {
 const BEST_TIMES_KEY = 'setgame_solo_best_times'
 
 const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="text-xs font-medium uppercase tracking-wide text-neutral-400">{children}</div>
+  <div className="text-xs font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-500">{children}</div>
 )
 
 function formatTime(ms: number): string {
@@ -88,13 +88,13 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
   }, [bestTimes])
 
   const statusChip = isFinished
-    ? { label: 'Finished', classes: 'bg-amber-100 text-amber-800' }
+    ? { label: 'Finished', classes: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200' }
     : isPaused
-      ? { label: 'Paused', classes: 'bg-neutral-200 text-neutral-700' }
-      : { label: 'In play', classes: 'bg-emerald-100 text-emerald-800' }
+      ? { label: 'Paused', classes: 'bg-neutral-200 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200' }
+      : { label: 'In play', classes: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200' }
 
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-4 md:p-5">
+    <div className="rounded-2xl border border-neutral-200 bg-white p-4 md:p-5 dark:border-neutral-800 dark:bg-neutral-900">
       {/* Timer */}
       <div className="flex items-center justify-between">
         <SectionLabel>Time</SectionLabel>
@@ -103,7 +103,7 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
         </span>
       </div>
       <div className="mt-1 flex items-center justify-between gap-2">
-        <div className="text-4xl font-semibold tabular-nums tracking-tight text-neutral-900">
+        <div className="text-4xl font-semibold tabular-nums tracking-tight text-neutral-900 dark:text-neutral-100">
           {formatTime(elapsedMs)}
         </div>
         <div className="flex items-center gap-1">
@@ -111,7 +111,7 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
             <button
               type="button"
               onClick={onTogglePause}
-              className="rounded-full p-2 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700"
+              className="rounded-full p-2 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
               title={isPaused ? 'Resume' : 'Pause'}
               aria-label={isPaused ? 'Resume' : 'Pause'}
             >
@@ -129,7 +129,7 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
           <button
             type="button"
             onClick={onRestart}
-            className="rounded-full p-2 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700"
+            className="rounded-full p-2 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
             title="New game"
             aria-label="New game"
           >
@@ -150,25 +150,25 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
       </div>
 
       {/* Stats */}
-      <div className="mt-4 flex items-center justify-between border-t border-neutral-100 pt-3 text-sm">
-        <span className="text-neutral-500">
-          <span className="font-semibold tabular-nums text-neutral-900">{deckCount}</span> cards left
+      <div className="mt-4 flex items-center justify-between border-t border-neutral-100 pt-3 text-sm dark:border-neutral-800">
+        <span className="text-neutral-500 dark:text-neutral-400">
+          <span className="font-semibold tabular-nums text-neutral-900 dark:text-neutral-100">{deckCount}</span> cards left
         </span>
-        <span className="text-neutral-500">
-          <span className="font-semibold tabular-nums text-neutral-900">{setsFound}</span> sets found
+        <span className="text-neutral-500 dark:text-neutral-400">
+          <span className="font-semibold tabular-nums text-neutral-900 dark:text-neutral-100">{setsFound}</span> sets found
         </span>
       </div>
 
       {/* Finished round summary */}
       {isFinished && (
-        <div className="mt-3 space-y-2 rounded-xl bg-neutral-50 p-3">
-          <div className="text-sm text-neutral-700">
+        <div className="mt-3 space-y-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-800/50">
+          <div className="text-sm text-neutral-700 dark:text-neutral-300">
             Cleared the deck in <span className="font-semibold tabular-nums">{formatTime(elapsedMs)}</span>
           </div>
           <button
             type="button"
             onClick={onRestart}
-            className="w-full rounded-lg bg-neutral-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-700"
+            className="w-full rounded-lg bg-neutral-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-700 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
           >
             Play again
           </button>
@@ -177,7 +177,7 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
 
       {/* Best times */}
       {bestTimes.length > 0 && (
-        <div className="mt-4 border-t border-neutral-100 pt-3">
+        <div className="mt-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
           <SectionLabel>Best times</SectionLabel>
           <ol className="mt-2 space-y-1">
             {bestTimes.map((entry, index) => {
@@ -187,11 +187,13 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
                 <li
                   key={`${entry.at}-${entry.ms}`}
                   className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 text-sm ${
-                    isNewest ? 'bg-amber-50' : ''
+                    isNewest ? 'bg-amber-50 dark:bg-amber-950/50' : ''
                   }`}
                 >
                   <span className="flex items-center gap-2">
-                    <span className={`tabular-nums ${isBest ? 'font-semibold text-neutral-900' : 'text-neutral-700'}`}>
+                    <span
+                      className={`tabular-nums ${isBest ? 'font-semibold text-neutral-900 dark:text-neutral-100' : 'text-neutral-700 dark:text-neutral-300'}`}
+                    >
                       {formatTime(entry.ms)}
                     </span>
                     {isBest && isNewest && (
@@ -216,7 +218,7 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
 
       {/* Recent sets */}
       {recentClaims.length > 0 && (
-        <div className="mt-4 border-t border-neutral-100 pt-3">
+        <div className="mt-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
           <SectionLabel>Last sets found</SectionLabel>
           <ul className="mt-2 max-h-72 space-y-2 overflow-y-auto">
             {recentClaims.map((claim, index) => (
@@ -227,7 +229,7 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
                     src={`/cards/${cardId}.png`}
                     alt={`Card ${cardId}`}
                     draggable={false}
-                    className="h-9 w-auto rounded border border-neutral-200 bg-white object-contain md:h-10"
+                    className="h-9 w-auto rounded border border-neutral-200 bg-white object-contain md:h-10 dark:border-neutral-700 dark:bg-neutral-900"
                   />
                 ))}
               </li>

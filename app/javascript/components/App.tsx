@@ -49,7 +49,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-dvh bg-neutral-100 text-neutral-900 antialiased">
+    <div className="min-h-dvh bg-neutral-100 text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-100">
       <Header mode={mode} onSwitchMode={switchMode} othersOnline={othersOnline} />
       {mode === 'solo' ? <SolitaireGame /> : <MultiplayerGame />}
     </div>

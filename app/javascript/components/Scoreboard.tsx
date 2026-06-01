@@ -28,7 +28,7 @@ interface ScoreboardProps {
 }
 
 const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="text-xs font-medium uppercase tracking-wide text-neutral-400">{children}</div>
+  <div className="text-xs font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-500">{children}</div>
 )
 
 const Scoreboard: React.FC<ScoreboardProps> = ({
@@ -79,11 +79,11 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
   const isRoundOver = status !== 'playing'
 
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-4 md:p-5">
+    <div className="rounded-2xl border border-neutral-200 bg-white p-4 md:p-5 dark:border-neutral-800 dark:bg-neutral-900">
       {/* Players */}
       <div className="mb-2 flex items-center justify-between">
         <SectionLabel>Players</SectionLabel>
-        <span className="flex items-center gap-1.5 text-xs text-neutral-400">
+        <span className="flex items-center gap-1.5 text-xs text-neutral-400 dark:text-neutral-500">
           <span
             className={`h-1.5 w-1.5 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-rose-500'}`}
           />
@@ -92,7 +92,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
       </div>
 
       {sortedPlayers.length === 0 ? (
-        <div className="py-2 text-sm text-neutral-400">Waiting for players…</div>
+        <div className="py-2 text-sm text-neutral-400 dark:text-neutral-500">Waiting for players…</div>
       ) : (
         <ul className="space-y-1">
           {sortedPlayers.map(({ pid, score }) => {
@@ -102,7 +102,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
               <li
                 key={pid}
                 className={`flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 ${
-                  isYou ? 'bg-neutral-100' : ''
+                  isYou ? 'bg-neutral-100 dark:bg-neutral-800' : ''
                 }`}
               >
                 <div className="flex min-w-0 items-center gap-1.5">
@@ -118,14 +118,16 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
                       }}
                       placeholder="Your name"
                       maxLength={20}
-                      className="w-full rounded-md border border-neutral-300 bg-white px-2 py-0.5 text-sm focus:border-neutral-500 focus:outline-none"
+                      className="w-full rounded-md border border-neutral-300 bg-white px-2 py-0.5 text-sm focus:border-neutral-500 focus:outline-none dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 dark:focus:border-neutral-400"
                     />
                   ) : (
                     <button
                       type="button"
                       onClick={isYou ? startEditing : undefined}
                       className={`group flex min-w-0 items-center gap-1.5 text-sm ${
-                        isYou ? 'cursor-pointer font-medium text-neutral-900' : 'cursor-default text-neutral-700'
+                        isYou
+                          ? 'cursor-pointer font-medium text-neutral-900 dark:text-neutral-100'
+                          : 'cursor-default text-neutral-700 dark:text-neutral-300'
                       }`}
                       title={isYou ? 'Click to edit your name' : undefined}
                     >
@@ -152,7 +154,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
                     </button>
                   )}
                 </div>
-                <span className="text-base font-semibold tabular-nums text-neutral-900">{score}</span>
+                <span className="text-base font-semibold tabular-nums text-neutral-900 dark:text-neutral-100">{score}</span>
               </li>
             )
           })}
@@ -160,13 +162,15 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
       )}
 
       {/* Deck and status */}
-      <div className="mt-4 flex items-center justify-between border-t border-neutral-100 pt-3 text-sm">
-        <span className="text-neutral-500">
-          <span className="font-semibold tabular-nums text-neutral-900">{deckCount}</span> cards left
+      <div className="mt-4 flex items-center justify-between border-t border-neutral-100 pt-3 text-sm dark:border-neutral-800">
+        <span className="text-neutral-500 dark:text-neutral-400">
+          <span className="font-semibold tabular-nums text-neutral-900 dark:text-neutral-100">{deckCount}</span> cards left
         </span>
         <span
           className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-            isRoundOver ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+            isRoundOver
+              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200'
+              : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
           }`}
         >
           {isRoundOver ? 'Round over' : 'In play'}
@@ -175,7 +179,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
 
       {/* Round results */}
       {isRoundOver && (
-        <div className="mt-3 space-y-2 rounded-xl bg-neutral-50 p-3">
+        <div className="mt-3 space-y-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-800/50">
           {placements.length > 0 && (
             <ol className="space-y-1 text-sm">
               {placements.map(p => (
@@ -189,7 +193,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
               ))}
             </ol>
           )}
-          <div className="text-sm text-neutral-600">
+          <div className="text-sm text-neutral-600 dark:text-neutral-400">
             Next round in <span className="font-semibold tabular-nums">{Math.max(0, countdown)}</span>…
           </div>
         </div>
@@ -197,7 +201,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
 
       {/* Recent sets */}
       {recentClaims.length > 0 && (
-        <div className="mt-4 border-t border-neutral-100 pt-3">
+        <div className="mt-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
           <SectionLabel>Last sets found</SectionLabel>
           <ul className="mt-2 max-h-72 space-y-2 overflow-y-auto">
             {recentClaims.map((claim, index) => (
@@ -209,11 +213,11 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
                       src={`/cards/${cardId}.png`}
                       alt={`Card ${cardId}`}
                       draggable={false}
-                      className="h-9 w-auto rounded border border-neutral-200 bg-white object-contain md:h-10"
+                      className="h-9 w-auto rounded border border-neutral-200 bg-white object-contain md:h-10 dark:border-neutral-700 dark:bg-neutral-900"
                     />
                   ))}
                 </div>
-                <span className="min-w-0 truncate text-xs text-neutral-500">
+                <span className="min-w-0 truncate text-xs text-neutral-500 dark:text-neutral-400">
                   {names[claim.player_id] || 'Player'}
                 </span>
               </li>
