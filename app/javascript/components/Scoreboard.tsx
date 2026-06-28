@@ -89,56 +89,54 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
   const resetRequesterName = resetRequestedBy === playerId
     ? 'You'
     : names[resetRequestedBy || ''] || 'A player'
+  const resetAction = isResetPending ? onCancelReset : onRequestReset
+  const resetSeconds = Math.max(1, Math.ceil(resetCountdown))
 
   return (
     <div className="rounded-2xl border border-neutral-200 bg-white p-4 md:p-5 dark:border-neutral-800 dark:bg-neutral-900">
-      {/* Shared reset */}
-      <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 dark:border-rose-900 dark:bg-rose-950/40">
-        <SectionLabel>Game controls</SectionLabel>
-        {isResetPending ? (
-          <>
-            <div aria-live="assertive" className="mt-2 text-sm text-rose-900 dark:text-rose-100">
-              <span className="font-medium">{resetRequesterName}</span> requested a reset.
-              <div className="mt-0.5">
-                New game in{' '}
-                <span className="font-semibold tabular-nums">{Math.max(1, Math.ceil(resetCountdown))}</span>…
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={onCancelReset}
-              disabled={!isConnected || !onCancelReset}
-              className="mt-2.5 w-full rounded-lg bg-rose-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-offset-neutral-900"
-            >
-              Stop reset
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={onRequestReset}
-              disabled={!isConnected || !onRequestReset}
-              className="mt-2 w-full rounded-lg bg-rose-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-offset-neutral-900"
-            >
-              Reset game
-            </button>
-            <p className="mt-1.5 text-center text-xs text-rose-700 dark:text-rose-300">
-              Starts a 5-second countdown anyone can stop.
-            </p>
-          </>
-        )}
-      </div>
-
       {/* Players */}
       <div className="mb-2 flex items-center justify-between">
         <SectionLabel>Players</SectionLabel>
-        <span className="flex items-center gap-1.5 text-xs text-neutral-400 dark:text-neutral-500">
-          <span
-            className={`h-1.5 w-1.5 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-rose-500'}`}
-          />
-          {isConnected ? 'Live' : 'Reconnecting…'}
-        </span>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={resetAction}
+            disabled={!isConnected || !resetAction}
+            aria-label={
+              isResetPending
+                ? `${resetRequesterName} requested a reset. Stop reset with ${resetSeconds} seconds remaining`
+                : 'Reset game'
+            }
+            title={isResetPending ? `${resetRequesterName} requested a reset` : 'Reset game'}
+            className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-offset-neutral-900 ${
+              isResetPending
+                ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-950/50 dark:text-rose-300 dark:hover:bg-rose-950'
+                : 'text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:text-neutral-500 dark:hover:bg-neutral-800 dark:hover:text-neutral-200'
+            }`}
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-3.5 w-3.5"
+            >
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+            </svg>
+            <span aria-live={isResetPending ? 'assertive' : undefined}>
+              {isResetPending ? `Stop reset · ${resetSeconds}s` : 'Reset'}
+            </span>
+          </button>
+          <span className="flex items-center gap-1.5 text-xs text-neutral-400 dark:text-neutral-500">
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-rose-500'}`}
+            />
+            {isConnected ? 'Live' : 'Reconnecting…'}
+          </span>
+        </div>
       </div>
 
       {sortedPlayers.length === 0 ? (
