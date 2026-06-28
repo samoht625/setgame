@@ -49,6 +49,26 @@ class GameChannel < ApplicationCable::Channel
     end
   end
 
+  def request_reset(_data)
+    result = GAME_ENGINE.request_reset(connection.player_id)
+
+    if result[:success]
+      ActionCable.server.broadcast('game', result[:new_state])
+    else
+      transmit({ error: result[:message], action: 'reset' })
+    end
+  end
+
+  def cancel_reset(_data)
+    result = GAME_ENGINE.cancel_reset(connection.player_id)
+
+    if result[:success]
+      ActionCable.server.broadcast('game', result[:new_state])
+    else
+      transmit({ error: result[:message], action: 'reset' })
+    end
+  end
+
   def heartbeat(_data)
     GAME_ENGINE.heartbeat(connection.player_id)
   end

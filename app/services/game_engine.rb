@@ -9,8 +9,13 @@ class GameEngine
 
   RECENT_CLAIMS_LIMIT = 10
   SET_REVEAL_SECONDS = 2
+  RESET_SECONDS = 5
 
-  def initialize(reveal_seconds: SET_REVEAL_SECONDS, start_presence_sweeper: true)
+  def initialize(
+    reveal_seconds: SET_REVEAL_SECONDS,
+    reset_seconds: RESET_SECONDS,
+    start_presence_sweeper: true
+  )
     @board = []
     @deck = []
     @scores = {} # player_id => score
@@ -32,6 +37,14 @@ class GameEngine
     @active_claim_token = nil
     @claim_sequence = 0
     @reveal_seconds = reveal_seconds
+    @reset_countdown = 0
+    @reset_requested_by = nil
+    @reset_request_token = nil
+    @reset_request_sequence = 0
+    @reset_deadline = nil
+    @reset_seconds = reset_seconds.to_f
+    raise ArgumentError, 'reset_seconds must be positive' unless @reset_seconds.positive?
+
     start_new_round
 
     # Start presence sweeper thread after all initialization is complete
@@ -47,31 +60,7 @@ class GameEngine
 
   # Start a new round: shuffle deck, deal initial board
   def start_new_round
-    @mutex.synchronize do
-      # Reset scores for a fresh game as requested
-      @scores = {}
-
-      @deck = (1..81).to_a.shuffle
-      @board = []
-      deal_cards(12)
-
-      # If no set exists, add 3 more cards (up to 15, then 18)
-      while @board.length < 18 && !Rules.set_exists?(@board)
-        deal_cards(3)
-      end
-
-      # If still no sets at 18 cards, reshuffle and redeal
-      if @board.length >= 18 && !Rules.set_exists?(@board)
-        reshuffle_and_redeal_12!
-      end
-
-      @status = 'playing'
-      @countdown = 0
-      @placements = []
-      @recent_claims = []
-      @active_claim = nil
-      @active_claim_token = nil
-    end
+    @mutex.synchronize { start_new_round_locked! }
   end
 
   # Deal cards from deck to board
@@ -153,6 +142,48 @@ class GameEngine
       {
         success: true,
         message: 'Set claimed!',
+        new_state: current_state
+      }
+    end
+  end
+
+  # Schedule a new round. Any connected player may request or cancel a reset.
+  def request_reset(player_id)
+    @mutex.synchronize do
+      @last_seen[player_id] = Time.now
+
+      if @reset_request_token
+        return { success: false, message: 'A game reset is already scheduled' }
+      end
+
+      @reset_request_sequence += 1
+      @reset_request_token = @reset_request_sequence
+      @reset_requested_by = player_id
+      @reset_deadline = monotonic_time + @reset_seconds
+      @reset_countdown = @reset_seconds.ceil
+      schedule_reset(@reset_request_token)
+
+      {
+        success: true,
+        message: 'Game reset scheduled',
+        new_state: current_state
+      }
+    end
+  end
+
+  def cancel_reset(player_id)
+    @mutex.synchronize do
+      @last_seen[player_id] = Time.now
+
+      unless @reset_request_token
+        return { success: false, message: 'There is no game reset to stop' }
+      end
+
+      clear_reset_request!
+
+      {
+        success: true,
+        message: 'Game reset stopped',
         new_state: current_state
       }
     end
@@ -263,6 +294,31 @@ class GameEngine
 
   private
 
+  def start_new_round_locked!
+    # Reset scores for a fresh game as requested
+    @scores = {}
+
+    @deck = (1..81).to_a.shuffle
+    @board = []
+    deal_cards(12)
+
+    # If no set exists, add 3 more cards (up to 15, then 18)
+    while @board.length < 18 && !Rules.set_exists?(@board)
+      deal_cards(3)
+    end
+
+    # If still no sets at 18 cards, reshuffle and redeal
+    reshuffle_and_redeal_12! if @board.length >= 18 && !Rules.set_exists?(@board)
+
+    @status = 'playing'
+    @countdown = 0
+    @placements = []
+    @recent_claims = []
+    @active_claim = nil
+    @active_claim_token = nil
+    clear_reset_request!
+  end
+
   def build_current_state
     {
       board: @board.dup,
@@ -278,8 +334,54 @@ class GameEngine
       active_claim: @active_claim && {
         player_id: @active_claim[:player_id],
         cards: @active_claim[:cards].dup
-      }
+      },
+      reset_countdown: @reset_countdown,
+      reset_requested_by: @reset_requested_by
     }
+  end
+
+  def schedule_reset(reset_token)
+    Thread.new do
+      loop do
+        sleep [1.0, @reset_seconds].min
+
+        state = nil
+        request_active = false
+        reset_complete = false
+
+        @mutex.synchronize do
+          if @reset_request_token == reset_token
+            request_active = true
+            remaining = (@reset_deadline - monotonic_time).ceil
+
+            if remaining <= 0
+              start_new_round_locked!
+              reset_complete = true
+            else
+              @reset_countdown = remaining
+            end
+
+            state = current_state
+          end
+        end
+
+        break unless request_active
+
+        @broadcaster&.call(state)
+        break if reset_complete
+      end
+    end
+  end
+
+  def clear_reset_request!
+    @reset_countdown = 0
+    @reset_requested_by = nil
+    @reset_request_token = nil
+    @reset_deadline = nil
+  end
+
+  def monotonic_time
+    Process.clock_gettime(Process::CLOCK_MONOTONIC)
   end
 
   def schedule_claim_resolution(claim_token, card_ids)

@@ -35,11 +35,13 @@ interface GameState {
   placements: Placement[]
   recent_claims: RecentClaim[]
   active_claim: ActiveClaim | null
+  reset_countdown: number
+  reset_requested_by: string | null
 }
 
 type ServerMessage =
   | GameState
-  | { error: string }
+  | { error: string; action?: string }
   | { your_id: string }
   | ({ success: boolean } & GameState)
 
@@ -54,7 +56,9 @@ const EMPTY_STATE: GameState = {
   countdown: 0,
   placements: [],
   recent_claims: [],
-  active_claim: null
+  active_claim: null,
+  reset_countdown: 0,
+  reset_requested_by: null
 }
 
 const MultiplayerGame: React.FC = () => {
@@ -115,12 +119,14 @@ const MultiplayerGame: React.FC = () => {
         }
 
         if ('error' in data) {
-          // Response to one of our own actions failed
-          clearClaimTimeout()
           showToast(data.error, 'error')
-          flashRejection(selectedCardsRef.current)
-          setSelectedCards([])
-          setClaiming(false)
+          if (data.action !== 'reset') {
+            // Response to one of our own claims failed
+            clearClaimTimeout()
+            flashRejection(selectedCardsRef.current)
+            setSelectedCards([])
+            setClaiming(false)
+          }
           return
         }
 
@@ -188,6 +194,19 @@ const MultiplayerGame: React.FC = () => {
       // ignore storage failures
     }
     subscriptionRef.current.perform('update_name', { name })
+  }
+
+  const performResetAction = (action: 'request_reset' | 'cancel_reset') => {
+    if (!isConnected || !subscriptionRef.current || typeof subscriptionRef.current.perform !== 'function') {
+      showToast('Not connected to the game. Trying to reconnect…', 'error')
+      return
+    }
+
+    try {
+      subscriptionRef.current.perform(action)
+    } catch (_) {
+      showToast('Failed to send reset request. Please try again.', 'error')
+    }
   }
 
   const handleClaimSet = (cardIds: number[]) => {
@@ -272,8 +291,12 @@ const MultiplayerGame: React.FC = () => {
             countdown={gameState.countdown}
             placements={gameState.placements}
             recentClaims={gameState.recent_claims || []}
+            resetCountdown={gameState.reset_countdown || 0}
+            resetRequestedBy={gameState.reset_requested_by || null}
             isConnected={isConnected}
             onUpdateName={updatePlayerName}
+            onRequestReset={() => performResetAction('request_reset')}
+            onCancelReset={() => performResetAction('cancel_reset')}
           />
         }
       />

@@ -7,7 +7,11 @@ require_relative '../app/services/game_engine'
 
 class GameEngineTest < Minitest::Test
   def setup
-    @engine = GameEngine.new(reveal_seconds: 0.05, start_presence_sweeper: false)
+    @engine = GameEngine.new(
+      reveal_seconds: 0.05,
+      reset_seconds: 0.05,
+      start_presence_sweeper: false
+    )
     @engine.instance_variable_set(:@board, (1..12).to_a)
     @engine.instance_variable_set(:@deck, (13..81).to_a)
     @engine.instance_variable_set(:@scores, {})
@@ -62,6 +66,54 @@ class GameEngineTest < Minitest::Test
     assert_nil resolved_state[:active_claim]
     assert_equal 10, resolved_state[:countdown]
     assert_equal 'winner', resolved_state[:placements].first[:player_id]
+  end
+
+  def test_any_player_can_stop_a_scheduled_reset
+    original_board = @engine.board.dup
+    @engine.instance_variable_set(:@scores, { 'player-one' => 3 })
+
+    requested = @engine.request_reset('player-one')
+
+    assert requested[:success]
+    assert_equal 1, requested[:new_state][:reset_countdown]
+    assert_equal 'player-one', requested[:new_state][:reset_requested_by]
+    refute @engine.request_reset('player-three')[:success]
+
+    cancelled = @engine.cancel_reset('player-two')
+
+    assert cancelled[:success]
+    assert_equal 0, cancelled[:new_state][:reset_countdown]
+    assert_nil cancelled[:new_state][:reset_requested_by]
+
+    sleep 0.08
+    assert_equal original_board, @engine.current_state[:board]
+    assert_equal 3, @engine.current_state[:scores]['player-one']
+  end
+
+  def test_scheduled_reset_starts_a_fresh_game
+    @engine.instance_variable_set(:@scores, { 'player-one' => 3 })
+    @engine.instance_variable_set(
+      :@recent_claims,
+      [{ player_id: 'player-one', cards: [1, 2, 3] }]
+    )
+    broadcasts = []
+    @engine.broadcaster = ->(state) { broadcasts << state }
+
+    requested = @engine.request_reset('player-one')
+    assert requested[:success]
+
+    reset_state = wait_until do
+      state = @engine.current_state
+      state if state[:reset_countdown].zero? && state[:reset_requested_by].nil?
+    end
+
+    refute_nil reset_state
+    assert_empty reset_state[:scores]
+    assert_empty reset_state[:recent_claims]
+    assert_equal 'playing', reset_state[:status]
+    assert_includes [12, 15, 18], reset_state[:board].length
+    assert Rules.set_exists?(reset_state[:board])
+    assert(broadcasts.any? { |state| state[:reset_countdown].zero? })
   end
 
   private
