@@ -18,6 +18,11 @@ interface RecentClaim {
   cards: number[]
 }
 
+interface ActiveClaim {
+  player_id: string
+  cards: number[]
+}
+
 interface GameState {
   board: number[]
   deck_count: number
@@ -29,6 +34,7 @@ interface GameState {
   countdown: number
   placements: Placement[]
   recent_claims: RecentClaim[]
+  active_claim: ActiveClaim | null
 }
 
 type ServerMessage =
@@ -47,7 +53,8 @@ const EMPTY_STATE: GameState = {
   idle_player_ids: [],
   countdown: 0,
   placements: [],
-  recent_claims: []
+  recent_claims: [],
+  active_claim: null
 }
 
 const MultiplayerGame: React.FC = () => {
@@ -120,7 +127,6 @@ const MultiplayerGame: React.FC = () => {
         if ('success' in data && data.success) {
           // Our own claim succeeded
           clearClaimTimeout()
-          showToast('Set found!', 'success')
           setGameState(data)
           setSelectedCards([])
           setClaiming(false)
@@ -132,7 +138,9 @@ const MultiplayerGame: React.FC = () => {
         // that are no longer on the board.
         const state = data as GameState
         setGameState(state)
-        setSelectedCards(prev => prev.filter(id => state.board.includes(id)))
+        setSelectedCards(prev => (
+          state.active_claim ? [] : prev.filter(id => state.board.includes(id))
+        ))
       }
     })
 
@@ -183,7 +191,7 @@ const MultiplayerGame: React.FC = () => {
   }
 
   const handleClaimSet = (cardIds: number[]) => {
-    if (cardIds.length !== 3 || claiming) return
+    if (cardIds.length !== 3 || claiming || gameState.active_claim) return
 
     if (!isConnected || !subscriptionRef.current || typeof subscriptionRef.current.perform !== 'function') {
       showToast('Not connected to the game. Trying to reconnect…', 'error')
@@ -212,7 +220,7 @@ const MultiplayerGame: React.FC = () => {
   }
 
   const handleCardClick = (cardId: number) => {
-    if (claiming || gameState.status !== 'playing') return
+    if (claiming || gameState.active_claim || gameState.status !== 'playing') return
 
     const nextSelected = selectedCards.includes(cardId)
       ? selectedCards.filter(id => id !== cardId)
@@ -228,6 +236,13 @@ const MultiplayerGame: React.FC = () => {
     }
   }
 
+  const activeClaim = gameState.active_claim
+  const announcement = activeClaim
+    ? activeClaim.player_id === playerId
+      ? 'You found a set!'
+      : `${gameState.names[activeClaim.player_id] || 'A player'} found a set!`
+    : null
+
   return (
     <>
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}
@@ -238,9 +253,11 @@ const MultiplayerGame: React.FC = () => {
             cards={gameState.board}
             selectedCards={selectedCards}
             rejectedCards={rejectedCards}
+            foundCards={activeClaim?.cards || []}
+            announcement={announcement}
             onCardClick={handleCardClick}
             claiming={claiming}
-            gameOver={gameState.status !== 'playing'}
+            gameOver={gameState.status === 'round_over'}
           />
         }
         sidebar={

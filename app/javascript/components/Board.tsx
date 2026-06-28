@@ -4,6 +4,8 @@ interface BoardProps {
   cards: number[]
   selectedCards: number[]
   rejectedCards?: number[]
+  foundCards?: number[]
+  announcement?: string | null
   onCardClick: (cardId: number) => void
   claiming: boolean
   gameOver?: boolean
@@ -14,17 +16,34 @@ const Board: React.FC<BoardProps> = ({
   cards,
   selectedCards,
   rejectedCards = [],
+  foundCards = [],
+  announcement,
   onCardClick,
   claiming,
   gameOver = false,
   paused = false
 }) => {
-  const interactionLocked = claiming || gameOver || paused
+  const isRevealingSet = foundCards.length === 3
+  const interactionLocked = claiming || gameOver || paused || isRevealingSet
 
   return (
     // Grid geometry stays constant regardless of how many cards are dealt:
     // extra cards simply add rows below, so existing cards never move or resize.
     <div className="relative mx-auto w-full max-w-2xl lg:max-w-4xl">
+      {announcement !== undefined && (
+        <div className="mb-3 flex h-9 items-center justify-center" aria-live="polite" aria-atomic="true">
+          {announcement && (
+            <div
+              role="status"
+              className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-sm font-semibold text-emerald-900 shadow-sm dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-100"
+            >
+              <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />
+              {announcement}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Round over overlay */}
       {gameOver && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
@@ -49,12 +68,19 @@ const Board: React.FC<BoardProps> = ({
         {cards.map((cardId) => {
           const isSelected = selectedCards.includes(cardId)
           const isRejected = rejectedCards.includes(cardId)
+          const isFound = foundCards.includes(cardId)
 
           const borderStyle = isRejected
             ? 'border-rose-500 ring-2 ring-rose-500/30 animate-shake'
-            : isSelected
-              ? 'border-neutral-900 ring-2 ring-neutral-900/15 -translate-y-0.5 shadow-md dark:border-neutral-100 dark:ring-neutral-100/15'
-              : 'border-neutral-200 hover:border-neutral-300 dark:border-neutral-700 dark:hover:border-neutral-600'
+            : isFound
+              ? 'relative z-[1] -translate-y-1 border-emerald-500 ring-4 ring-emerald-500/25 shadow-lg'
+              : isSelected
+                ? 'border-neutral-900 ring-2 ring-neutral-900/15 -translate-y-0.5 shadow-md dark:border-neutral-100 dark:ring-neutral-100/15'
+                : 'border-neutral-200 hover:border-neutral-300 dark:border-neutral-700 dark:hover:border-neutral-600'
+
+          const revealStyle = isRevealingSet && !isFound
+            ? 'scale-[0.98] opacity-40 saturate-50'
+            : ''
 
           return (
             <button
@@ -63,9 +89,9 @@ const Board: React.FC<BoardProps> = ({
               disabled={interactionLocked}
               aria-pressed={isSelected}
               onClick={() => onCardClick(cardId)}
-              className={`animate-card-in block w-full touch-manipulation select-none overflow-hidden rounded-xl border-2 bg-white transition-[border-color,box-shadow,transform] duration-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 dark:bg-white dark:focus-visible:outline-neutral-100 ${
+              className={`animate-card-in block w-full touch-manipulation select-none overflow-hidden rounded-xl border-2 bg-white transition-[border-color,box-shadow,transform,opacity,filter] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 dark:bg-white dark:focus-visible:outline-neutral-100 ${
                 interactionLocked ? 'cursor-default' : 'cursor-pointer active:scale-[0.98]'
-              } ${borderStyle}`}
+              } ${borderStyle} ${revealStyle}`}
             >
               <img
                 src={`/cards/${cardId}.png`}

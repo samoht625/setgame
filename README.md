@@ -26,9 +26,10 @@ set is present, and the round ends when the deck is exhausted and no sets remain
   Progress, the timer and your best times are persisted in `localStorage`, so you can leave
   and resume. (`/s` redirects here for old links.)
 - **Multiplayer** (`/m`): one shared, server-authoritative board for everyone connected.
-  Scores, presence and recent sets update live over WebSockets. When the deck runs out the
-  round ends, placements are shown, and a new round starts automatically. While you're in
-  solo mode, a tiny `/presence` poll lights up a jewel on the Multiplayer toggle whenever
+  Scores, presence and recent sets update live over WebSockets. A claimed set is highlighted
+  for everyone for two seconds before replacement cards are dealt. When the deck runs out
+  the round ends, placements are shown, and a new round starts automatically. While you're
+  in solo mode, a tiny `/presence` poll lights up a jewel on the Multiplayer toggle whenever
   other people are playing.
 
 ## Features
@@ -104,6 +105,7 @@ See `AGENTS.md` for cloud-only commands and verification.
 ### Testing
 
 - `ruby script/test_rules.rb` — sanity checks for the card mapping and set validation logic
+- `ruby script/test_game_engine.rb` — multiplayer claim/reveal timing checks
 - `yarn typecheck` — TypeScript type checking
 - Open multiple browser tabs to test multiplayer locally
 
@@ -169,8 +171,9 @@ script/
 2. **Game State**: single authoritative game state in the `GAME_ENGINE` service
 3. **Set Claims**: players select 3 cards; the claim is sent over the WebSocket
 4. **Validation**: the server validates the cards are distinct, on the board, and form a set
-5. **Scoring**: each valid claim scores 1 point; scores reset when a new round starts
-6. **Auto-progression**: the server deals replacements, extends the board when no set exists,
+5. **Reveal**: every client highlights the set and announces its finder for two seconds
+6. **Scoring**: each valid claim scores 1 point; scores reset when a new round starts
+7. **Auto-progression**: the server deals replacements, extends the board when no set exists,
    and starts a new round shortly after the deck is exhausted
 
 ## License

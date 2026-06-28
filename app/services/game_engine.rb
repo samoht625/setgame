@@ -8,8 +8,9 @@ class GameEngine
   attr_writer :broadcaster
 
   RECENT_CLAIMS_LIMIT = 10
+  SET_REVEAL_SECONDS = 2
 
-  def initialize
+  def initialize(reveal_seconds: SET_REVEAL_SECONDS, start_presence_sweeper: true)
     @board = []
     @deck = []
     @scores = {} # player_id => score
@@ -27,13 +28,19 @@ class GameEngine
     @placements = []
     # Store only player_id and cards so UI always resolves latest name
     @recent_claims = [] # { player_id:, cards: [] }
+    @active_claim = nil
+    @active_claim_token = nil
+    @claim_sequence = 0
+    @reveal_seconds = reveal_seconds
     start_new_round
 
     # Start presence sweeper thread after all initialization is complete
-    @presence_sweeper_thread = Thread.new do
-      loop do
-        sleep 5
-        @mutex.synchronize { update_online_set! }
+    if start_presence_sweeper
+      @presence_sweeper_thread = Thread.new do
+        loop do
+          sleep 5
+          @mutex.synchronize { update_online_set! }
+        end
       end
     end
   end
@@ -62,6 +69,8 @@ class GameEngine
       @countdown = 0
       @placements = []
       @recent_claims = []
+      @active_claim = nil
+      @active_claim_token = nil
     end
   end
 
@@ -111,6 +120,10 @@ class GameEngine
         return { success: false, message: 'Round is over - waiting for the next round' }
       end
 
+      if @active_claim
+        return { success: false, message: 'A set was just found - new cards are coming' }
+      end
+
       # Check if cards are still on board
       unless card_ids.all? { |id| @board.include?(id) }
         return { success: false, message: 'One or more cards are no longer on the board' }
@@ -121,25 +134,6 @@ class GameEngine
         return { success: false, message: 'Not a valid set' }
       end
 
-      # If we were at 15+ cards, collapse back down by removing the set
-      # (It's okay to re-arrange the board in this case.)
-      if @board.length >= 15
-        remove_cards_from_board(card_ids)
-      else
-        # Otherwise, replace cards in place (preserve positions when possible)
-        replace_cards_in_place(card_ids)
-      end
-
-      # If no set exists and we have cards left, add more
-      while @board.length < 18 && !Rules.set_exists?(@board) && !@deck.empty?
-        deal_cards(3)
-      end
-
-      # If still no sets at 18 cards, reshuffle and redeal
-      if @board.length >= 18 && !Rules.set_exists?(@board)
-        reshuffle_and_redeal_12!
-      end
-
       # Award point
       @scores[player_id] ||= 0
       @scores[player_id] += 1
@@ -148,35 +142,13 @@ class GameEngine
       @recent_claims.unshift({ player_id: player_id, cards: card_ids })
       @recent_claims = @recent_claims.first(RECENT_CLAIMS_LIMIT)
 
-      # Check if round is over (deck empty and no sets on board)
-      if @deck.empty? && !Rules.set_exists?(@board)
-        @status = 'round_over'
-        # Compute placements (top 3 if available)
-        @placements = compute_top_placements(3)
-        # Begin a 10-second countdown and broadcast each second
-        @countdown = 10
-        @broadcaster&.call(current_state)
-
-        Thread.new do
-          loop do
-            sleep 1
-            should_start = false
-            @mutex.synchronize do
-              @countdown -= 1 if @countdown > 0
-              should_start = @countdown <= 0
-              @broadcaster&.call(current_state)
-            end
-            break if should_start
-          end
-
-          # Call start_new_round outside of a held mutex to avoid deadlock
-          # since start_new_round acquires @mutex internally.
-          start_new_round
-          @mutex.synchronize do
-            @broadcaster&.call(current_state)
-          end
-        end
-      end
+      # Keep the claimed cards on the board briefly so every client can see
+      # the set before replacements are dealt. The active claim also locks out
+      # competing claims during this short reveal phase.
+      @claim_sequence += 1
+      @active_claim_token = @claim_sequence
+      @active_claim = { player_id: player_id, cards: card_ids.dup }
+      schedule_claim_resolution(@active_claim_token, card_ids.dup)
 
       {
         success: true,
@@ -188,18 +160,9 @@ class GameEngine
 
   # Get current game state
   def current_state
-    {
-      board: @board,
-      deck_count: @deck.length,
-      scores: @scores.dup,
-      names: @names.dup,
-      status: @status,
-      online_player_ids: @online_player_ids.to_a,
-      idle_player_ids: @idle_player_ids.to_a,
-      countdown: @countdown,
-      placements: @placements,
-      recent_claims: @recent_claims
-    }
+    return build_current_state if @mutex.owned?
+
+    @mutex.synchronize { build_current_state }
   end
 
   # Thread-safe snapshot of the player ids currently connected to multiplayer.
@@ -299,6 +262,106 @@ class GameEngine
   end
 
   private
+
+  def build_current_state
+    {
+      board: @board.dup,
+      deck_count: @deck.length,
+      scores: @scores.dup,
+      names: @names.dup,
+      status: @status,
+      online_player_ids: @online_player_ids.to_a,
+      idle_player_ids: @idle_player_ids.to_a,
+      countdown: @countdown,
+      placements: @placements.map(&:dup),
+      recent_claims: @recent_claims.map { |claim| { player_id: claim[:player_id], cards: claim[:cards].dup } },
+      active_claim: @active_claim && {
+        player_id: @active_claim[:player_id],
+        cards: @active_claim[:cards].dup
+      }
+    }
+  end
+
+  def schedule_claim_resolution(claim_token, card_ids)
+    Thread.new do
+      sleep @reveal_seconds
+
+      state = nil
+      round_over = false
+
+      @mutex.synchronize do
+        next unless @active_claim_token == claim_token
+
+        resolve_claimed_cards!(card_ids)
+        @active_claim = nil
+        @active_claim_token = nil
+
+        if @deck.empty? && !Rules.set_exists?(@board)
+          @status = 'round_over'
+          @placements = compute_top_placements(3)
+          @countdown = 10
+          round_over = true
+        end
+
+        state = current_state
+      end
+
+      @broadcaster&.call(state) if state
+      start_round_countdown if round_over
+    end
+  end
+
+  def resolve_claimed_cards!(card_ids)
+    # Extra rows collapse after a set; the normal 12-card board gets in-place
+    # replacements so unrelated cards stay put.
+    if @board.length >= 15
+      remove_cards_from_board(card_ids)
+    else
+      replace_cards_in_place(card_ids)
+    end
+
+    while @board.length < 18 && !Rules.set_exists?(@board) && !@deck.empty?
+      deal_cards(3)
+    end
+
+    reshuffle_and_redeal_12! if @board.length >= 18 && !Rules.set_exists?(@board)
+  end
+
+  def start_round_countdown
+    Thread.new do
+      restart_round = false
+
+      loop do
+        sleep 1
+        state = nil
+        should_start = false
+
+        @mutex.synchronize do
+          next unless @status == 'round_over'
+
+          @countdown -= 1 if @countdown > 0
+          should_start = @countdown <= 0
+          state = current_state
+        end
+
+        unless state
+          restart_round = false
+          break
+        end
+
+        @broadcaster&.call(state)
+        restart_round = should_start
+        break if should_start
+      end
+
+      next unless restart_round
+
+      # start_new_round acquires the mutex itself.
+      start_new_round
+      state = @mutex.synchronize { current_state }
+      @broadcaster&.call(state)
+    end
+  end
 
   ADJECTIVES = %w[
     Wily Clever Swift Bold Bright Quick Silent Brave Noble Wise
