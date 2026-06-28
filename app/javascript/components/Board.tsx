@@ -73,14 +73,10 @@ const Board: React.FC<BoardProps> = ({
           const borderStyle = isRejected
             ? 'border-rose-500 ring-2 ring-rose-500/30 animate-shake'
             : isFound
-              ? 'relative z-[1] -translate-y-1 border-emerald-500 ring-4 ring-emerald-500/25 shadow-lg'
+              ? 'relative z-[1] -translate-y-0.5 border-emerald-500 ring-4 ring-emerald-500/25 shadow-lg'
               : isSelected
                 ? 'border-neutral-900 ring-2 ring-neutral-900/15 -translate-y-0.5 shadow-md dark:border-neutral-100 dark:ring-neutral-100/15'
                 : 'border-neutral-200 hover:border-neutral-300 dark:border-neutral-700 dark:hover:border-neutral-600'
-
-          const revealStyle = isRevealingSet && !isFound
-            ? 'scale-[0.98] opacity-40 saturate-50'
-            : ''
 
           return (
             <button
@@ -89,9 +85,9 @@ const Board: React.FC<BoardProps> = ({
               disabled={interactionLocked}
               aria-pressed={isSelected}
               onClick={() => onCardClick(cardId)}
-              className={`animate-card-in block w-full touch-manipulation select-none overflow-hidden rounded-xl border-2 bg-white transition-[border-color,box-shadow,transform,opacity,filter] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 dark:bg-white dark:focus-visible:outline-neutral-100 ${
+              className={`animate-card-in block w-full touch-manipulation select-none overflow-hidden rounded-xl border-2 bg-white transition-[border-color,box-shadow,transform] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 dark:bg-white dark:focus-visible:outline-neutral-100 ${
                 interactionLocked ? 'cursor-default' : 'cursor-pointer active:scale-[0.98]'
-              } ${borderStyle} ${revealStyle}`}
+              } ${borderStyle}`}
             >
               <img
                 src={`/cards/${cardId}.png`}
