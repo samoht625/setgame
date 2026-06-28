@@ -92,6 +92,44 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
 
   return (
     <div className="rounded-2xl border border-neutral-200 bg-white p-4 md:p-5 dark:border-neutral-800 dark:bg-neutral-900">
+      {/* Shared reset */}
+      <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 dark:border-rose-900 dark:bg-rose-950/40">
+        <SectionLabel>Game controls</SectionLabel>
+        {isResetPending ? (
+          <>
+            <div aria-live="assertive" className="mt-2 text-sm text-rose-900 dark:text-rose-100">
+              <span className="font-medium">{resetRequesterName}</span> requested a reset.
+              <div className="mt-0.5">
+                New game in{' '}
+                <span className="font-semibold tabular-nums">{Math.max(1, Math.ceil(resetCountdown))}</span>…
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onCancelReset}
+              disabled={!isConnected || !onCancelReset}
+              className="mt-2.5 w-full rounded-lg bg-rose-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-offset-neutral-900"
+            >
+              Stop reset
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={onRequestReset}
+              disabled={!isConnected || !onRequestReset}
+              className="mt-2 w-full rounded-lg bg-rose-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-offset-neutral-900"
+            >
+              Reset game
+            </button>
+            <p className="mt-1.5 text-center text-xs text-rose-700 dark:text-rose-300">
+              Starts a 5-second countdown anyone can stop.
+            </p>
+          </>
+        )}
+      </div>
+
       {/* Players */}
       <div className="mb-2 flex items-center justify-between">
         <SectionLabel>Players</SectionLabel>
@@ -187,43 +225,6 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
         >
           {isRoundOver ? 'Round over' : 'In play'}
         </span>
-      </div>
-
-      {/* Shared reset */}
-      <div className="mt-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-        {isResetPending ? (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 dark:border-rose-900 dark:bg-rose-950/40">
-            <div aria-live="assertive" className="text-sm text-rose-900 dark:text-rose-100">
-              <span className="font-medium">{resetRequesterName}</span> requested a reset.
-              <div className="mt-0.5">
-                New game in{' '}
-                <span className="font-semibold tabular-nums">{Math.max(1, Math.ceil(resetCountdown))}</span>…
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={onCancelReset}
-              disabled={!isConnected || !onCancelReset}
-              className="mt-2.5 w-full rounded-lg bg-rose-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-offset-neutral-900"
-            >
-              Stop reset
-            </button>
-          </div>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={onRequestReset}
-              disabled={!isConnected || !onRequestReset}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-600 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:text-neutral-400 dark:hover:border-rose-800 dark:hover:bg-rose-950/40 dark:hover:text-rose-300 dark:focus-visible:ring-offset-neutral-900"
-            >
-              Reset game
-            </button>
-            <p className="mt-1.5 text-center text-xs text-neutral-400 dark:text-neutral-500">
-              Starts a 5-second countdown anyone can stop.
-            </p>
-          </>
-        )}
       </div>
 
       {/* Round results */}
