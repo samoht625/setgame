@@ -71,11 +71,11 @@ const Board: React.FC<BoardProps> = ({
           const isFound = foundCards.includes(cardId)
 
           const borderStyle = isRejected
-            ? 'border-rose-500 ring-2 ring-rose-500/30 animate-shake'
+            ? 'border-rose-500 ring-2 ring-rose-500/30 animate-shake dark:ring-rose-400/50 dark:shadow-lg dark:shadow-rose-500/20'
             : isFound
-              ? 'relative z-[1] -translate-y-0.5 border-emerald-500 ring-4 ring-emerald-500/25 shadow-lg'
+              ? 'relative z-[1] -translate-y-0.5 border-emerald-500 ring-4 ring-emerald-500/25 shadow-lg dark:ring-emerald-400/45 dark:shadow-emerald-500/25'
               : isSelected
-                ? 'border-neutral-900 ring-2 ring-neutral-900/15 -translate-y-0.5 shadow-md dark:border-neutral-100 dark:ring-neutral-100/15'
+                ? 'relative z-[1] -translate-y-0.5 border-neutral-900 ring-4 ring-neutral-900/20 shadow-lg dark:border-amber-500 dark:ring-amber-400/60 dark:shadow-lg dark:shadow-amber-500/35'
                 : 'border-neutral-200 hover:border-neutral-300 dark:border-neutral-700 dark:hover:border-neutral-600'
 
           return (
