@@ -75,7 +75,7 @@ const Board: React.FC<BoardProps> = ({
             : isFound
               ? 'relative z-[1] -translate-y-0.5 border-emerald-500 ring-4 ring-emerald-500/25 shadow-lg dark:ring-emerald-400/45 dark:shadow-emerald-500/25'
               : isSelected
-                ? 'relative z-[1] -translate-y-0.5 border-neutral-900 ring-4 ring-neutral-900/20 shadow-lg dark:border-sky-400 dark:ring-sky-400/55 dark:shadow-lg dark:shadow-sky-500/30'
+                ? 'relative z-[1] -translate-y-0.5 border-neutral-900 ring-4 ring-neutral-900/20 shadow-lg dark:border-amber-500 dark:ring-amber-400/60 dark:shadow-lg dark:shadow-amber-500/35'
                 : 'border-neutral-200 hover:border-neutral-300 dark:border-neutral-700 dark:hover:border-neutral-600'
 
           return (
