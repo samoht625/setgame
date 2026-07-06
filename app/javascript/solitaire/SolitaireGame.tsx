@@ -224,7 +224,7 @@ const SolitaireGame: React.FC = () => {
       return
     }
 
-    const localSeed = (Math.random() * 0xffffffff) >>> 0
+    const localSeed = crypto.getRandomValues(new Uint32Array(1))[0]!
     const deal = startSoloDeal(localSeed)
     applyDeal(deal, {
       gameId: null,

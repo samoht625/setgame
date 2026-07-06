@@ -374,7 +374,7 @@ class GameEngine
     # Reset scores for a fresh game as requested
     @scores = {}
 
-    @deck = (1..81).to_a.shuffle
+    @deck = (1..81).to_a.shuffle(random: SecureRandom)
     @board = []
     deal_cards(12)
 
@@ -589,7 +589,7 @@ class GameEngine
   # Used when board reaches 18 cards with no sets
   def reshuffle_and_redeal_12!
     # Combine board and deck, shuffle
-    pool = (@board + @deck).shuffle
+    pool = (@board + @deck).shuffle(random: SecureRandom)
     @deck = pool
     @board = []
 
