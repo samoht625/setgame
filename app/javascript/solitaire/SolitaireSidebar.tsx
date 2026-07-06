@@ -29,6 +29,13 @@ interface SolitaireSidebarProps {
 
 const BEST_TIMES_KEY = 'setgame_solo_best_times'
 
+// Gold / silver / bronze badges for the top three leaderboard ranks
+const RANK_BADGES: string[] = [
+  'bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300',
+  'bg-neutral-200 text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300',
+  'bg-orange-100 text-orange-700 dark:bg-orange-900/60 dark:text-orange-300'
+]
+
 const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="text-xs font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-500">{children}</div>
 )
@@ -197,16 +204,16 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
       <div className="mt-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
         <div className="flex items-center justify-between gap-2">
           <SectionLabel>Leaderboard</SectionLabel>
-          <div className="flex gap-1">
+          <div className="flex rounded-lg bg-neutral-100 p-0.5 dark:bg-neutral-800">
             {periods.map(p => (
               <button
                 key={p}
                 type="button"
                 onClick={() => onPeriodChange(p)}
-                className={`rounded px-2 py-0.5 text-[11px] capitalize ${
+                className={`rounded-md px-2.5 py-1 text-[11px] font-medium capitalize transition-colors ${
                   period === p
-                    ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'
-                    : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                    ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-600 dark:text-neutral-100'
+                    : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200'
                 }`}
               >
                 {p}
@@ -216,73 +223,87 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
         </div>
 
         {personalBest && (
-          <div className="mb-2 rounded-lg border border-emerald-200 bg-emerald-50 p-2 text-xs dark:border-emerald-900 dark:bg-emerald-950/40">
-            <div className="text-xs font-medium text-emerald-800 dark:text-emerald-200">
-              Your best ({period})
-            </div>
-            <div className="font-semibold tabular-nums text-emerald-900 dark:text-emerald-100">
+          <div className="mt-2.5 flex items-center justify-between rounded-lg bg-emerald-50 px-2.5 py-1.5 dark:bg-emerald-950/40">
+            <span className="text-[11px] font-medium text-emerald-700 dark:text-emerald-300">Your best</span>
+            <span className="text-xs font-semibold tabular-nums text-emerald-800 dark:text-emerald-200">
               {formatTime(personalBest.elapsed_ms)}
-            </div>
+            </span>
           </div>
         )}
 
         {leaderboard.length === 0 ? (
-          <p className="text-xs text-neutral-400">No scores yet for this period.</p>
-        ) : (
-          <div className="max-h-48 space-y-1.5 overflow-y-auto">
-            {leaderboard.map((entry, index) => (
-              <div
-                key={`${entry.player_id}-${entry.completed_at}-${index}`}
-                className="flex items-center justify-between gap-2 rounded-lg border border-neutral-200 bg-neutral-50 p-2 text-xs dark:border-neutral-700 dark:bg-neutral-800/50"
-              >
-                <div className="min-w-0">
-                  <div className="truncate font-medium text-neutral-900 dark:text-neutral-100">
-                    {index + 1}. {entry.display_name || 'Anonymous'}
-                  </div>
-                  <div className="text-[11px] text-neutral-500">{formatDate(entry.completed_at)}</div>
-                </div>
-                <div className="shrink-0 font-semibold tabular-nums text-neutral-800 dark:text-neutral-200">
-                  {formatTime(entry.elapsed_ms)}
-                </div>
-              </div>
-            ))}
+          <div className="mt-2.5 rounded-xl border border-dashed border-neutral-200 px-3 py-5 text-center dark:border-neutral-700">
+            <p className="text-xs text-neutral-400 dark:text-neutral-500">
+              No times yet — finish a game to claim the top spot.
+            </p>
           </div>
+        ) : (
+          <ol className="mt-1.5 max-h-48 space-y-0.5 overflow-y-auto">
+            {leaderboard.map((entry, index) => (
+              <li
+                key={`${entry.player_id}-${entry.completed_at}-${index}`}
+                className="flex items-center gap-2.5 rounded-lg px-2 py-1.5"
+              >
+                <span
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold tabular-nums ${
+                    RANK_BADGES[index] ?? 'text-neutral-400 dark:text-neutral-500'
+                  }`}
+                >
+                  {index + 1}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-xs font-medium text-neutral-900 dark:text-neutral-100">
+                  {entry.display_name || 'Anonymous'}
+                </span>
+                <span className="flex shrink-0 flex-col items-end">
+                  <span className="text-xs font-semibold tabular-nums text-neutral-900 dark:text-neutral-100">
+                    {formatTime(entry.elapsed_ms)}
+                  </span>
+                  <span className="text-[10px] text-neutral-400 dark:text-neutral-500">
+                    {formatDate(entry.completed_at)}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ol>
         )}
       </div>
 
       {bestTimes.length > 0 && (
         <div className="mt-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-          <SectionLabel>Local bests</SectionLabel>
-          <ol className="mt-2 space-y-1">
+          <SectionLabel>My times</SectionLabel>
+          <ol className="mt-1.5 space-y-0.5">
             {bestTimes.map((entry, index) => {
               const isBest = index === 0
               const isNewest = isFinished && entry.at === newestAt
               return (
                 <li
                   key={`${entry.at}-${entry.ms}`}
-                  className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 text-sm ${
-                    isNewest ? 'bg-amber-50 dark:bg-amber-950/50' : ''
+                  className={`flex items-center justify-between rounded-lg px-2 py-1.5 ${
+                    isNewest ? 'bg-amber-50 dark:bg-amber-950/40' : ''
                   }`}
                 >
                   <span className="flex items-center gap-2">
                     <span
-                      className={`tabular-nums ${isBest ? 'font-semibold text-neutral-900 dark:text-neutral-100' : 'text-neutral-700 dark:text-neutral-300'}`}
+                      className={`text-sm tabular-nums ${
+                        isBest
+                          ? 'font-semibold text-neutral-900 dark:text-neutral-100'
+                          : 'text-neutral-600 dark:text-neutral-300'
+                      }`}
                     >
                       {formatTime(entry.ms)}
                     </span>
-                    {isBest && isNewest && (
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        className="h-3.5 w-3.5 text-amber-500"
-                        aria-label="New best time"
-                      >
-                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                      </svg>
+                    {isBest && (
+                      <span className="rounded-full bg-neutral-900 px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide text-white dark:bg-neutral-100 dark:text-neutral-900">
+                        Best
+                      </span>
+                    )}
+                    {isNewest && (
+                      <span className="rounded-full bg-amber-100 px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-900 dark:text-amber-200">
+                        New
+                      </span>
                     )}
                   </span>
-                  <span className="text-xs text-neutral-400">{formatDate(entry.at)}</span>
+                  <span className="text-[11px] text-neutral-400 dark:text-neutral-500">{formatDate(entry.at)}</span>
                 </li>
               )
             })}
