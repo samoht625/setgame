@@ -195,9 +195,9 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
       )}
 
       <div className="mt-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
           <SectionLabel>Leaderboard</SectionLabel>
-          <div className="flex rounded-lg bg-neutral-100 p-0.5 dark:bg-neutral-800">
+          <div className="flex shrink-0 rounded-lg bg-neutral-100 p-0.5 dark:bg-neutral-800">
             {periods.map(p => (
               <button
                 key={p}
