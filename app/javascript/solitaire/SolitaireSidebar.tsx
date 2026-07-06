@@ -1,5 +1,6 @@
 import React from 'react'
 import type { SoloStatus } from './SolitaireGame'
+import type { LeaderboardEntry } from '../lib/solo_api'
 
 interface BestTime {
   ms: number
@@ -18,6 +19,12 @@ interface SolitaireSidebarProps {
   onTogglePause: () => void
   onRestart: () => void
   recentClaims: RecentClaim[]
+  leaderboard: LeaderboardEntry[]
+  personalBest: LeaderboardEntry | null
+  period: 'daily' | 'weekly' | 'monthly'
+  onPeriodChange: (period: 'daily' | 'weekly' | 'monthly') => void
+  eligible?: boolean
+  submitting?: boolean
 }
 
 const BEST_TIMES_KEY = 'setgame_solo_best_times'
@@ -62,18 +69,24 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
   status,
   onTogglePause,
   onRestart,
-  recentClaims
+  recentClaims,
+  leaderboard,
+  personalBest,
+  period,
+  onPeriodChange,
+  eligible = true,
+  submitting = false
 }) => {
   const isFinished = status === 'round_over'
   const isPaused = status === 'paused'
 
   const [bestTimes, setBestTimes] = React.useState<BestTime[]>(loadBestTimes)
+  const periods: Array<'daily' | 'weekly' | 'monthly'> = ['daily', 'weekly', 'monthly']
 
   React.useEffect(() => {
     setBestTimes(loadBestTimes())
   }, [isFinished])
 
-  // The newest entry (by timestamp) gets highlighted after a finished round
   const newestAt = React.useMemo(() => {
     let newest = ''
     let newestTs = 0
@@ -95,7 +108,6 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
 
   return (
     <div className="rounded-2xl border border-neutral-200 bg-white p-4 md:p-5 dark:border-neutral-800 dark:bg-neutral-900">
-      {/* Timer */}
       <div className="flex items-center justify-between">
         <SectionLabel>Time</SectionLabel>
         <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusChip.classes}`}>
@@ -149,7 +161,15 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
         </div>
       </div>
 
-      {/* Stats */}
+      {!eligible && !isFinished && (
+        <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+          Pause or offline play is not ranked.
+        </p>
+      )}
+      {submitting && (
+        <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">Submitting…</p>
+      )}
+
       <div className="mt-4 flex items-center justify-between border-t border-neutral-100 pt-3 text-sm dark:border-neutral-800">
         <span className="text-neutral-500 dark:text-neutral-400">
           <span className="font-semibold tabular-nums text-neutral-900 dark:text-neutral-100">{deckCount}</span> cards left
@@ -159,7 +179,6 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
         </span>
       </div>
 
-      {/* Finished round summary */}
       {isFinished && (
         <div className="mt-3 space-y-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-800/50">
           <div className="text-sm text-neutral-700 dark:text-neutral-300">
@@ -175,10 +194,65 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
         </div>
       )}
 
-      {/* Best times */}
+      <div className="mt-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+        <div className="flex items-center justify-between gap-2">
+          <SectionLabel>Leaderboard</SectionLabel>
+          <div className="flex gap-1">
+            {periods.map(p => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => onPeriodChange(p)}
+                className={`rounded px-2 py-0.5 text-[11px] capitalize ${
+                  period === p
+                    ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'
+                    : 'text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {personalBest && (
+          <div className="mb-2 rounded-lg border border-emerald-200 bg-emerald-50 p-2 text-xs dark:border-emerald-900 dark:bg-emerald-950/40">
+            <div className="text-xs font-medium text-emerald-800 dark:text-emerald-200">
+              Your best ({period})
+            </div>
+            <div className="font-semibold tabular-nums text-emerald-900 dark:text-emerald-100">
+              {formatTime(personalBest.elapsed_ms)}
+            </div>
+          </div>
+        )}
+
+        {leaderboard.length === 0 ? (
+          <p className="text-xs text-neutral-400">No scores yet for this period.</p>
+        ) : (
+          <div className="max-h-48 space-y-1.5 overflow-y-auto">
+            {leaderboard.map((entry, index) => (
+              <div
+                key={`${entry.player_id}-${entry.completed_at}-${index}`}
+                className="flex items-center justify-between gap-2 rounded-lg border border-neutral-200 bg-neutral-50 p-2 text-xs dark:border-neutral-700 dark:bg-neutral-800/50"
+              >
+                <div className="min-w-0">
+                  <div className="truncate font-medium text-neutral-900 dark:text-neutral-100">
+                    {index + 1}. {entry.display_name || 'Anonymous'}
+                  </div>
+                  <div className="text-[11px] text-neutral-500">{formatDate(entry.completed_at)}</div>
+                </div>
+                <div className="shrink-0 font-semibold tabular-nums text-neutral-800 dark:text-neutral-200">
+                  {formatTime(entry.elapsed_ms)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {bestTimes.length > 0 && (
         <div className="mt-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-          <SectionLabel>Best times</SectionLabel>
+          <SectionLabel>Local bests</SectionLabel>
           <ol className="mt-2 space-y-1">
             {bestTimes.map((entry, index) => {
               const isBest = index === 0
@@ -216,7 +290,6 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
         </div>
       )}
 
-      {/* Recent sets */}
       {recentClaims.length > 0 && (
         <div className="mt-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
           <SectionLabel>Last sets found</SectionLabel>

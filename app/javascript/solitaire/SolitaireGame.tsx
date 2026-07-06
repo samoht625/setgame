@@ -1,13 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Board from '../components/Board'
 import GameLayout from '../components/GameLayout'
-import Toast, { ToastMessage } from '../components/Toast'
+import Toast, { ToastMessage, ToastType } from '../components/Toast'
 import SolitaireSidebar from './SolitaireSidebar'
-import { isSet, setExists } from '../lib/rules'
+import {
+  applySoloClaim,
+  isRoundOver,
+  restoreSoloDeal,
+  startSoloDeal,
+  type SoloDealState
+} from '../lib/solo_deal'
+import {
+  fetchLeaderboard,
+  fetchPersonalBests,
+  getPlayerDisplayName,
+  startSoloGame,
+  submitSoloScore,
+  type ClaimEvent,
+  type LeaderboardEntry
+} from '../lib/solo_api'
 
-const LOCAL_STORAGE_KEY = 'setgame_solo_state_v1'
+const LOCAL_STORAGE_KEY = 'setgame_solo_state_v2'
 const BEST_TIMES_KEY = 'setgame_solo_best_times'
-const PERSIST_INTERVAL_MS = 5000
 
 interface RecentClaim {
   cards: number[]
@@ -22,28 +36,36 @@ type SavedSoloState = {
   recentClaims: RecentClaim[]
   startedAtMs: number
   elapsedMs: number
-  setsFound?: number
+  gameId: string | null
+  seed: number
+  rngState: number
+  events: ClaimEvent[]
+  eligible: boolean
 }
 
 function loadSavedGame(): SavedSoloState | null {
   try {
     const stored = localStorage.getItem(LOCAL_STORAGE_KEY)
     if (!stored) return null
-
     const parsed = JSON.parse(stored) as SavedSoloState
-
     if (
       !Array.isArray(parsed.board) ||
       !Array.isArray(parsed.deck) ||
       (parsed.status !== 'playing' && parsed.status !== 'paused' && parsed.status !== 'round_over') ||
       !Array.isArray(parsed.recentClaims) ||
       typeof parsed.startedAtMs !== 'number' ||
-      typeof parsed.elapsedMs !== 'number'
+      typeof parsed.elapsedMs !== 'number' ||
+      typeof parsed.seed !== 'number'
     ) {
       return null
     }
-
-    return parsed
+    return {
+      ...parsed,
+      events: Array.isArray(parsed.events) ? parsed.events : [],
+      eligible: Boolean(parsed.eligible && parsed.gameId),
+      rngState: typeof parsed.rngState === 'number' ? parsed.rngState : 0,
+      gameId: parsed.gameId || null
+    }
   } catch {
     return null
   }
@@ -57,73 +79,11 @@ function saveGame(state: SavedSoloState): void {
   }
 }
 
-function shuffle(array: number[]): number[] {
-  const shuffled = [...array]
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-  }
-  return shuffled
-}
-
-function dealCards(count: number, deckToUse: number[], boardToUse: number[]): { deck: number[]; board: number[] } {
-  const newDeck = [...deckToUse]
-  const newBoard = [...boardToUse]
-
-  for (let i = 0; i < count && newDeck.length > 0; i++) {
-    newBoard.push(newDeck.shift()!)
-  }
-
-  return { deck: newDeck, board: newBoard }
-}
-
-// Remove cards from the board, filling any mid-board gaps with cards taken
-// from the end so the remaining cards keep their positions and the board
-// shrinks from the end (mirrors the server's behavior).
-function removeWithGapFill(board: number[], cardIds: number[]): number[] {
-  const removing = new Set(cardIds)
-  const finalLength = board.length - board.filter(id => removing.has(id)).length
-  const fillers = board.slice(finalLength).filter(id => !removing.has(id))
-
-  const result: number[] = []
-  for (let i = 0; i < finalLength; i++) {
-    const id = board[i]
-    if (removing.has(id)) {
-      const filler = fillers.shift()
-      if (filler !== undefined) result.push(filler)
-    } else {
-      result.push(id)
-    }
-  }
-  return result
-}
-
-// Deal a fresh game: 12 cards, extended to 15/18 until a set exists,
-// reshuffling if even 18 cards contain no set.
-function dealNewGame(): { board: number[]; deck: number[] } {
-  let d = shuffle(Array.from({ length: 81 }, (_, i) => i + 1))
-  let b: number[] = []
-
-  const dealUntilSetExists = () => {
-    const initial = dealCards(12, d, b)
-    d = initial.deck
-    b = initial.board
-    while (b.length < 18 && !setExists(b) && d.length > 0) {
-      const result = dealCards(3, d, b)
-      d = result.deck
-      b = result.board
-    }
-  }
-
-  dealUntilSetExists()
-
-  if (b.length >= 18 && !setExists(b)) {
-    d = shuffle([...b, ...d])
-    b = []
-    dealUntilSetExists()
-  }
-
-  return { board: b, deck: d }
+function formatTime(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000)
+  const minutes = Math.floor(totalSeconds / 60)
+  const secs = totalSeconds % 60
+  return `${minutes}:${String(secs).padStart(2, '0')}`
 }
 
 const SolitaireGame: React.FC = () => {
@@ -136,39 +96,27 @@ const SolitaireGame: React.FC = () => {
   const [elapsedMs, setElapsedMs] = useState(0)
   const [recentClaims, setRecentClaims] = useState<RecentClaim[]>([])
   const [setsFound, setSetsFound] = useState(0)
-  const [startedAtMs, setStartedAtMs] = useState<number>(Date.now())
+  const [startedAtMs, setStartedAtMs] = useState(Date.now())
+  const [eligible, setEligible] = useState(false)
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
+  const [personalBest, setPersonalBest] = useState<LeaderboardEntry | null>(null)
+  const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily')
+  const [submitting, setSubmitting] = useState(false)
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const rejectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const lastPersistAtRef = useRef(0)
-  const initializedRef = useRef(false)
+  const dealStateRef = useRef<SoloDealState | null>(null)
+  const eventsRef = useRef<ClaimEvent[]>([])
+  const eligibleRef = useRef(false)
+  const gameIdRef = useRef<string | null>(null)
+  const seedRef = useRef(0)
+  const submittedRef = useRef(false)
 
-  // Keep the latest state in a ref so persistence helpers never read stale values
-  const stateRef = useRef({ board, deck, status, recentClaims, startedAtMs, elapsedMs, setsFound })
-  stateRef.current = { board, deck, status, recentClaims, startedAtMs, elapsedMs, setsFound }
-
-  const persistNow = () => {
-    if (!initializedRef.current) return
-    const s = stateRef.current
-    if (s.board.length === 0 && s.deck.length === 0) return
-    const elapsedToPersist = s.status === 'playing' ? Date.now() - s.startedAtMs : s.elapsedMs
-    saveGame({
-      board: s.board,
-      deck: s.deck,
-      status: s.status,
-      recentClaims: s.recentClaims,
-      startedAtMs: s.startedAtMs,
-      elapsedMs: elapsedToPersist,
-      setsFound: s.setsFound
-    })
-    lastPersistAtRef.current = Date.now()
-  }
-
-  const showToast = (text: string, type: ToastMessage['type']) => {
+  const showToast = (text: string, type: ToastType = 'success') => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
     setToast({ text, type })
-    toastTimeoutRef.current = setTimeout(() => setToast(null), 2000)
+    toastTimeoutRef.current = setTimeout(() => setToast(null), 2500)
   }
 
   const flashRejection = (cards: number[]) => {
@@ -177,118 +125,214 @@ const SolitaireGame: React.FC = () => {
     rejectTimeoutRef.current = setTimeout(() => setRejectedCards([]), 650)
   }
 
-  const startNewGame = () => {
-    const { board: b, deck: d } = dealNewGame()
-    const now = Date.now()
-
-    setBoard(b)
-    setDeck(d)
-    setStatus('playing')
-    setSelectedCards([])
-    setRejectedCards([])
-    setElapsedMs(0)
-    setRecentClaims([])
-    setSetsFound(0)
-    setStartedAtMs(now)
-
-    initializedRef.current = true
+  const writeSave = (
+    deal: SoloDealState,
+    opts: {
+      status: SoloStatus
+      recentClaims: RecentClaim[]
+      startedAtMs: number
+      elapsedMs: number
+      gameId: string | null
+      seed: number
+      events: ClaimEvent[]
+      eligible: boolean
+    }
+  ) => {
     saveGame({
-      board: b,
-      deck: d,
-      status: 'playing',
-      recentClaims: [],
-      startedAtMs: now,
-      elapsedMs: 0,
-      setsFound: 0
+      board: deal.board,
+      deck: deal.deck,
+      status: opts.status,
+      recentClaims: opts.recentClaims,
+      startedAtMs: opts.startedAtMs,
+      elapsedMs: opts.elapsedMs,
+      gameId: opts.gameId,
+      seed: opts.seed,
+      rngState: deal.rng.getState(),
+      events: opts.events,
+      eligible: opts.eligible
     })
-    lastPersistAtRef.current = now
   }
 
-  const recordBestTime = (finalElapsed: number) => {
+  const applyDeal = (
+    deal: SoloDealState,
+    opts: {
+      gameId: string | null
+      seed: number
+      eligible: boolean
+      status?: SoloStatus
+      elapsedMs?: number
+      startedAtMs?: number
+      recentClaims?: RecentClaim[]
+      events?: ClaimEvent[]
+    }
+  ) => {
+    dealStateRef.current = deal
+    setBoard([...deal.board])
+    setDeck([...deal.deck])
+
+    eligibleRef.current = opts.eligible
+    setEligible(opts.eligible)
+    gameIdRef.current = opts.gameId ?? null
+    seedRef.current = opts.seed
+
+    const ev = opts.events || []
+    eventsRef.current = ev
+
+    const claims = opts.recentClaims || []
+    setRecentClaims(claims)
+    setSetsFound(claims.length)
+
+    const started = opts.startedAtMs ?? Date.now()
+    setStartedAtMs(started)
+    setElapsedMs(opts.elapsedMs ?? 0)
+
+    const st = opts.status || 'playing'
+    setStatus(st)
+    setSelectedCards([])
+    submittedRef.current = st === 'round_over'
+
+    writeSave(deal, {
+      status: st,
+      recentClaims: claims,
+      startedAtMs: started,
+      elapsedMs: opts.elapsedMs ?? 0,
+      gameId: opts.gameId ?? null,
+      seed: opts.seed,
+      events: ev,
+      eligible: opts.eligible
+    })
+  }
+
+  const refreshScores = async (p: 'daily' | 'weekly' | 'monthly') => {
+    const [lb, pb] = await Promise.all([fetchLeaderboard(p), fetchPersonalBests()])
+    setLeaderboard(lb)
+    setPersonalBest(pb[p] || null)
+  }
+
+  const startNewGame = async () => {
+    submittedRef.current = false
+    const remote = await startSoloGame()
+    if (remote) {
+      const deal = startSoloDeal(remote.seed)
+      applyDeal(deal, {
+        gameId: remote.game_id,
+        seed: remote.seed,
+        eligible: true,
+        status: 'playing',
+        events: []
+      })
+      return
+    }
+
+    const localSeed = (Math.random() * 0xffffffff) >>> 0
+    const deal = startSoloDeal(localSeed)
+    applyDeal(deal, {
+      gameId: null,
+      seed: localSeed,
+      eligible: false,
+      status: 'playing',
+      events: []
+    })
+    showToast("Offline — won't count for leaderboard", 'error')
+  }
+
+  const finishGame = async (finalMs: number, claimEvents: ClaimEvent[]) => {
+    if (submittedRef.current) return
+    submittedRef.current = true
+
     try {
-      const times = JSON.parse(localStorage.getItem(BEST_TIMES_KEY) || '[]')
-      times.push({ ms: finalElapsed, at: new Date().toISOString() })
-      times.sort((a: { ms: number }, b: { ms: number }) => a.ms - b.ms)
+      const times = JSON.parse(localStorage.getItem(BEST_TIMES_KEY) || '[]') as {
+        ms: number
+        at: string
+      }[]
+      times.push({ ms: finalMs, at: new Date().toISOString() })
+      times.sort((a, b) => a.ms - b.ms)
       localStorage.setItem(BEST_TIMES_KEY, JSON.stringify(times.slice(0, 10)))
     } catch {
-      // Ignore storage failures
+      // ignore
+    }
+
+    if (!eligibleRef.current || !gameIdRef.current) {
+      if (!eligibleRef.current) {
+        showToast('Finished — not submitted (ineligible)', 'error')
+      }
+      return
+    }
+
+    setSubmitting(true)
+    const res = await submitSoloScore({
+      game_id: gameIdRef.current,
+      elapsed_ms: finalMs,
+      events: claimEvents,
+      display_name: getPlayerDisplayName()
+    })
+    setSubmitting(false)
+
+    if (res.ok) {
+      showToast(`Submitted! ${formatTime(finalMs)}`, 'success')
+      void refreshScores(period)
+    } else {
+      showToast(res.error || 'Submit failed', 'error')
     }
   }
 
   const claimSet = (cardIds: number[]) => {
-    if (cardIds.length !== 3) return
+    const deal = dealStateRef.current
+    if (!deal || status !== 'playing') return
 
-    if (!isSet(cardIds[0], cardIds[1], cardIds[2])) {
-      showToast('Not a valid set', 'error')
+    const result = applySoloClaim(deal, cardIds)
+    if (!result.ok) {
+      showToast(result.error, 'error')
       flashRejection(cardIds)
       setSelectedCards([])
       return
     }
 
-    let newBoard = [...board]
-    let newDeck = [...deck]
-
-    if (newBoard.length >= 15) {
-      // Collapse back down by removing the set without replacement
-      newBoard = removeWithGapFill(newBoard, cardIds)
-    } else {
-      // Replace cards in place to preserve positions; if the deck is empty,
-      // fill the gaps with cards from the end of the board instead
-      const leftover: number[] = []
-      cardIds.forEach(id => {
-        const idx = newBoard.indexOf(id)
-        if (idx !== -1) {
-          if (newDeck.length > 0) {
-            newBoard[idx] = newDeck.shift()!
-          } else {
-            leftover.push(id)
-          }
-        }
-      })
-      if (leftover.length > 0) {
-        newBoard = removeWithGapFill(newBoard, leftover)
-      }
+    const tMs = Date.now() - startedAtMs
+    const event: ClaimEvent = {
+      type: 'claim',
+      cards: [...cardIds].sort((a, b) => a - b),
+      t_ms: tMs
     }
+    const newEvents = [...eventsRef.current, event]
+    eventsRef.current = newEvents
 
-    // If no set exists and we have cards left, add more
-    while (newBoard.length < 18 && !setExists(newBoard) && newDeck.length > 0) {
-      const result = dealCards(3, newDeck, newBoard)
-      newDeck = result.deck
-      newBoard = result.board
-    }
-
-    // If still no sets at 18 cards, reshuffle and redeal
-    if (newBoard.length >= 18 && !setExists(newBoard)) {
-      newDeck = shuffle([...newBoard, ...newDeck])
-      newBoard = []
-
-      const result = dealCards(12, newDeck, newBoard)
-      newDeck = result.deck
-      newBoard = result.board
-
-      while (newBoard.length < 18 && !setExists(newBoard) && newDeck.length > 0) {
-        const nextResult = dealCards(3, newDeck, newBoard)
-        newDeck = nextResult.deck
-        newBoard = nextResult.board
-      }
-    }
-
-    const updatedRecentClaims = [{ cards: cardIds }, ...recentClaims].slice(0, 8)
-
-    setBoard(newBoard)
-    setDeck(newDeck)
+    setBoard([...deal.board])
+    setDeck([...deal.deck])
     setSelectedCards([])
-    setRecentClaims(updatedRecentClaims)
-    setSetsFound(prev => prev + 1)
     showToast('Set found!', 'success')
 
-    // Round over: deck empty and no sets left on the board
-    if (newDeck.length === 0 && !setExists(newBoard)) {
-      const finalElapsed = Date.now() - startedAtMs
+    const updatedRecentClaims = [{ cards: cardIds }, ...recentClaims].slice(0, 8)
+    setRecentClaims(updatedRecentClaims)
+    setSetsFound(prev => prev + 1)
+
+    if (isRoundOver(deal)) {
       setStatus('round_over')
-      setElapsedMs(finalElapsed)
-      recordBestTime(finalElapsed)
+      setElapsedMs(tMs)
+      writeSave(deal, {
+        status: 'round_over',
+        recentClaims: updatedRecentClaims,
+        startedAtMs,
+        elapsedMs: tMs,
+        gameId: gameIdRef.current,
+        seed: seedRef.current,
+        events: newEvents,
+        eligible: eligibleRef.current
+      })
+      void finishGame(tMs, newEvents)
+      return
     }
+
+    writeSave(deal, {
+      status: 'playing',
+      recentClaims: updatedRecentClaims,
+      startedAtMs,
+      elapsedMs: tMs,
+      gameId: gameIdRef.current,
+      seed: seedRef.current,
+      events: newEvents,
+      eligible: eligibleRef.current
+    })
   }
 
   const handleCardClick = (cardId: number) => {
@@ -301,87 +345,106 @@ const SolitaireGame: React.FC = () => {
         : selectedCards
 
     setSelectedCards(nextSelected)
-
     if (nextSelected.length === 3) {
       claimSet(nextSelected)
     }
   }
 
+  const markIneligible = (reason: string) => {
+    if (!eligibleRef.current) return
+    eligibleRef.current = false
+    setEligible(false)
+    showToast(reason, 'error')
+  }
+
   const togglePause = () => {
     if (status === 'playing') {
-      setElapsedMs(Date.now() - startedAtMs)
+      const nowElapsed = Date.now() - startedAtMs
+      setElapsedMs(nowElapsed)
       setStatus('paused')
       setSelectedCards([])
+      markIneligible('Paused — this run will not count for the leaderboard')
+      if (dealStateRef.current) {
+        writeSave(dealStateRef.current, {
+          status: 'paused',
+          recentClaims,
+          startedAtMs,
+          elapsedMs: nowElapsed,
+          gameId: gameIdRef.current,
+          seed: seedRef.current,
+          events: eventsRef.current,
+          eligible: false
+        })
+      }
     } else if (status === 'paused') {
-      setStartedAtMs(Date.now() - elapsedMs)
+      const newStart = Date.now() - elapsedMs
+      setStartedAtMs(newStart)
       setStatus('playing')
+      if (dealStateRef.current) {
+        writeSave(dealStateRef.current, {
+          status: 'playing',
+          recentClaims,
+          startedAtMs: newStart,
+          elapsedMs,
+          gameId: gameIdRef.current,
+          seed: seedRef.current,
+          events: eventsRef.current,
+          eligible: false
+        })
+      }
     }
   }
 
-  // Timer: tick while playing, persist every few seconds so progress survives reloads
   useEffect(() => {
     if (status === 'playing') {
       timerRef.current = setInterval(() => {
         setElapsedMs(Date.now() - startedAtMs)
-        if (Date.now() - lastPersistAtRef.current > PERSIST_INTERVAL_MS) {
-          persistNow()
-        }
       }, 100)
     } else if (timerRef.current) {
       clearInterval(timerRef.current)
       timerRef.current = null
     }
-
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-        timerRef.current = null
-      }
+      if (timerRef.current) clearInterval(timerRef.current)
     }
   }, [status, startedAtMs])
 
-  // Restore saved game (or start a new one) on mount
   useEffect(() => {
     const saved = loadSavedGame()
-    if (saved && (saved.board.length > 0 || saved.deck.length > 0)) {
-      setBoard(saved.board)
-      setDeck(saved.deck)
-      setStatus(saved.status)
-      setRecentClaims(saved.recentClaims)
-      setSetsFound(saved.setsFound ?? saved.recentClaims.length)
-      // Resume from the persisted elapsed time rather than wall-clock time,
-      // so time spent away from the page doesn't count against the player.
-      setElapsedMs(saved.elapsedMs)
-      setStartedAtMs(Date.now() - saved.elapsedMs)
-      initializedRef.current = true
+    if (saved && saved.board.length > 0) {
+      const deal = restoreSoloDeal(saved.board, saved.deck, saved.rngState)
+      const wasPaused = saved.status === 'paused'
+      applyDeal(deal, {
+        gameId: saved.gameId,
+        seed: saved.seed,
+        eligible: saved.eligible && !wasPaused && saved.status !== 'round_over',
+        status: saved.status,
+        elapsedMs:
+          saved.status === 'playing' ? Date.now() - saved.startedAtMs : saved.elapsedMs,
+        startedAtMs:
+          saved.status === 'playing' ? saved.startedAtMs : Date.now() - saved.elapsedMs,
+        recentClaims: saved.recentClaims,
+        events: saved.events
+      })
+      if (wasPaused) {
+        eligibleRef.current = false
+        setEligible(false)
+      }
     } else {
-      startNewGame()
+      void startNewGame()
     }
+    void refreshScores(period)
 
     return () => {
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
       if (rejectTimeoutRef.current) clearTimeout(rejectTimeoutRef.current)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Persist on meaningful state changes
   useEffect(() => {
-    persistNow()
-  }, [board, deck, status, recentClaims, setsFound])
-
-  // Persist when the page is hidden or being unloaded
-  useEffect(() => {
-    const onHide = () => persistNow()
-    const onVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') persistNow()
-    }
-    window.addEventListener('pagehide', onHide)
-    document.addEventListener('visibilitychange', onVisibilityChange)
-    return () => {
-      window.removeEventListener('pagehide', onHide)
-      document.removeEventListener('visibilitychange', onVisibilityChange)
-    }
-  }, [])
+    void refreshScores(period)
+  }, [period])
 
   return (
     <>
@@ -406,8 +469,14 @@ const SolitaireGame: React.FC = () => {
             setsFound={setsFound}
             status={status}
             onTogglePause={togglePause}
-            onRestart={startNewGame}
+            onRestart={() => void startNewGame()}
             recentClaims={recentClaims}
+            leaderboard={leaderboard}
+            personalBest={personalBest}
+            period={period}
+            onPeriodChange={setPeriod}
+            eligible={eligible}
+            submitting={submitting}
           />
         }
       />

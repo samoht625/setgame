@@ -14,7 +14,8 @@ class GameEngine
   def initialize(
     reveal_seconds: SET_REVEAL_SECONDS,
     reset_seconds: RESET_SECONDS,
-    start_presence_sweeper: true
+    start_presence_sweeper: true,
+    auto_start: true
   )
     @board = []
     @deck = []
@@ -45,7 +46,7 @@ class GameEngine
     @reset_seconds = reset_seconds.to_f
     raise ArgumentError, 'reset_seconds must be positive' unless @reset_seconds.positive?
 
-    start_new_round
+    start_new_round if auto_start
 
     # Start presence sweeper thread after all initialization is complete
     if start_presence_sweeper
@@ -61,6 +62,7 @@ class GameEngine
   # Start a new round: shuffle deck, deal initial board
   def start_new_round
     @mutex.synchronize { start_new_round_locked! }
+    persist_snapshot_async
   end
 
   # Deal cards from deck to board
@@ -144,6 +146,8 @@ class GameEngine
         message: 'Set claimed!',
         new_state: current_state
       }
+    end.tap do |result|
+      persist_snapshot_async if result.is_a?(Hash) && result[:success]
     end
   end
 
@@ -292,7 +296,79 @@ class GameEngine
     changed
   end
 
+  # Snapshot of durable multiplayer state (presence is not included)
+  def snapshot_payload
+    @mutex.synchronize { snapshot_payload_unlocked }
+  end
+
+  def restore_from!(payload)
+    @mutex.synchronize do
+      @board = Array(payload["board"] || payload[:board]).map(&:to_i)
+      @deck = Array(payload["deck"] || payload[:deck]).map(&:to_i)
+      @scores = normalize_scores(payload["scores"] || payload[:scores] || {})
+      @names = normalize_names(payload["names"] || payload[:names] || {})
+      @status = (payload["status"] || payload[:status] || "playing").to_s
+      @countdown = 0
+      @placements = []
+      @recent_claims = normalize_claims(payload["recent_claims"] || payload[:recent_claims])
+      @active_claim = nil
+      @active_claim_token = nil
+      clear_reset_request!
+    end
+
+    # Mid-countdown / round_over is not restored — start a fresh round instead.
+    start_new_round if @status == "round_over"
+  end
+
   private
+
+  def snapshot_payload_unlocked
+    {
+      "board" => @board.dup,
+      "deck" => @deck.dup,
+      "scores" => @scores.dup,
+      "names" => @names.dup,
+      "status" => @status,
+      "recent_claims" => @recent_claims.map { |c|
+        {
+          "player_id" => c[:player_id],
+          "cards" => Array(c[:cards]).map(&:to_i)
+        }
+      }
+    }
+  end
+
+  def persist_snapshot_async
+    payload = snapshot_payload
+    Thread.new do
+      GameStateStore.save(payload)
+    end
+  rescue StandardError => e
+    Rails.logger.warn("[GameEngine] persist failed: #{e.class}: #{e.message}")
+  end
+
+  def normalize_scores(hash)
+    return {} unless hash.is_a?(Hash)
+
+    hash.each_with_object({}) { |(k, v), acc| acc[k.to_s] = v.to_i }
+  end
+
+  def normalize_names(hash)
+    return {} unless hash.is_a?(Hash)
+
+    hash.each_with_object({}) { |(k, v), acc| acc[k.to_s] = v.to_s }
+  end
+
+  def normalize_claims(list)
+    Array(list).filter_map do |c|
+      next unless c.is_a?(Hash)
+
+      {
+        player_id: (c["player_id"] || c[:player_id]).to_s,
+        cards: Array(c["cards"] || c[:cards]).map(&:to_i)
+      }
+    end
+  end
 
   def start_new_round_locked!
     # Reset scores for a fresh game as requested
@@ -409,6 +485,7 @@ class GameEngine
       end
 
       @broadcaster&.call(state) if state
+      persist_snapshot_async if state
       start_round_countdown if round_over
     end
   end

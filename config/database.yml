@@ -1,0 +1,22 @@
+default: &default
+  adapter: sqlite3
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 3 }.to_i + 5 %>
+  timeout: 5000
+  pragmas:
+    journal_mode: wal
+    busy_timeout: 5000
+
+development:
+  <<: *default
+  database: storage/development.sqlite3
+
+test:
+  <<: *default
+  adapter: sqlite3
+  database: storage/test.sqlite3
+
+production:
+  <<: *default
+  adapter: sqlite3
+  # Prefer DATABASE_PATH; fall back to durable path used by ensure-prod-env.sh
+  database: <%= ENV.fetch("DATABASE_PATH") { File.expand_path("~/www/setgame-data/production.sqlite3") } %>

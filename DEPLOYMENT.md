@@ -1,3 +1,67 @@
+## Linux host (systemd + SQLite)
+
+Production on a dedicated host uses SQLite for:
+
+- Multiplayer board/deck/scores snapshot (survives redeploys)
+- Solo game seeds, move replay verification, and leaderboards
+
+### Redeploy (required entrypoint)
+
+After `git pull` on the host, always run:
+
+```bash
+./scripts/set-prod.sh
+```
+
+That script:
+
+1. Ensures `deploy/setgame.env` has `DATABASE_PATH` (default `$HOME/www/setgame-data/production.sqlite3`) and `WEB_CONCURRENCY=1`
+2. Creates the data directory; migrates a legacy `storage/production.sqlite3` once if needed
+3. `bundle install` (deployment mode, vendor/bundle) so the `sqlite3` gem is present
+4. Runs `rails db:prepare` (creates/migrates SQLite)
+5. Refreshes the user systemd unit from `deploy/setgame.service`
+6. Builds JS/CSS and precompiles Rails assets
+7. Restarts `setgame.service` and checks it is active
+
+`set-prod.sh` is self-contained (it no longer hands off to `www-restart.sh` by default). Point auto-deploy at `./scripts/set-prod.sh` after pull. A bare `systemctl --user restart setgame` will not install the new `sqlite3` gem.
+The systemd unit is also hardened: `setgame-start-pre.sh` ensures the data dir + schema, and `setgame-run-puma.sh` loads env before Puma. Neither hardcodes a Ruby ABI path under `vendor/bundle`.
+
+### Environment
+
+See `deploy/setgame.env.example`. Important vars:
+
+- `DATABASE_PATH` — absolute path to the SQLite file, outside the git checkout
+- `WEB_CONCURRENCY=1` — required (one process owns `GAME_ENGINE` and SQLite writes)
+- `RAILS_MASTER_KEY` — required in production
+
+### First boot / service install
+
+```bash
+./scripts/install-setgame-service.sh
+```
+
+`deploy/setgame.service` also runs `db:prepare` in `ExecStartPre` via `scripts/setgame-with-bundle.sh` (no hardcoded Ruby ABI path under `vendor/bundle`).
+
+### Backups
+
+Do **not** `cp` a live SQLite database while the app is running (WAL mode). Use the SQLite backup API:
+
+```bash
+sqlite3 "$DATABASE_PATH" ".backup '/path/to/setgame-$(date +%Y%m%d).sqlite3'"
+```
+
+### Time windows
+
+Daily / weekly / monthly solo leaderboards use `America/New_York` (`config.time_zone`).
+
+### Solitaire anti-cheat (summary)
+
+- Server issues a game id + seed; client logs claim events with `t_ms`
+- On submit, the server replays the deal and checks wall-clock bounds
+- Pausing marks the run ineligible for the leaderboard
+
+---
+
 # Deployment Checklist
 
 ## Pre-Deployment
@@ -8,6 +72,7 @@
 - [x] Card images copied to public/cards/
 - [x] Local testing completed
 - [x] render.yaml configuration created
+- [x] SQLite persistence for multiplayer + solo leaderboards
 
 ## Render Deployment Steps
 

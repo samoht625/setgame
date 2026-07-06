@@ -6,8 +6,10 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=%h/www/setgame
-EnvironmentFile=%h/www/setgame/deploy/setgame.env
-ExecStart=%h/www/setgame/vendor/bundle/ruby/3.2.0/bin/bundle exec puma -C config/puma.rb -b tcp://127.0.0.1:7778
+EnvironmentFile=-%h/www/setgame/deploy/setgame.env
+# Wrappers load/create DATABASE_PATH and avoid hardcoded vendor/bundle/ruby/X.Y.Z paths.
+ExecStartPre=%h/www/setgame/scripts/setgame-start-pre.sh
+ExecStart=%h/www/setgame/scripts/setgame-run-puma.sh
 Restart=on-failure
 RestartSec=5
 

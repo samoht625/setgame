@@ -5,12 +5,15 @@ Rails.application.routes.draw do
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
 
-  # Render dynamic PWA files from app/views/pwa/* (remember to link manifest in application.html.erb)
-  # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
-  # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
-
   # ActionCable WebSocket endpoint
   mount ActionCable.server => '/cable'
+
+  namespace :api do
+    post "solo/games", to: "solo_games#create"
+    post "solo/scores", to: "solo_scores#create"
+    get "solo/leaderboard", to: "solo_scores#leaderboard"
+    get "solo/personal_bests", to: "solo_scores#personal_bests"
+  end
 
   # Multiplayer game ("m" for "meet me at the table")
   get '/m' => 'home#multiplayer', as: :multiplayer

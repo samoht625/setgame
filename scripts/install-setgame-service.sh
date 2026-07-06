@@ -3,24 +3,24 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ENV_EXAMPLE="$ROOT/deploy/setgame.env.example"
-ENV_FILE="$ROOT/deploy/setgame.env"
 UNIT_SRC="$ROOT/deploy/setgame.service"
 UNIT_DEST="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/setgame.service"
 
-if [[ ! -f "$ENV_FILE" ]]; then
-  cp "$ENV_EXAMPLE" "$ENV_FILE"
-  echo "Created $ENV_FILE from example."
+chmod +x "$ROOT/scripts/"*.sh
+
+if [[ -d "${HOME}/.rbenv/bin" ]]; then
+  export PATH="${HOME}/.rbenv/bin:${HOME}/.rbenv/shims:${PATH}"
+fi
+if command -v rbenv >/dev/null 2>&1; then
+  eval "$(rbenv init - bash)" 2>/dev/null || true
 fi
 
-if [[ ! -f "$ROOT/public/assets/.manifest.json" ]] && [[ ! -f "$ROOT/public/assets/manifest.json" ]]; then
-  echo "Building assets…"
-  (cd "$ROOT" && yarn install --frozen-lockfile && yarn build && yarn build:css)
-  (cd "$ROOT" && RAILS_ENV=production bundle exec rake assets:precompile)
-fi
+# Prepare gems, assets, DB, and copy unit — without restarting yet.
+SETGAME_SKIP_RESTART=1 "$ROOT/scripts/set-prod.sh"
 
-mkdir -p "$(dirname "$UNIT_DEST")"
-cp "$UNIT_SRC" "$UNIT_DEST"
+if [[ ! -f "$ROOT/deploy/setgame.env" ]] || ! grep -qE '^RAILS_MASTER_KEY=' "$ROOT/deploy/setgame.env"; then
+  echo "WARNING: set RAILS_MASTER_KEY in $ROOT/deploy/setgame.env before relying on this service." >&2
+fi
 
 pkill -f "puma.*7778" 2>/dev/null || true
 if command -v fuser >/dev/null 2>&1; then
@@ -40,3 +40,4 @@ echo "Set Game production service is enabled."
 echo "  Status:  systemctl --user status setgame"
 echo "  Logs:    journalctl --user -u setgame -f"
 echo "  Site:    https://set.tido.site"
+echo "  Redeploy after git pull: ./scripts/set-prod.sh"
