@@ -23,7 +23,6 @@ interface SolitaireSidebarProps {
   personalBest: LeaderboardEntry | null
   period: 'daily' | 'weekly' | 'monthly'
   onPeriodChange: (period: 'daily' | 'weekly' | 'monthly') => void
-  eligible?: boolean
   submitting?: boolean
 }
 
@@ -81,7 +80,6 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
   personalBest,
   period,
   onPeriodChange,
-  eligible = true,
   submitting = false
 }) => {
   const isFinished = status === 'round_over'
@@ -168,11 +166,6 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
         </div>
       </div>
 
-      {!eligible && !isFinished && (
-        <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-          Pause or offline play is not ranked.
-        </p>
-      )}
       {submitting && (
         <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">Submitting…</p>
       )}

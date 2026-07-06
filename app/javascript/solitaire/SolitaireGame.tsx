@@ -475,7 +475,6 @@ const SolitaireGame: React.FC = () => {
             personalBest={personalBest}
             period={period}
             onPeriodChange={setPeriod}
-            eligible={eligible}
             submitting={submitting}
           />
         }
