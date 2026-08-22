@@ -22,6 +22,10 @@ import {
 
 const LOCAL_STORAGE_KEY = 'setgame_solo_state_v2'
 const BEST_TIMES_KEY = 'setgame_solo_best_times'
+// Discard an in-progress solo game once the player has been away this long.
+const IDLE_RESET_MS = 15 * 60 * 1000
+// While playing with the tab visible, refresh the saved activity stamp this often.
+const ACTIVITY_SAVE_INTERVAL_MS = 10_000
 
 interface RecentClaim {
   cards: number[]
@@ -41,6 +45,8 @@ type SavedSoloState = {
   rngState: number
   events: ClaimEvent[]
   eligible: boolean
+  // Wall-clock time of the last save (i.e. last meaningful activity).
+  savedAtMs: number
 }
 
 function loadSavedGame(): SavedSoloState | null {
@@ -64,16 +70,25 @@ function loadSavedGame(): SavedSoloState | null {
       events: Array.isArray(parsed.events) ? parsed.events : [],
       eligible: Boolean(parsed.eligible && parsed.gameId),
       rngState: typeof parsed.rngState === 'number' ? parsed.rngState : 0,
-      gameId: parsed.gameId || null
+      gameId: parsed.gameId || null,
+      // Older saves have no savedAtMs; approximate last activity from the
+      // timer values that were current when the save was written.
+      savedAtMs:
+        typeof parsed.savedAtMs === 'number'
+          ? parsed.savedAtMs
+          : parsed.startedAtMs + Math.max(0, parsed.elapsedMs)
     }
   } catch {
     return null
   }
 }
 
-function saveGame(state: SavedSoloState): void {
+function saveGame(state: Omit<SavedSoloState, 'savedAtMs'>): void {
   try {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state))
+    localStorage.setItem(
+      LOCAL_STORAGE_KEY,
+      JSON.stringify({ ...state, savedAtMs: Date.now() })
+    )
   } catch {
     // Ignore storage failures
   }
@@ -112,6 +127,14 @@ const SolitaireGame: React.FC = () => {
   const gameIdRef = useRef<string | null>(null)
   const seedRef = useRef(0)
   const submittedRef = useRef(false)
+  const recentClaimsRef = useRef<RecentClaim[]>([])
+  // Wall-clock time of the last meaningful activity (save or visible timer tick).
+  const lastActivityAtRef = useRef(Date.now())
+  const lastActivitySaveRef = useRef(0)
+
+  useEffect(() => {
+    recentClaimsRef.current = recentClaims
+  }, [recentClaims])
 
   const showToast = (text: string, type: ToastType = 'success') => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
@@ -151,6 +174,7 @@ const SolitaireGame: React.FC = () => {
       events: opts.events,
       eligible: opts.eligible
     })
+    lastActivityAtRef.current = Date.now()
   }
 
   const applyDeal = (
@@ -234,6 +258,13 @@ const SolitaireGame: React.FC = () => {
       events: []
     })
     showToast("Offline — won't count for leaderboard", 'error')
+  }
+
+  const startFreshAfterIdle = () => {
+    // Stamp activity first so overlapping timer ticks don't re-trigger the reset.
+    lastActivityAtRef.current = Date.now()
+    showToast('New game — previous game was idle for 15+ minutes', 'success')
+    void startNewGame()
   }
 
   const finishGame = async (finalMs: number, claimEvents: ClaimEvent[]) => {
@@ -377,6 +408,10 @@ const SolitaireGame: React.FC = () => {
         })
       }
     } else if (status === 'paused') {
+      if (Date.now() - lastActivityAtRef.current >= IDLE_RESET_MS) {
+        startFreshAfterIdle()
+        return
+      }
       const newStart = Date.now() - elapsedMs
       setStartedAtMs(newStart)
       setStatus('playing')
@@ -398,7 +433,34 @@ const SolitaireGame: React.FC = () => {
   useEffect(() => {
     if (status === 'playing') {
       timerRef.current = setInterval(() => {
-        setElapsedMs(Date.now() - startedAtMs)
+        const now = Date.now()
+        setElapsedMs(now - startedAtMs)
+        if (document.visibilityState !== 'visible') return
+
+        // Returning to a backgrounded tab after a long absence: start fresh.
+        if (now - lastActivityAtRef.current >= IDLE_RESET_MS) {
+          startFreshAfterIdle()
+          return
+        }
+
+        lastActivityAtRef.current = now
+        // Periodically persist so savedAtMs tracks presence, not just moves.
+        if (
+          now - lastActivitySaveRef.current >= ACTIVITY_SAVE_INTERVAL_MS &&
+          dealStateRef.current
+        ) {
+          lastActivitySaveRef.current = now
+          writeSave(dealStateRef.current, {
+            status: 'playing',
+            recentClaims: recentClaimsRef.current,
+            startedAtMs,
+            elapsedMs: now - startedAtMs,
+            gameId: gameIdRef.current,
+            seed: seedRef.current,
+            events: eventsRef.current,
+            eligible: eligibleRef.current
+          })
+        }
       }, 100)
     } else if (timerRef.current) {
       clearInterval(timerRef.current)
@@ -411,7 +473,14 @@ const SolitaireGame: React.FC = () => {
 
   useEffect(() => {
     const saved = loadSavedGame()
-    if (saved && saved.board.length > 0) {
+    const staleInProgress =
+      saved !== null &&
+      saved.status !== 'round_over' &&
+      Date.now() - saved.savedAtMs >= IDLE_RESET_MS
+    if (staleInProgress) {
+      // The player was away 15+ minutes: discard the stale game, deal fresh.
+      startFreshAfterIdle()
+    } else if (saved && saved.board.length > 0) {
       const deal = restoreSoloDeal(saved.board, saved.deck, saved.rngState)
       const wasPaused = saved.status === 'paused'
       applyDeal(deal, {
