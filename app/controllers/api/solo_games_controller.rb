@@ -5,10 +5,15 @@ module Api
     def create
       SoloGame.expire_stale!
 
-      open_count = SoloGame.open_games.where(player_id: current_player_id).count
-      if open_count >= SoloGame::MAX_OPEN_PER_PLAYER
-        return render json: { error: "too_many_open_games" }, status: :too_many_requests
-      end
+      # Make room instead of rejecting: abandoned games (restart, idle reset,
+      # failed submit) previously stayed "open" for 7 days, and once a player
+      # had MAX_OPEN_PER_PLAYER of them every new game was refused — the client
+      # then fell back to an ineligible local game and finished runs silently
+      # never reached the leaderboard.
+      SoloGame.abandon_excess_open!(
+        player_id: current_player_id,
+        keep: SoloGame::MAX_OPEN_PER_PLAYER - 1
+      )
 
       game = SoloGame.create!(
         id: SecureRandom.uuid,

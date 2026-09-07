@@ -311,7 +311,13 @@ const SolitaireGame: React.FC = () => {
     const deal = dealStateRef.current
     if (!deal || status !== 'playing') return
 
-    const result = applySoloClaim(deal, cardIds)
+    // Apply the claim in sorted order — the submitted event is sorted and the
+    // server replays it in that order. Card positions after a replace-in-place
+    // depend on iteration order, and board order feeds the (order-sensitive)
+    // full-board reshuffle, so applying in selection order could desync the
+    // replay and get a legitimate run rejected.
+    const sortedCards = [...cardIds].sort((a, b) => a - b)
+    const result = applySoloClaim(deal, sortedCards)
     if (!result.ok) {
       showToast(result.error, 'error')
       flashRejection(cardIds)
@@ -322,7 +328,7 @@ const SolitaireGame: React.FC = () => {
     const tMs = Date.now() - startedAtMs
     const event: ClaimEvent = {
       type: 'claim',
-      cards: [...cardIds].sort((a, b) => a - b),
+      cards: sortedCards,
       t_ms: tMs
     }
     const newEvents = [...eventsRef.current, event]
