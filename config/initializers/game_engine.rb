@@ -5,19 +5,26 @@ require_relative '../../app/services/rules'
 require_relative '../../app/services/game_engine'
 require_relative '../../app/services/game_state_store'
 
-GAME_ENGINE = GameEngine.new(auto_start: false)
-GAME_ENGINE.broadcaster = ->(state) { ActionCable.server.broadcast('game', state) }
+Rails.application.config.after_initialize do
+  snapshot_store = GameStateStore
 
-begin
-  payload, _version = GameStateStore.load
+  begin
+    payload, _version = snapshot_store.load
+  rescue StandardError => e
+    Rails.logger.error "[GameEngine] Snapshot load failed (#{e.class}: #{e.message}); persistence disabled until restart"
+    snapshot_store = nil
+  end
+
+  engine = GameEngine.new(auto_start: false, snapshot_store: snapshot_store, logger: Rails.logger)
+  engine.broadcaster = ->(state) { ActionCable.server.broadcast('game', state) }
+
   if payload
-    GAME_ENGINE.restore_from!(payload)
+    engine.restore_from!(payload)
     Rails.logger.info "[GameEngine] Restored multiplayer state from database"
   else
-    GAME_ENGINE.start_new_round
-    Rails.logger.info "[GameEngine] Started fresh multiplayer round"
+    engine.start_new_round
+    Rails.logger.info "[GameEngine] Started #{snapshot_store ? 'fresh' : 'temporary, unsaved'} multiplayer round"
   end
-rescue StandardError => e
-  Rails.logger.warn "[GameEngine] Snapshot restore failed (#{e.class}: #{e.message}); starting fresh"
-  GAME_ENGINE.start_new_round
+
+  Object.const_set(:GAME_ENGINE, engine)
 end

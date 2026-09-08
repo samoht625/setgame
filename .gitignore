@@ -17,6 +17,7 @@ tmp/*
 !tmp/.keep
 !tmp/**/
 !tmp/pids/.keep
+/tmp/playwright-results/
 
 # macOS
 .DS_Store

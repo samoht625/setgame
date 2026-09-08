@@ -47,6 +47,9 @@ export function startSoloDeal(seed: number): SoloDealState {
 
 export function applySoloClaim(state: SoloDealState, cardIds: number[]): { ok: true } | { ok: false; error: string } {
   if (cardIds.length !== 3) return { ok: false, error: 'Must select exactly 3 cards' }
+  if (cardIds[0] === cardIds[1] || cardIds[0] === cardIds[2] || cardIds[1] === cardIds[2]) {
+    return { ok: false, error: 'Must select exactly 3 different cards' }
+  }
   if (!isSet(cardIds[0], cardIds[1], cardIds[2])) {
     return { ok: false, error: 'Not a valid set' }
   }

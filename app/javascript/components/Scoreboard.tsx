@@ -165,6 +165,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
                         if (e.key === 'Escape') cancel()
                       }}
                       placeholder="Your name"
+                      aria-label="Your name"
                       maxLength={20}
                       className="w-full rounded-md border border-neutral-300 bg-white px-2 py-0.5 text-sm focus:border-neutral-500 focus:outline-none dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 dark:focus:border-neutral-400"
                     />

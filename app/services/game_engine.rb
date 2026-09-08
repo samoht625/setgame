@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'logger'
+require 'securerandom'
 require 'set'
 
 # Game engine manages the state of the Set game
@@ -15,7 +17,9 @@ class GameEngine
     reveal_seconds: SET_REVEAL_SECONDS,
     reset_seconds: RESET_SECONDS,
     start_presence_sweeper: true,
-    auto_start: true
+    auto_start: true,
+    snapshot_store: nil,
+    logger: Logger.new($stderr)
   )
     @board = []
     @deck = []
@@ -29,6 +33,12 @@ class GameEngine
     @idle_player_ids = Set.new
     @status = 'playing'
     @mutex = Mutex.new
+    @snapshot_store = snapshot_store
+    @logger = logger
+    @snapshot_mutex = Mutex.new
+    @pending_snapshot = nil
+    @snapshot_writer = nil
+    @snapshot_write_error = nil
     @broadcaster = nil
     @countdown = 0
     @placements = []
@@ -62,7 +72,6 @@ class GameEngine
   # Start a new round: shuffle deck, deal initial board
   def start_new_round
     @mutex.synchronize { start_new_round_locked! }
-    persist_snapshot_async
   end
 
   # Deal cards from deck to board
@@ -139,15 +148,14 @@ class GameEngine
       @claim_sequence += 1
       @active_claim_token = @claim_sequence
       @active_claim = { player_id: player_id, cards: card_ids.dup }
-      schedule_claim_resolution(@active_claim_token, card_ids.dup)
+      enqueue_snapshot_locked!
+      schedule_claim_resolution(@active_claim_token)
 
       {
         success: true,
         message: 'Set claimed!',
         new_state: current_state
       }
-    end.tap do |result|
-      persist_snapshot_async if result.is_a?(Hash) && result[:success]
     end
   end
 
@@ -218,7 +226,7 @@ class GameEngine
       @names[player_id] ||= default_name_for(player_id)
 
       @last_seen[player_id] = Time.now
-      Rails.logger.info "[GameEngine] Registered connection for player_id=#{player_id} (#{@active_connections[player_id]} open)"
+      @logger.info "[GameEngine] Registered connection for player_id=#{player_id} (#{@active_connections[player_id]} open)"
 
       # Update online set and broadcast if changed
       update_online_set!
@@ -240,7 +248,7 @@ class GameEngine
         @last_seen.delete(player_id)
       end
 
-      Rails.logger.info "[GameEngine] Unregistered connection for player_id=#{player_id}"
+      @logger.info "[GameEngine] Unregistered connection for player_id=#{player_id}"
 
       # Update online set and broadcast if changed
       update_online_set!
@@ -263,6 +271,7 @@ class GameEngine
       end
 
       @names[player_id] = name
+      enqueue_snapshot_locked!
       { success: true, message: 'Name updated', new_state: current_state }
     end
   end
@@ -296,7 +305,7 @@ class GameEngine
     changed
   end
 
-  # Snapshot of durable multiplayer state (presence is not included)
+  # Snapshot of durable multiplayer state (presence and reset requests are not included)
   def snapshot_payload
     @mutex.synchronize { snapshot_payload_unlocked }
   end
@@ -311,13 +320,41 @@ class GameEngine
       @countdown = 0
       @placements = []
       @recent_claims = normalize_claims(payload["recent_claims"] || payload[:recent_claims])
-      @active_claim = nil
+      @active_claim = normalize_claims([payload["active_claim"] || payload[:active_claim]]).first
       @active_claim_token = nil
       clear_reset_request!
-    end
 
-    # Mid-countdown / round_over is not restored — start a fresh round instead.
-    start_new_round if @status == "round_over"
+      if @active_claim
+        cards = @active_claim[:cards]
+        unless @status == 'playing' && cards.uniq.length == 3 && cards.length == 3 &&
+            cards.all? { |id| @board.include?(id) } && Rules.is_set?(*cards)
+          raise ArgumentError, 'Invalid pending claim in snapshot'
+        end
+
+        # The score and recent claim were committed before the reveal began.
+        finish_active_claim_locked!
+        enqueue_snapshot_locked!
+      end
+
+      if @status == 'round_over'
+        @placements = compute_top_placements(3)
+        @countdown = 10
+        start_round_countdown
+      end
+    end
+  end
+
+  # Wait for queued writes, without holding the game mutex.
+  def flush_snapshots
+    loop do
+      writer, error = @snapshot_mutex.synchronize { [@snapshot_writer, @snapshot_write_error] }
+      unless writer
+        raise error if error
+        return
+      end
+
+      writer.join
+    end
   end
 
   private
@@ -329,6 +366,10 @@ class GameEngine
       "scores" => @scores.dup,
       "names" => @names.dup,
       "status" => @status,
+      "active_claim" => @active_claim && {
+        "player_id" => @active_claim[:player_id],
+        "cards" => @active_claim[:cards].dup
+      },
       "recent_claims" => @recent_claims.map { |c|
         {
           "player_id" => c[:player_id],
@@ -338,13 +379,38 @@ class GameEngine
     }
   end
 
-  def persist_snapshot_async
-    payload = snapshot_payload
-    Thread.new do
-      GameStateStore.save(payload)
+  def enqueue_snapshot_locked!
+    return unless @snapshot_store
+
+    payload = snapshot_payload_unlocked
+    @snapshot_mutex.synchronize do
+      # Keep only the newest waiting snapshot; an in-flight write always finishes first.
+      @pending_snapshot = payload
+      @snapshot_writer ||= Thread.new { write_snapshots }
     end
-  rescue StandardError => e
-    Rails.logger.warn("[GameEngine] persist failed: #{e.class}: #{e.message}")
+  end
+
+  def write_snapshots
+    loop do
+      payload = @snapshot_mutex.synchronize do
+        unless @pending_snapshot
+          @snapshot_writer = nil
+          return
+        end
+
+        snapshot = @pending_snapshot
+        @pending_snapshot = nil
+        snapshot
+      end
+
+      begin
+        @snapshot_store.save(payload)
+        @snapshot_mutex.synchronize { @snapshot_write_error = nil }
+      rescue StandardError => e
+        @snapshot_mutex.synchronize { @snapshot_write_error = e }
+        @logger.warn("[GameEngine] persist failed: #{e.class}: #{e.message}")
+      end
+    end
   end
 
   def normalize_scores(hash)
@@ -393,6 +459,7 @@ class GameEngine
     @active_claim = nil
     @active_claim_token = nil
     clear_reset_request!
+    enqueue_snapshot_locked!
   end
 
   def build_current_state
@@ -428,15 +495,7 @@ class GameEngine
         @mutex.synchronize do
           if @reset_request_token == reset_token
             request_active = true
-            remaining = (@reset_deadline - monotonic_time).ceil
-
-            if remaining <= 0
-              start_new_round_locked!
-              reset_complete = true
-            else
-              @reset_countdown = remaining
-            end
-
+            reset_complete = advance_reset_locked!
             state = current_state
           end
         end
@@ -446,6 +505,17 @@ class GameEngine
         @broadcaster&.call(state)
         break if reset_complete
       end
+    end
+  end
+
+  def advance_reset_locked!
+    remaining = (@reset_deadline - monotonic_time).ceil
+    if remaining <= 0
+      start_new_round_locked!
+      true
+    else
+      @reset_countdown = remaining
+      false
     end
   end
 
@@ -460,33 +530,35 @@ class GameEngine
     Process.clock_gettime(Process::CLOCK_MONOTONIC)
   end
 
-  def schedule_claim_resolution(claim_token, card_ids)
+  def schedule_claim_resolution(claim_token)
     Thread.new do
       sleep @reveal_seconds
+      resolve_pending_claim(claim_token)
+    end
+  end
 
-      state = nil
-      round_over = false
+  def resolve_pending_claim(claim_token)
+    state = @mutex.synchronize do
+      next unless @active_claim && @active_claim_token == claim_token
 
-      @mutex.synchronize do
-        next unless @active_claim_token == claim_token
+      finish_active_claim_locked!
+      enqueue_snapshot_locked!
+      start_round_countdown if @status == 'round_over'
+      current_state
+    end
 
-        resolve_claimed_cards!(card_ids)
-        @active_claim = nil
-        @active_claim_token = nil
+    @broadcaster&.call(state) if state
+  end
 
-        if @deck.empty? && !Rules.set_exists?(@board)
-          @status = 'round_over'
-          @placements = compute_top_placements(3)
-          @countdown = 10
-          round_over = true
-        end
+  def finish_active_claim_locked!
+    resolve_claimed_cards!(@active_claim[:cards])
+    @active_claim = nil
+    @active_claim_token = nil
 
-        state = current_state
-      end
-
-      @broadcaster&.call(state) if state
-      persist_snapshot_async if state
-      start_round_countdown if round_over
+    if @deck.empty? && !Rules.set_exists?(@board)
+      @status = 'round_over'
+      @placements = compute_top_placements(3)
+      @countdown = 10
     end
   end
 

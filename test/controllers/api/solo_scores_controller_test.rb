@@ -53,8 +53,9 @@ module Api
         flunk "no set found on board during replay" unless set
 
         t_ms += 1_500
+        set.sort!
         sim.apply_claim!(set)
-        events << { type: "claim", cards: set.sort, t_ms: t_ms }
+        events << { type: "claim", cards: set, t_ms: t_ms }
       end
       assert sim.finished?, "simulated game should reach round_over"
       events

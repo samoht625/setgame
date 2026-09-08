@@ -1,17 +1,9 @@
-function playerId(): string {
-  const key = 'setgame_player_id'
-  let id = localStorage.getItem(key)
-  if (!id) {
-    id = crypto.randomUUID()
-    localStorage.setItem(key, id)
-  }
-  return id
-}
+import { getPlayerId } from './player_id'
 
 function headers(json = true): HeadersInit {
   const h: Record<string, string> = {
     Accept: 'application/json',
-    'X-Player-Id': playerId()
+    'X-Player-Id': getPlayerId()
   }
   if (json) h['Content-Type'] = 'application/json'
   return h
@@ -36,12 +28,13 @@ export type ClaimEvent = {
   t_ms: number
 }
 
-export async function startSoloGame(): Promise<SoloGameStart | null> {
+export async function startSoloGame(signal?: AbortSignal): Promise<SoloGameStart | null> {
   try {
     const res = await fetch('/api/solo/games', {
       method: 'POST',
       headers: headers(),
-      credentials: 'same-origin'
+      credentials: 'same-origin',
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(8000)]) : AbortSignal.timeout(8000)
     })
     if (!res.ok) return null
     return (await res.json()) as SoloGameStart
@@ -55,55 +48,53 @@ export async function submitSoloScore(body: {
   elapsed_ms: number
   events: ClaimEvent[]
   display_name?: string | null
-}): Promise<{ ok: true; is_personal_best?: Record<string, boolean> } | { ok: false; error: string }> {
+}): Promise<{ ok: true; is_personal_best?: Record<string, boolean> } | { ok: false; error: string; retryable: boolean }> {
   try {
     const res = await fetch('/api/solo/scores', {
       method: 'POST',
       headers: headers(),
       credentials: 'same-origin',
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(10000)
     })
     const data = await res.json()
-    if (!res.ok) return { ok: false, error: data.error || 'submit_failed' }
+    // The server checks ownership before reporting an already accepted game.
+    if (res.status === 422 && data.error === 'already_completed') return { ok: true }
+    if (!res.ok) return { ok: false, error: data.error || 'submit_failed', retryable: res.status >= 500 || res.status === 429 }
     return { ok: true, is_personal_best: data.is_personal_best }
   } catch {
-    return { ok: false, error: 'network_error' }
+    return { ok: false, error: 'network_error', retryable: true }
   }
 }
 
 export async function fetchLeaderboard(
   period: 'daily' | 'weekly' | 'monthly',
-  limit = 20
+  limit = 20,
+  signal?: AbortSignal
 ): Promise<LeaderboardEntry[]> {
-  try {
-    const res = await fetch(`/api/solo/leaderboard?period=${period}&limit=${limit}`, {
-      headers: headers(false),
-      credentials: 'same-origin'
-    })
-    if (!res.ok) return []
-    const data = await res.json()
-    return data.entries || []
-  } catch {
-    return []
-  }
+  const res = await fetch(`/api/solo/leaderboard?period=${period}&limit=${limit}`, {
+    headers: headers(false),
+    credentials: 'same-origin',
+    signal
+  })
+  if (!res.ok) throw new Error('Could not load leaderboard')
+  const data = await res.json()
+  return data.entries || []
 }
 
-export async function fetchPersonalBests(): Promise<Record<string, LeaderboardEntry | null>> {
-  try {
-    const res = await fetch('/api/solo/personal_bests', {
-      headers: headers(),
-      credentials: 'same-origin'
-    })
-    if (!res.ok) return {}
-    return await res.json()
-  } catch {
-    return {}
-  }
+export async function fetchPersonalBests(signal?: AbortSignal): Promise<Record<string, LeaderboardEntry | null>> {
+  const res = await fetch('/api/solo/personal_bests', {
+    headers: headers(false),
+    credentials: 'same-origin',
+    signal
+  })
+  if (!res.ok) throw new Error('Could not load personal bests')
+  return await res.json()
 }
 
 export function getPlayerDisplayName(): string | null {
   try {
-    const id = playerId()
+    const id = getPlayerId()
     return (
       localStorage.getItem(`setgame_player_name:${id}`) ||
       localStorage.getItem('setgame_name') ||

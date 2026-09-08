@@ -5,28 +5,32 @@
 class GameStateStore
   NAME = "default"
 
+  class LoadError < StandardError; end
+
   def self.load
-    snapshot = GameSnapshot.default
-    return [nil, nil] unless snapshot
-    return [nil, nil] unless snapshot.version == GameSnapshot::CURRENT_VERSION
+    ActiveRecord::Base.connection_pool.with_connection do
+      snapshot = GameSnapshot.default
+      return [nil, nil] unless snapshot
 
-    payload = snapshot.parsed_payload
-    return [nil, nil] unless payload.is_a?(Hash)
+      unless snapshot.version == GameSnapshot::CURRENT_VERSION
+        raise LoadError, "Unsupported snapshot version: #{snapshot.version}"
+      end
 
-    [payload, snapshot.version]
-  rescue StandardError => e
-    Rails.logger.warn("[GameStateStore] load failed: #{e.class}: #{e.message}")
-    [nil, nil]
+      payload = snapshot.parsed_payload
+      raise LoadError, "Invalid snapshot payload" unless payload.is_a?(Hash)
+
+      [payload, snapshot.version]
+    end
   end
 
   def self.save(payload_hash)
-    ActiveRecord::Base.connection_pool.with_connection do
-      snapshot = GameSnapshot.find_or_initialize_by(name: NAME)
-      snapshot.version = GameSnapshot::CURRENT_VERSION
-      snapshot.payload = payload_hash.to_json
-      snapshot.save!
+    Rails.application.executor.wrap do
+      ActiveRecord::Base.connection_pool.with_connection do
+        snapshot = GameSnapshot.find_or_initialize_by(name: NAME)
+        snapshot.version = GameSnapshot::CURRENT_VERSION
+        snapshot.payload = payload_hash.to_json
+        snapshot.save!
+      end
     end
-  rescue StandardError => e
-    Rails.logger.warn("[GameStateStore] save failed: #{e.class}: #{e.message}")
   end
 end

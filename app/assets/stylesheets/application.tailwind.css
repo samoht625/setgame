@@ -14,6 +14,20 @@ html {
   color-scheme: light dark;
 }
 
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 /* Padding helpers that respect safe areas */
 .pb-safe {
   /* Fallback for older iOS */

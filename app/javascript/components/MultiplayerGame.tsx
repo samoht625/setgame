@@ -109,6 +109,7 @@ const MultiplayerGame: React.FC = () => {
       disconnected() {
         setIsConnected(false)
         clearClaimTimeout()
+        setSelectedCards([])
         setClaiming(false)
       },
 
@@ -160,6 +161,24 @@ const MultiplayerGame: React.FC = () => {
       subscriptionRef.current = null
       // Close the socket so we don't appear online while playing solo
       consumer.disconnect()
+    }
+  }, [])
+
+  useEffect(() => {
+    const onOffline = () => {
+      setIsConnected(false)
+      clearClaimTimeout()
+      setClaiming(false)
+      setSelectedCards([])
+      consumer.disconnect()
+    }
+    const onOnline = () => consumer.connect()
+
+    window.addEventListener('offline', onOffline)
+    window.addEventListener('online', onOnline)
+    return () => {
+      window.removeEventListener('offline', onOffline)
+      window.removeEventListener('online', onOnline)
     }
   }, [])
 
@@ -275,7 +294,8 @@ const MultiplayerGame: React.FC = () => {
             foundCards={activeClaim?.cards || []}
             announcement={announcement}
             onCardClick={handleCardClick}
-            claiming={claiming}
+            claiming={claiming || !isConnected}
+            loading={gameState.board.length === 0 && gameState.status === 'playing'}
             gameOver={gameState.status === 'round_over'}
           />
         }

@@ -25,34 +25,43 @@ export function cardAttributes(cardId: number): CardAttributes {
   return { number, color, shape, shading }
 }
 
+// Each attribute's three values must sum to zero modulo 3.
+const THIRD_CARDS = Array.from({ length: 81 }, (_, first) => {
+  const row = new Uint8Array(81)
+  for (let second = 0; second < 81; second++) {
+    let a = first
+    let b = second
+    let third = 1
+    for (let place = 1; place <= 27; place *= 3) {
+      third += ((6 - a % 3 - b % 3) % 3) * place
+      a = Math.floor(a / 3)
+      b = Math.floor(b / 3)
+    }
+    row[second] = third
+  }
+  return row
+})
+
+function thirdCard(card1: number, card2: number): number | undefined {
+  return THIRD_CARDS[card1 - 1]?.[card2 - 1]
+}
+
 export function isSet(card1: number, card2: number, card3: number): boolean {
-  const attrs1 = cardAttributes(card1)
-  const attrs2 = cardAttributes(card2)
-  const attrs3 = cardAttributes(card3)
-
-  // For each attribute, all three cards must be either:
-  // - all the same value, OR
-  // - all different values
-  const attributes: (keyof CardAttributes)[] = ['number', 'color', 'shape', 'shading']
-
-  return attributes.every(attr => {
-    const vals = [attrs1[attr], attrs2[attr], attrs3[attr]]
-    const uniqueCount = new Set(vals).size
-    return uniqueCount === 1 || uniqueCount === 3
-  })
+  const third = thirdCard(card1, card2)
+  return third !== undefined && third === card3
 }
 
 export function setExists(board: number[]): boolean {
   if (board.length < 3) return false
 
-  // Try all combinations of 3 cards
+  const lastPositions = new Map<number, number>()
+  for (let i = 0; i < board.length; i++) lastPositions.set(board[i], i)
+
   for (let i = 0; i < board.length - 2; i++) {
     for (let j = i + 1; j < board.length - 1; j++) {
-      for (let k = j + 1; k < board.length; k++) {
-        if (isSet(board[i], board[j], board[k])) {
-          return true
-        }
-      }
+      const third = thirdCard(board[i], board[j])
+      // The completing card must occupy a third position, even for repeated IDs.
+      if (third !== undefined && (lastPositions.get(third) ?? -1) > j) return true
     }
   }
 

@@ -17,6 +17,9 @@ module SoloReplay
     def apply_claim!(card_ids)
       card_ids = Array(card_ids).map(&:to_i)
       raise "must_select_three" unless card_ids.length == 3
+      if card_ids[0] == card_ids[1] || card_ids[0] == card_ids[2] || card_ids[1] == card_ids[2]
+        raise "must_select_three_different_cards"
+      end
       raise "not_a_set" unless Rules.is_set?(card_ids[0], card_ids[1], card_ids[2])
       raise "cards_not_on_board" unless card_ids.all? { |id| @board.include?(id) }
 

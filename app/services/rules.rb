@@ -24,52 +24,55 @@ module Rules
     }
   end
 
-  # Check if three cards form a valid set
-  # For each attribute, all three cards must be either:
-  # - all the same value, OR
-  # - all different values
-  def self.is_set?(card1_id, card2_id, card3_id)
-    attrs1 = card_attributes(card1_id)
-    attrs2 = card_attributes(card2_id)
-    attrs3 = card_attributes(card3_id)
-
-    %i[number color shape shading].all? do |attr|
-      vals = [attrs1[attr], attrs2[attr], attrs3[attr]]
-      unique_count = vals.uniq.length
-      unique_count == 1 || unique_count == 3
-    end
-  end
-
-  # Given two cards, calculate the third card that would complete a set
-  def self.third_card(card1_id, card2_id)
-    attrs1 = card_attributes(card1_id)
-    attrs2 = card_attributes(card2_id)
-
-    third_attrs = %i[number color shape shading].map do |attr|
-      val1 = attrs1[attr]
-      val2 = attrs2[attr]
-
-      if val1 == val2
-        val1
-      else
-        (0..2).find { |v| v != val1 && v != val2 }
+  # Each attribute's three values must sum to zero modulo 3.
+  THIRD_CARDS = Array.new(81) do |first|
+    Array.new(81) do |second|
+      a = first
+      b = second
+      third = 1
+      place = 1
+      4.times do
+        third += ((6 - a % 3 - b % 3) % 3) * place
+        a /= 3
+        b /= 3
+        place *= 3
       end
-    end
+      third
+    end.freeze
+  end.freeze
+  private_constant :THIRD_CARDS
 
-    # third_attrs is [number, color, shape, shading], least significant digit first
-    card_id = third_attrs.each_with_index.sum do |val, idx|
-      val * (3**idx)
-    end
-
-    card_id + 1
+  def self.is_set?(card1_id, card2_id, card3_id)
+    third = third_card(card1_id, card2_id)
+    !third.nil? && third == card3_id
   end
 
-  # Check if there's at least one set in the given board
+  def self.third_card(card1_id, card2_id)
+    return unless card1_id.is_a?(Integer) && card1_id.between?(1, 81)
+    return unless card2_id.is_a?(Integer) && card2_id.between?(1, 81)
+
+    THIRD_CARDS[card1_id - 1][card2_id - 1]
+  end
+
   def self.set_exists?(board)
     return false if board.length < 3
 
-    board.combination(3).any? do |cards|
-      is_set?(cards[0], cards[1], cards[2])
+    last_positions = {}
+    board.each_with_index { |card, index| last_positions[card] = index }
+
+    i = 0
+    while i < board.length - 2
+      j = i + 1
+      while j < board.length - 1
+        third = third_card(board[i], board[j])
+        # The completing card must occupy a third position, even for repeated IDs.
+        return true if third && last_positions.fetch(third, -1) > j
+
+        j += 1
+      end
+      i += 1
     end
+
+    false
   end
 end

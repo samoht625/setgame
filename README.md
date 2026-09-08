@@ -49,7 +49,7 @@ set is present, and the round ends when the deck is exhausted and no sets remain
 - Node.js 18+ and Yarn
 - On Linux: `build-essential`, `libyaml-dev` (for native gem extensions)
 
-There is no database; all game state is held in memory by a single server process.
+SQLite stores verified solo scores and multiplayer snapshots. Live multiplayer state is managed in memory by a single server process.
 
 ### Setup
 
@@ -74,8 +74,9 @@ yarn build
 yarn build:css
 ```
 
-3. Start the server (or use `bin/dev` for watchers + livereload):
+3. Prepare SQLite and start the server (or use `bin/dev` for watchers + livereload):
 ```bash
+bin/rails db:prepare
 bin/dev
 ```
 
@@ -106,19 +107,24 @@ See `AGENTS.md` for cloud-only commands and verification.
 
 - `ruby script/test_rules.rb` — sanity checks for the card mapping and set validation logic
 - `ruby script/test_game_engine.rb` — multiplayer claim/reveal timing checks
+- `ruby script/test_game_persistence.rb` — ordered snapshots and restart recovery
+- `bundle exec ruby script/test_game_persistence_boot.rb` — cold-boot recovery and failed-read safety using temporary databases
 - `yarn typecheck` — TypeScript type checking
+- `npm run test:rules` — exhaustive client rules checks and seeded replay parity
+- `npm run test:browser` — Chromium regression tests against a running local server, including solo completion, multiplayer, and responsive layouts. Set `PLAYWRIGHT_BASE_URL` to use another port.
 - Open multiple browser tabs to test multiplayer locally
 
 ## Deployment
 
 See `DEPLOYMENT.md`. The app is currently deployed behind a reverse proxy via the systemd
 unit in `deploy/` (see `scripts/install-setgame-service.sh`); a `render.yaml` is also
-included for Render deployments. Because game state is in-memory and ActionCable uses the
-async adapter, run a single process (state is lost on restart).
+included for Render deployments. Because live game state is in-memory and ActionCable uses the
+async adapter, run a single process. Multiplayer snapshots restore the board and scores after restart;
+keep the SQLite database on durable storage.
 
 ## Architecture
 
-- **Backend**: Rails 8 with ActionCable for WebSockets (no database)
+- **Backend**: Rails 8 with ActionCable for WebSockets and SQLite persistence
 - **Frontend**: React + TypeScript bundled with esbuild
 - **Styling**: Tailwind CSS 4
 - **Game Engine**: In-memory singleton service managing the multiplayer game state

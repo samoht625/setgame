@@ -13,6 +13,8 @@ interface RecentClaim {
 
 interface SolitaireSidebarProps {
   elapsedMs: number
+  startedAtMs: number
+  isStarting: boolean
   deckCount: number
   setsFound: number
   status: SoloStatus
@@ -21,9 +23,14 @@ interface SolitaireSidebarProps {
   recentClaims: RecentClaim[]
   leaderboard: LeaderboardEntry[]
   personalBest: LeaderboardEntry | null
+  scoresLoading: boolean
+  scoresError: string | null
+  onRetryScores: () => void
   period: 'daily' | 'weekly' | 'monthly'
   onPeriodChange: (period: 'daily' | 'weekly' | 'monthly') => void
   submitting?: boolean
+  submissionError: string | null
+  onRetrySubmission: () => void
 }
 
 const BEST_TIMES_KEY = 'setgame_solo_best_times'
@@ -61,15 +68,48 @@ function loadBestTimes(): BestTime[] {
   try {
     const stored = localStorage.getItem(BEST_TIMES_KEY)
     if (!stored) return []
-    const times = JSON.parse(stored) as BestTime[]
-    return times.sort((a, b) => a.ms - b.ms).slice(0, 5)
+    const times: unknown = JSON.parse(stored)
+    if (!Array.isArray(times)) return []
+    return times.filter((time): time is BestTime => (
+      time !== null && typeof time === 'object' &&
+      Number.isFinite(time.ms) && time.ms >= 0 &&
+      typeof time.at === 'string' && Number.isFinite(Date.parse(time.at))
+    )).sort((a, b) => a.ms - b.ms).slice(0, 5)
   } catch {
     return []
   }
 }
 
+const SoloTimer: React.FC<{ startedAtMs: number; elapsedMs: number; running: boolean; loading: boolean }> = ({
+  startedAtMs, elapsedMs, running, loading
+}) => {
+  const [now, setNow] = React.useState(Date.now)
+
+  React.useEffect(() => {
+    if (!running) return
+    const tick = () => {
+      if (document.visibilityState === 'visible') setNow(Date.now())
+    }
+    tick()
+    const timer = window.setInterval(tick, 1000)
+    document.addEventListener('visibilitychange', tick)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', tick)
+    }
+  }, [running, startedAtMs])
+
+  return (
+    <div role="timer" aria-label="Elapsed time" className="text-4xl font-semibold tabular-nums tracking-tight text-neutral-900 dark:text-neutral-100">
+      {loading ? '—' : formatTime(Math.max(0, running ? now - startedAtMs : elapsedMs))}
+    </div>
+  )
+}
+
 const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
   elapsedMs,
+  startedAtMs,
+  isStarting,
   deckCount,
   setsFound,
   status,
@@ -78,9 +118,14 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
   recentClaims,
   leaderboard,
   personalBest,
+  scoresLoading,
+  scoresError,
+  onRetryScores,
   period,
   onPeriodChange,
-  submitting = false
+  submitting = false,
+  submissionError,
+  onRetrySubmission
 }) => {
   const isFinished = status === 'round_over'
   const isPaused = status === 'paused'
@@ -105,11 +150,13 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
     return newest
   }, [bestTimes])
 
-  const statusChip = isFinished
-    ? { label: 'Finished', classes: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200' }
-    : isPaused
-      ? { label: 'Paused', classes: 'bg-neutral-200 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200' }
-      : { label: 'In play', classes: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200' }
+  const statusChip = isStarting
+    ? { label: 'Dealing', classes: 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300' }
+    : isFinished
+      ? { label: 'Finished', classes: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200' }
+      : isPaused
+        ? { label: 'Paused', classes: 'bg-neutral-200 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200' }
+        : { label: 'In play', classes: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200' }
 
   return (
     <div className="rounded-2xl border border-neutral-200 bg-white p-4 md:p-5 dark:border-neutral-800 dark:bg-neutral-900">
@@ -120,15 +167,14 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
         </span>
       </div>
       <div className="mt-1 flex items-center justify-between gap-2">
-        <div className="text-4xl font-semibold tabular-nums tracking-tight text-neutral-900 dark:text-neutral-100">
-          {formatTime(elapsedMs)}
-        </div>
+        <SoloTimer startedAtMs={startedAtMs} elapsedMs={elapsedMs} running={!isStarting && status === 'playing'} loading={isStarting} />
         <div className="flex items-center gap-1">
           {!isFinished && (
             <button
               type="button"
               onClick={onTogglePause}
-              className="rounded-full p-2 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+              disabled={isStarting}
+              className="flex h-11 w-11 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-700 disabled:opacity-40 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
               title={isPaused ? 'Resume' : 'Pause'}
               aria-label={isPaused ? 'Resume' : 'Pause'}
             >
@@ -146,7 +192,8 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
           <button
             type="button"
             onClick={onRestart}
-            className="rounded-full p-2 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+            disabled={isStarting}
+            className="flex h-11 w-11 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-700 disabled:opacity-40 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
             title="New game"
             aria-label="New game"
           >
@@ -167,7 +214,13 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
       </div>
 
       {submitting && (
-        <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">Submitting…</p>
+        <p role="status" className="mt-1 text-xs text-blue-600 dark:text-blue-400">Submitting…</p>
+      )}
+      {submissionError && !submitting && (
+        <div className="mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+          <p role="status">{submissionError}</p>
+          <button type="button" onClick={onRetrySubmission} className="mt-1 min-h-9 rounded-md px-1 font-semibold underline underline-offset-4">Retry submission</button>
+        </div>
       )}
 
       <div className="mt-4 flex items-center justify-between border-t border-neutral-100 pt-3 text-sm dark:border-neutral-800">
@@ -179,7 +232,7 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
         </span>
       </div>
 
-      {isFinished && (
+      {isFinished && !isStarting && (
         <div className="mt-3 space-y-2 rounded-xl bg-neutral-50 p-3 dark:bg-neutral-800/50">
           <div className="text-sm text-neutral-700 dark:text-neutral-300">
             Cleared the deck in <span className="font-semibold tabular-nums">{formatTime(elapsedMs)}</span>
@@ -203,6 +256,7 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
                 key={p}
                 type="button"
                 onClick={() => onPeriodChange(p)}
+                aria-pressed={period === p}
                 className={`rounded-md px-2.5 py-1 text-[11px] font-medium capitalize transition-colors ${
                   period === p
                     ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-600 dark:text-neutral-100'
@@ -224,7 +278,14 @@ const SolitaireSidebar: React.FC<SolitaireSidebarProps> = ({
           </div>
         )}
 
-        {leaderboard.length === 0 ? (
+        {scoresLoading ? (
+          <p role="status" className="mt-2.5 rounded-xl bg-neutral-50 px-3 py-5 text-center text-xs text-neutral-500 dark:bg-neutral-800/50 dark:text-neutral-400">Loading times…</p>
+        ) : scoresError ? (
+          <div className="mt-2.5 rounded-xl border border-dashed border-neutral-200 px-3 py-3 text-center dark:border-neutral-700">
+            <p role="status" className="text-xs text-neutral-500 dark:text-neutral-400">{scoresError}</p>
+            <button type="button" onClick={onRetryScores} className="mt-1 min-h-9 rounded-md px-3 text-xs font-medium underline underline-offset-4">Try again</button>
+          </div>
+        ) : leaderboard.length === 0 ? (
           <div className="mt-2.5 rounded-xl border border-dashed border-neutral-200 px-3 py-5 text-center dark:border-neutral-700">
             <p className="text-xs text-neutral-400 dark:text-neutral-500">
               No times yet — finish a game to claim the top spot.

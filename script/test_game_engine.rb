@@ -10,7 +10,8 @@ class GameEngineTest < Minitest::Test
     @engine = GameEngine.new(
       reveal_seconds: 0.05,
       reset_seconds: 0.05,
-      start_presence_sweeper: false
+      start_presence_sweeper: false,
+      snapshot_store: nil
     )
     @engine.instance_variable_set(:@board, (1..12).to_a)
     @engine.instance_variable_set(:@deck, (13..81).to_a)

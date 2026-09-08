@@ -3,6 +3,7 @@ import Board from '../components/Board'
 import GameLayout from '../components/GameLayout'
 import Toast, { ToastMessage, ToastType } from '../components/Toast'
 import SolitaireSidebar from './SolitaireSidebar'
+import { useSoloScores } from '../hooks/useSoloScores'
 import {
   applySoloClaim,
   isRoundOver,
@@ -11,13 +12,10 @@ import {
   type SoloDealState
 } from '../lib/solo_deal'
 import {
-  fetchLeaderboard,
-  fetchPersonalBests,
   getPlayerDisplayName,
   startSoloGame,
   submitSoloScore,
-  type ClaimEvent,
-  type LeaderboardEntry
+  type ClaimEvent
 } from '../lib/solo_api'
 
 const LOCAL_STORAGE_KEY = 'setgame_solo_state_v2'
@@ -45,6 +43,7 @@ type SavedSoloState = {
   rngState: number
   events: ClaimEvent[]
   eligible: boolean
+  submissionStatus?: 'pending' | 'submitted' | 'rejected'
   // Wall-clock time of the last save (i.e. last meaningful activity).
   savedAtMs: number
 }
@@ -57,11 +56,14 @@ function loadSavedGame(): SavedSoloState | null {
     if (
       !Array.isArray(parsed.board) ||
       !Array.isArray(parsed.deck) ||
+      ![...parsed.board, ...parsed.deck].every(id => Number.isInteger(id) && id >= 1 && id <= 81) ||
+      new Set([...parsed.board, ...parsed.deck]).size !== parsed.board.length + parsed.deck.length ||
       (parsed.status !== 'playing' && parsed.status !== 'paused' && parsed.status !== 'round_over') ||
       !Array.isArray(parsed.recentClaims) ||
-      typeof parsed.startedAtMs !== 'number' ||
-      typeof parsed.elapsedMs !== 'number' ||
-      typeof parsed.seed !== 'number'
+      !parsed.recentClaims.every(claim => claim && Array.isArray(claim.cards) && claim.cards.length === 3 && claim.cards.every(id => Number.isInteger(id) && id >= 1 && id <= 81)) ||
+      !Number.isFinite(parsed.startedAtMs) ||
+      !Number.isFinite(parsed.elapsedMs) || parsed.elapsedMs < 0 ||
+      !Number.isFinite(parsed.seed)
     ) {
       return null
     }
@@ -110,15 +112,15 @@ const SolitaireGame: React.FC = () => {
   const [toast, setToast] = useState<ToastMessage | null>(null)
   const [elapsedMs, setElapsedMs] = useState(0)
   const [recentClaims, setRecentClaims] = useState<RecentClaim[]>([])
-  const [setsFound, setSetsFound] = useState(0)
   const [startedAtMs, setStartedAtMs] = useState(Date.now())
-  const [eligible, setEligible] = useState(false)
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
-  const [personalBest, setPersonalBest] = useState<LeaderboardEntry | null>(null)
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily')
   const [submitting, setSubmitting] = useState(false)
-
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [submissionError, setSubmissionError] = useState<string | null>(null)
+  const submissionStatusRef = useRef<SavedSoloState['submissionStatus']>(undefined)
+  const [isStarting, setIsStarting] = useState(true)
+  const scores = useSoloScores(period)
+  const startRequestRef = useRef<AbortController | null>(null)
+  const gameGenerationRef = useRef(0)
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const rejectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dealStateRef = useRef<SoloDealState | null>(null)
@@ -172,7 +174,8 @@ const SolitaireGame: React.FC = () => {
       seed: opts.seed,
       rngState: deal.rng.getState(),
       events: opts.events,
-      eligible: opts.eligible
+      eligible: opts.eligible,
+      submissionStatus: submissionStatusRef.current
     })
     lastActivityAtRef.current = Date.now()
   }
@@ -188,6 +191,7 @@ const SolitaireGame: React.FC = () => {
       startedAtMs?: number
       recentClaims?: RecentClaim[]
       events?: ClaimEvent[]
+      savedAtMs?: number
     }
   ) => {
     dealStateRef.current = deal
@@ -195,7 +199,6 @@ const SolitaireGame: React.FC = () => {
     setDeck([...deal.deck])
 
     eligibleRef.current = opts.eligible
-    setEligible(opts.eligible)
     gameIdRef.current = opts.gameId ?? null
     seedRef.current = opts.seed
 
@@ -204,7 +207,7 @@ const SolitaireGame: React.FC = () => {
 
     const claims = opts.recentClaims || []
     setRecentClaims(claims)
-    setSetsFound(claims.length)
+    recentClaimsRef.current = claims
 
     const started = opts.startedAtMs ?? Date.now()
     setStartedAtMs(started)
@@ -212,8 +215,15 @@ const SolitaireGame: React.FC = () => {
 
     const st = opts.status || 'playing'
     setStatus(st)
+    setIsStarting(false)
     setSelectedCards([])
+    setRejectedCards([])
     submittedRef.current = st === 'round_over'
+
+    if (opts.savedAtMs !== undefined) {
+      lastActivityAtRef.current = opts.savedAtMs
+      return
+    }
 
     writeSave(deal, {
       status: st,
@@ -227,15 +237,23 @@ const SolitaireGame: React.FC = () => {
     })
   }
 
-  const refreshScores = async (p: 'daily' | 'weekly' | 'monthly') => {
-    const [lb, pb] = await Promise.all([fetchLeaderboard(p), fetchPersonalBests()])
-    setLeaderboard(lb)
-    setPersonalBest(pb[p] || null)
-  }
-
   const startNewGame = async () => {
+    startRequestRef.current?.abort()
+    const request = new AbortController()
+    startRequestRef.current = request
+    gameGenerationRef.current += 1
+    setIsStarting(true)
+    setSubmitting(false)
+    setSubmissionError(null)
+    submissionStatusRef.current = undefined
+    setSelectedCards([])
+    setRejectedCards([])
+    if (rejectTimeoutRef.current) clearTimeout(rejectTimeoutRef.current)
+
+    const remote = await startSoloGame(request.signal)
+    if (request.signal.aborted) return
+    startRequestRef.current = null
     submittedRef.current = false
-    const remote = await startSoloGame()
     if (remote) {
       const deal = startSoloDeal(remote.seed)
       applyDeal(deal, {
@@ -290,18 +308,34 @@ const SolitaireGame: React.FC = () => {
       return
     }
 
+    await submitFinishedGame(finalMs, claimEvents)
+  }
+
+  const submitFinishedGame = async (finalMs: number, claimEvents: ClaimEvent[]) => {
+    if (submitting || !eligibleRef.current || !gameIdRef.current) return
     setSubmitting(true)
+    setSubmissionError(null)
+    const generation = gameGenerationRef.current
     const res = await submitSoloScore({
       game_id: gameIdRef.current,
       elapsed_ms: finalMs,
       events: claimEvents,
       display_name: getPlayerDisplayName()
     })
+    if (generation !== gameGenerationRef.current) return
     setSubmitting(false)
+
+    submissionStatusRef.current = res.ok ? 'submitted' : res.retryable ? 'pending' : 'rejected'
+    const saved = loadSavedGame()
+    if (saved?.gameId === gameIdRef.current && saved?.status === 'round_over') {
+      saveGame({ ...saved, submissionStatus: submissionStatusRef.current })
+    }
 
     if (res.ok) {
       showToast(`Submitted! ${formatTime(finalMs)}`, 'success')
-      void refreshScores(period)
+      scores.refresh()
+    } else if (res.retryable) {
+      setSubmissionError('Your time is saved. Retry when you’re connected.')
     } else {
       showToast(res.error || 'Submit failed', 'error')
     }
@@ -341,9 +375,10 @@ const SolitaireGame: React.FC = () => {
 
     const updatedRecentClaims = [{ cards: cardIds }, ...recentClaims].slice(0, 8)
     setRecentClaims(updatedRecentClaims)
-    setSetsFound(prev => prev + 1)
+    recentClaimsRef.current = updatedRecentClaims
 
     if (isRoundOver(deal)) {
+      submissionStatusRef.current = eligibleRef.current ? 'pending' : undefined
       setStatus('round_over')
       setElapsedMs(tMs)
       writeSave(deal, {
@@ -373,7 +408,11 @@ const SolitaireGame: React.FC = () => {
   }
 
   const handleCardClick = (cardId: number) => {
-    if (status !== 'playing') return
+    if (isStarting || status !== 'playing') return
+    if (Date.now() - lastActivityAtRef.current >= IDLE_RESET_MS) {
+      startFreshAfterIdle()
+      return
+    }
 
     const nextSelected = selectedCards.includes(cardId)
       ? selectedCards.filter(id => id !== cardId)
@@ -390,11 +429,11 @@ const SolitaireGame: React.FC = () => {
   const markIneligible = (reason: string) => {
     if (!eligibleRef.current) return
     eligibleRef.current = false
-    setEligible(false)
     showToast(reason, 'error')
   }
 
   const togglePause = () => {
+    if (isStarting) return
     if (status === 'playing') {
       const nowElapsed = Date.now() - startedAtMs
       setElapsedMs(nowElapsed)
@@ -437,45 +476,39 @@ const SolitaireGame: React.FC = () => {
   }
 
   useEffect(() => {
-    if (status === 'playing') {
-      timerRef.current = setInterval(() => {
-        const now = Date.now()
-        setElapsedMs(now - startedAtMs)
-        if (document.visibilityState !== 'visible') return
+    if (isStarting || status !== 'playing') return
 
-        // Returning to a backgrounded tab after a long absence: start fresh.
-        if (now - lastActivityAtRef.current >= IDLE_RESET_MS) {
-          startFreshAfterIdle()
-          return
-        }
+    const saveActivity = () => {
+      if (document.visibilityState !== 'visible' || startRequestRef.current) return
+      const now = Date.now()
+      if (now - lastActivityAtRef.current >= IDLE_RESET_MS) {
+        startFreshAfterIdle()
+        return
+      }
 
-        lastActivityAtRef.current = now
-        // Periodically persist so savedAtMs tracks presence, not just moves.
-        if (
-          now - lastActivitySaveRef.current >= ACTIVITY_SAVE_INTERVAL_MS &&
-          dealStateRef.current
-        ) {
-          lastActivitySaveRef.current = now
-          writeSave(dealStateRef.current, {
-            status: 'playing',
-            recentClaims: recentClaimsRef.current,
-            startedAtMs,
-            elapsedMs: now - startedAtMs,
-            gameId: gameIdRef.current,
-            seed: seedRef.current,
-            events: eventsRef.current,
-            eligible: eligibleRef.current
-          })
-        }
-      }, 100)
-    } else if (timerRef.current) {
-      clearInterval(timerRef.current)
-      timerRef.current = null
+      lastActivityAtRef.current = now
+      if (now - lastActivitySaveRef.current >= ACTIVITY_SAVE_INTERVAL_MS && dealStateRef.current) {
+        lastActivitySaveRef.current = now
+        writeSave(dealStateRef.current, {
+          status: 'playing',
+          recentClaims: recentClaimsRef.current,
+          startedAtMs,
+          elapsedMs: now - startedAtMs,
+          gameId: gameIdRef.current,
+          seed: seedRef.current,
+          events: eventsRef.current,
+          eligible: eligibleRef.current
+        })
+      }
     }
+
+    const timer = setInterval(saveActivity, 1000)
+    document.addEventListener('visibilitychange', saveActivity)
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', saveActivity)
     }
-  }, [status, startedAtMs])
+  }, [isStarting, status, startedAtMs])
 
   useEffect(() => {
     const saved = loadSavedGame()
@@ -486,40 +519,35 @@ const SolitaireGame: React.FC = () => {
     if (staleInProgress) {
       // The player was away 15+ minutes: discard the stale game, deal fresh.
       startFreshAfterIdle()
-    } else if (saved && saved.board.length > 0) {
+    } else if (saved && (saved.board.length > 0 || saved.status === 'round_over')) {
       const deal = restoreSoloDeal(saved.board, saved.deck, saved.rngState)
       const wasPaused = saved.status === 'paused'
+      submissionStatusRef.current = saved.submissionStatus
+      const pendingSubmission = saved.status === 'round_over' && saved.submissionStatus === 'pending'
+      if (pendingSubmission) setSubmissionError('Your time is saved. Retry when you’re connected.')
       applyDeal(deal, {
         gameId: saved.gameId,
         seed: saved.seed,
-        eligible: saved.eligible && !wasPaused && saved.status !== 'round_over',
+        eligible: saved.eligible && !wasPaused && (saved.status !== 'round_over' || pendingSubmission),
         status: saved.status,
         elapsedMs:
           saved.status === 'playing' ? Date.now() - saved.startedAtMs : saved.elapsedMs,
         startedAtMs:
           saved.status === 'playing' ? saved.startedAtMs : Date.now() - saved.elapsedMs,
         recentClaims: saved.recentClaims,
-        events: saved.events
+        events: saved.events,
+        savedAtMs: saved.savedAtMs
       })
-      if (wasPaused) {
-        eligibleRef.current = false
-        setEligible(false)
-      }
     } else {
       void startNewGame()
     }
-    void refreshScores(period)
-
     return () => {
+      startRequestRef.current?.abort()
+      gameGenerationRef.current += 1
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
       if (rejectTimeoutRef.current) clearTimeout(rejectTimeoutRef.current)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  useEffect(() => {
-    void refreshScores(period)
-  }, [period])
 
   return (
     <>
@@ -532,25 +560,34 @@ const SolitaireGame: React.FC = () => {
             selectedCards={selectedCards}
             rejectedCards={rejectedCards}
             onCardClick={handleCardClick}
-            claiming={false}
-            gameOver={status === 'round_over'}
-            paused={status === 'paused'}
+            claiming={isStarting}
+            loading={isStarting}
+            gameOver={!isStarting && status === 'round_over'}
+            paused={!isStarting && status === 'paused'}
+            onResume={togglePause}
           />
         }
         sidebar={
           <SolitaireSidebar
             elapsedMs={elapsedMs}
+            startedAtMs={startedAtMs}
+            isStarting={isStarting}
             deckCount={deck.length}
-            setsFound={setsFound}
+            setsFound={eventsRef.current.length}
             status={status}
             onTogglePause={togglePause}
             onRestart={() => void startNewGame()}
             recentClaims={recentClaims}
-            leaderboard={leaderboard}
-            personalBest={personalBest}
+            leaderboard={scores.leaderboard}
+            personalBest={scores.personalBest}
+            scoresLoading={scores.loading}
+            scoresError={scores.error}
+            onRetryScores={scores.refresh}
             period={period}
             onPeriodChange={setPeriod}
             submitting={submitting}
+            submissionError={submissionError}
+            onRetrySubmission={() => void submitFinishedGame(elapsedMs, eventsRef.current)}
           />
         }
       />
