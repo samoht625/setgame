@@ -37,7 +37,9 @@ set is present, and the round ends when the deck is exhausted and no sets remain
 - Real-time multiplayer gameplay using ActionCable WebSockets
 - Solo mode with timer, pause/resume and local best times
 - Presence jewel on the Multiplayer toggle when other people are playing
-- Clean, board-first UI that works on phones, tablets and desktops
+- Crisp SVG cards, softer dark mode, and compact solo controls above the board on phones
+- Optional selection and set sounds, muted by default with a saved preference
+- Personal-best celebrations for improved local times, with reduced-motion support
 - Automatic game progression (extra deals, reshuffles, new rounds)
 - Editable display names with sensible defaults, presence and idle indicators
 
@@ -111,6 +113,7 @@ See `AGENTS.md` for cloud-only commands and verification.
 - `bundle exec ruby script/test_game_persistence_boot.rb` — cold-boot recovery and failed-read safety using temporary databases
 - `yarn typecheck` — TypeScript type checking
 - `npm run test:rules` — exhaustive client rules checks and seeded replay parity
+- `npm run test:cards` — all 81 SVG card mappings, shared shapes, and accessibility semantics
 - `npm run test:browser` — Chromium regression tests against a running local server, including solo completion, multiplayer, and responsive layouts. Set `PLAYWRIGHT_BASE_URL` to use another port.
 - Open multiple browser tabs to test multiplayer locally
 
@@ -148,6 +151,8 @@ app/
       GameLayout.tsx     # Shared board-centered layout
       MultiplayerGame.tsx# Multiplayer state + ActionCable wiring
       Board.tsx          # Card grid
+      CardFace.tsx       # Shared vector card shapes and accessible card artwork
+      SoundProvider.tsx  # Optional Web Audio feedback and saved preference
       Scoreboard.tsx     # Players, deck, results, recent sets
       Toast.tsx          # Feedback messages
     solitaire/
@@ -166,7 +171,7 @@ config/
   initializers/
     game_engine.rb       # Initialize global game engine
 public/
-  cards/                 # Card images (1.png through 81.png), see CARD_MAPPING.md
+  cards/                 # Original reference artwork; gameplay uses CardFace.tsx
 script/
   test_rules.rb          # Rules sanity checks
 ```

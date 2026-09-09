@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef } from 'react'
 import Board from '../components/Board'
 import GameLayout from '../components/GameLayout'
 import Toast, { ToastMessage, ToastType } from '../components/Toast'
-import SolitaireSidebar from './SolitaireSidebar'
+import SolitaireSidebar, { SoloControls } from './SolitaireSidebar'
+import PersonalBestCelebration from '../components/PersonalBestCelebration'
+import { useSound } from '../components/SoundProvider'
 import { useSoloScores } from '../hooks/useSoloScores'
 import {
   applySoloClaim,
@@ -104,6 +106,9 @@ function formatTime(ms: number): string {
 }
 
 const SolitaireGame: React.FC = () => {
+  const { playSelection, playSet } = useSound()
+  const [bestImprovementMs, setBestImprovementMs] = useState<number | null>(null)
+  const [claimAnimationKey, setClaimAnimationKey] = useState(0)
   const [board, setBoard] = useState<number[]>([])
   const [deck, setDeck] = useState<number[]>([])
   const [status, setStatus] = useState<SoloStatus>('playing')
@@ -245,6 +250,7 @@ const SolitaireGame: React.FC = () => {
     setIsStarting(true)
     setSubmitting(false)
     setSubmissionError(null)
+    setBestImprovementMs(null)
     submissionStatusRef.current = undefined
     setSelectedCards([])
     setRejectedCards([])
@@ -290,15 +296,18 @@ const SolitaireGame: React.FC = () => {
     submittedRef.current = true
 
     try {
-      const times = JSON.parse(localStorage.getItem(BEST_TIMES_KEY) || '[]') as {
-        ms: number
-        at: string
-      }[]
+      const stored: unknown = JSON.parse(localStorage.getItem(BEST_TIMES_KEY) || '[]')
+      const times = (Array.isArray(stored) ? stored : []).filter((time): time is { ms: number; at: string } => (
+        time !== null && typeof time === 'object' && Number.isFinite(time.ms) && time.ms > 0 &&
+        typeof time.at === 'string' && Number.isFinite(Date.parse(time.at))
+      ))
+      const previousBest = Math.min(...times.map(time => time.ms))
+      if (Number.isFinite(previousBest) && finalMs < previousBest) setBestImprovementMs(previousBest - finalMs)
       times.push({ ms: finalMs, at: new Date().toISOString() })
       times.sort((a, b) => a.ms - b.ms)
       localStorage.setItem(BEST_TIMES_KEY, JSON.stringify(times.slice(0, 10)))
     } catch {
-      // ignore
+      // Local records are optional when browser storage is unavailable.
     }
 
     if (!eligibleRef.current || !gameIdRef.current) {
@@ -371,6 +380,8 @@ const SolitaireGame: React.FC = () => {
     setBoard([...deal.board])
     setDeck([...deal.deck])
     setSelectedCards([])
+    setClaimAnimationKey(value => value + 1)
+    playSet()
     showToast('Set found!', 'success')
 
     const updatedRecentClaims = [{ cards: cardIds }, ...recentClaims].slice(0, 8)
@@ -420,6 +431,7 @@ const SolitaireGame: React.FC = () => {
         ? [...selectedCards, cardId]
         : selectedCards
 
+    if (nextSelected.length > selectedCards.length && nextSelected.length < 3) playSelection()
     setSelectedCards(nextSelected)
     if (nextSelected.length === 3) {
       claimSet(nextSelected)
@@ -554,6 +566,24 @@ const SolitaireGame: React.FC = () => {
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}
 
       <GameLayout
+        controls={
+          <SoloControls
+            elapsedMs={elapsedMs}
+            startedAtMs={startedAtMs}
+            isStarting={isStarting}
+            deckCount={deck.length}
+            setsFound={eventsRef.current.length}
+            claimAnimationKey={claimAnimationKey}
+            status={status}
+            onTogglePause={togglePause}
+            onRestart={() => void startNewGame()}
+            submitting={submitting}
+            submissionError={submissionError}
+            onRetrySubmission={() => void submitFinishedGame(elapsedMs, eventsRef.current)}
+          >
+            {bestImprovementMs !== null && status === 'round_over' && <PersonalBestCelebration improvementMs={bestImprovementMs} />}
+          </SoloControls>
+        }
         board={
           <Board
             cards={board}
@@ -569,25 +599,16 @@ const SolitaireGame: React.FC = () => {
         }
         sidebar={
           <SolitaireSidebar
-            elapsedMs={elapsedMs}
-            startedAtMs={startedAtMs}
-            isStarting={isStarting}
-            deckCount={deck.length}
-            setsFound={eventsRef.current.length}
-            status={status}
-            onTogglePause={togglePause}
-            onRestart={() => void startNewGame()}
+            isFinished={status === 'round_over'}
             recentClaims={recentClaims}
             leaderboard={scores.leaderboard}
             personalBest={scores.personalBest}
             scoresLoading={scores.loading}
             scoresError={scores.error}
+            personalBestError={scores.personalBestError}
             onRetryScores={scores.refresh}
             period={period}
             onPeriodChange={setPeriod}
-            submitting={submitting}
-            submissionError={submissionError}
-            onRetrySubmission={() => void submitFinishedGame(elapsedMs, eventsRef.current)}
           />
         }
       />

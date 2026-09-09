@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
+import RecentSets from './RecentSets'
+import ScoreValue from './ScoreValue'
 
 interface RecentClaim {
   player_id: string
@@ -29,10 +31,15 @@ interface ScoreboardProps {
   onUpdateName?: (name: string) => void
   onRequestReset?: () => void
   onCancelReset?: () => void
+  scoreAnimationKeys?: Record<string, string>
 }
 
+const EMPTY_IDS: string[] = []
+const EMPTY_PLACEMENTS: Placement[] = []
+const EMPTY_CLAIMS: RecentClaim[] = []
+
 const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="text-xs font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-500">{children}</div>
+  <div className="text-xs font-medium uppercase tracking-wide text-neutral-600 dark:text-neutral-300">{children}</div>
 )
 
 const Scoreboard: React.FC<ScoreboardProps> = ({
@@ -42,16 +49,17 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
   deckCount,
   status,
   onlinePlayerIds,
-  idlePlayerIds = [],
+  idlePlayerIds = EMPTY_IDS,
   countdown = 0,
-  placements = [],
-  recentClaims = [],
+  placements = EMPTY_PLACEMENTS,
+  recentClaims = EMPTY_CLAIMS,
   resetCountdown = 0,
   resetRequestedBy = null,
   isConnected = false,
   onUpdateName,
   onRequestReset,
-  onCancelReset
+  onCancelReset,
+  scoreAnimationKeys
 }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [tempName, setTempName] = useState('')
@@ -77,12 +85,13 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
 
   const cancel = () => setIsEditing(false)
 
-  // Show online players sorted by score; make sure we always appear in the list
-  const visibleIds = new Set(onlinePlayerIds)
-  if (playerId) visibleIds.add(playerId)
-  const sortedPlayers = Array.from(visibleIds)
-    .map(pid => ({ pid, score: scores[pid] || 0 }))
-    .sort((a, b) => b.score - a.score)
+  const sortedPlayers = React.useMemo(() => {
+    const visibleIds = new Set(onlinePlayerIds)
+    if (playerId) visibleIds.add(playerId)
+    return Array.from(visibleIds)
+      .map(pid => ({ pid, score: scores[pid] || 0 }))
+      .sort((a, b) => b.score - a.score)
+  }, [onlinePlayerIds, playerId, scores])
 
   const isRoundOver = status !== 'playing'
   const isResetPending = resetCountdown > 0
@@ -108,10 +117,10 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
                 : 'Reset game'
             }
             title={isResetPending ? `${resetRequesterName} requested a reset` : 'Reset game'}
-            className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-offset-neutral-900 ${
+            className={`flex min-h-11 items-center gap-1 rounded-full px-2 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-offset-neutral-900 ${
               isResetPending
                 ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-950/50 dark:text-rose-300 dark:hover:bg-rose-950'
-                : 'text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 dark:text-neutral-500 dark:hover:bg-neutral-800 dark:hover:text-neutral-200'
+                : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-neutral-100'
             }`}
           >
             <svg
@@ -130,7 +139,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
               {isResetPending ? `Stop reset · ${resetSeconds}s` : 'Reset'}
             </span>
           </button>
-          <span className="flex items-center gap-1.5 text-xs text-neutral-400 dark:text-neutral-500">
+          <span className="flex items-center gap-1.5 text-xs text-neutral-600 dark:text-neutral-300">
             <span
               className={`h-1.5 w-1.5 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-rose-500'}`}
             />
@@ -140,7 +149,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
       </div>
 
       {sortedPlayers.length === 0 ? (
-        <div className="py-2 text-sm text-neutral-400 dark:text-neutral-500">Waiting for players…</div>
+        <div className="py-2 text-sm text-neutral-600 dark:text-neutral-300">Waiting for players…</div>
       ) : (
         <ul className="space-y-1">
           {sortedPlayers.map(({ pid, score }) => {
@@ -203,7 +212,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
                     </button>
                   )}
                 </div>
-                <span className="text-base font-semibold tabular-nums text-neutral-900 dark:text-neutral-100">{score}</span>
+                <ScoreValue value={score} animationKey={scoreAnimationKeys?.[pid]} className="text-base font-semibold tabular-nums text-neutral-900 dark:text-neutral-100" />
               </li>
             )
           })}
@@ -248,34 +257,9 @@ const Scoreboard: React.FC<ScoreboardProps> = ({
         </div>
       )}
 
-      {/* Recent sets */}
-      {recentClaims.length > 0 && (
-        <div className="mt-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-          <SectionLabel>Last sets found</SectionLabel>
-          <ul className="mt-2 max-h-72 space-y-2 overflow-y-auto">
-            {recentClaims.map((claim, index) => (
-              <li key={index} className="flex items-center justify-between gap-2">
-                <div className="flex gap-1">
-                  {claim.cards.map((cardId) => (
-                    <img
-                      key={cardId}
-                      src={`/cards/${cardId}.png`}
-                      alt={`Card ${cardId}`}
-                      draggable={false}
-                      className="h-9 w-auto rounded border border-neutral-200 bg-white object-contain md:h-10 dark:border-neutral-700 dark:bg-white"
-                    />
-                  ))}
-                </div>
-                <span className="min-w-0 truncate text-xs text-neutral-500 dark:text-neutral-400">
-                  {names[claim.player_id] || 'Player'}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <RecentSets claims={recentClaims} names={names} />
     </div>
   )
 }
 
-export default Scoreboard
+export default React.memo(Scoreboard)

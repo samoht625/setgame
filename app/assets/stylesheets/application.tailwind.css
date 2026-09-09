@@ -71,7 +71,7 @@ input:focus-visible {
 }
 
 .animate-card-in {
-  animation: card-in 0.22s ease-out both;
+  animation: card-in 0.22s ease-out;
 }
 
 /* Invalid set feedback */
@@ -85,4 +85,33 @@ input:focus-visible {
 
 .animate-shake {
   animation: shake 0.3s ease-in-out;
+}
+
+@keyframes score-pop {
+  0%, 100% { transform: scale(1); }
+  40% { transform: scale(1.18); }
+}
+
+.animate-score-pop {
+  display: inline-block;
+  animation: score-pop 0.32s ease-out;
+}
+
+@keyframes logo-reveal {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-logo-reveal {
+  animation: logo-reveal 0.25s ease-out;
+}
+
+@keyframes celebration-particle {
+  0% { opacity: 0; transform: translate(0, 0) rotate(0deg); }
+  15% { opacity: 0.8; }
+  100% { opacity: 0; transform: translate(var(--particle-x), var(--particle-y)) rotate(var(--particle-turn)); }
+}
+
+.celebration-particle {
+  animation: celebration-particle 1.1s ease-out both;
 }

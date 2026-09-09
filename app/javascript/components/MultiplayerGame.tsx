@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { consumer } from '../cable'
 import Board from './Board'
 import GameLayout from './GameLayout'
 import Toast, { ToastMessage } from './Toast'
 import Scoreboard from './Scoreboard'
 import { useHeartbeat } from '../hooks/useHeartbeat'
+import { useSound } from './SoundProvider'
 
 interface Placement {
   player_id: string
@@ -62,6 +63,7 @@ const EMPTY_STATE: GameState = {
 }
 
 const MultiplayerGame: React.FC = () => {
+  const { playSelection, playSet } = useSound()
   const [gameState, setGameState] = useState<GameState>(EMPTY_STATE)
   const [selectedCards, setSelectedCards] = useState<number[]>([])
   const [rejectedCards, setRejectedCards] = useState<number[]>([])
@@ -69,6 +71,7 @@ const MultiplayerGame: React.FC = () => {
   const [toast, setToast] = useState<ToastMessage | null>(null)
   const [playerId, setPlayerId] = useState<string>('')
   const [isConnected, setIsConnected] = useState(false)
+  const [scoreAnimationKeys, setScoreAnimationKeys] = useState<Record<string, string>>({})
 
   const subscriptionRef = useRef<any>(null)
   const claimTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -76,16 +79,17 @@ const MultiplayerGame: React.FC = () => {
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const selectedCardsRef = useRef<number[]>([])
   const pushedStoredNameRef = useRef(false)
+  const previousScoresRef = useRef<Record<string, number> | null>(null)
 
   useEffect(() => {
     selectedCardsRef.current = selectedCards
   }, [selectedCards])
 
-  const showToast = (text: string, type: ToastMessage['type']) => {
+  const showToast = useCallback((text: string, type: ToastMessage['type']) => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
     setToast({ text, type })
     toastTimeoutRef.current = setTimeout(() => setToast(null), 2500)
-  }
+  }, [])
 
   const clearClaimTimeout = () => {
     if (claimTimeoutRef.current) {
@@ -107,6 +111,7 @@ const MultiplayerGame: React.FC = () => {
       },
 
       disconnected() {
+        previousScoresRef.current = null
         setIsConnected(false)
         clearClaimTimeout()
         setSelectedCards([])
@@ -131,8 +136,19 @@ const MultiplayerGame: React.FC = () => {
           return
         }
 
+        const current = data as GameState
+        const previous = previousScoresRef.current
+        const finder = current.active_claim?.player_id
+        if (previous && finder && (current.scores[finder] || 0) > (previous[finder] || 0)) {
+          const key = `${current.scores[finder]}:${current.active_claim!.cards.join('-')}`
+          setScoreAnimationKeys(keys => ({ ...keys, [finder]: key }))
+        }
+        previousScoresRef.current = current.scores
+        if (Object.keys(current.scores).length === 0) setScoreAnimationKeys({})
+
         if ('success' in data && data.success) {
           // Our own claim succeeded
+          playSet()
           clearClaimTimeout()
           setGameState(data)
           setSelectedCards([])
@@ -162,10 +178,11 @@ const MultiplayerGame: React.FC = () => {
       // Close the socket so we don't appear online while playing solo
       consumer.disconnect()
     }
-  }, [])
+  }, [playSet])
 
   useEffect(() => {
     const onOffline = () => {
+      previousScoresRef.current = null
       setIsConnected(false)
       clearClaimTimeout()
       setClaiming(false)
@@ -204,7 +221,7 @@ const MultiplayerGame: React.FC = () => {
     }
   }, [playerId, gameState.names])
 
-  const updatePlayerName = (name: string) => {
+  const updatePlayerName = useCallback((name: string) => {
     if (!subscriptionRef.current) return
     try {
       const key = playerId ? `setgame_player_name:${playerId}` : 'setgame_player_name'
@@ -213,9 +230,9 @@ const MultiplayerGame: React.FC = () => {
       // ignore storage failures
     }
     subscriptionRef.current.perform('update_name', { name })
-  }
+  }, [playerId])
 
-  const performResetAction = (action: 'request_reset' | 'cancel_reset') => {
+  const performResetAction = useCallback((action: 'request_reset' | 'cancel_reset') => {
     if (!isConnected || !subscriptionRef.current || typeof subscriptionRef.current.perform !== 'function') {
       showToast('Not connected to the game. Trying to reconnect…', 'error')
       return
@@ -226,7 +243,9 @@ const MultiplayerGame: React.FC = () => {
     } catch (_) {
       showToast('Failed to send reset request. Please try again.', 'error')
     }
-  }
+  }, [isConnected, showToast])
+  const requestReset = useCallback(() => performResetAction('request_reset'), [performResetAction])
+  const cancelReset = useCallback(() => performResetAction('cancel_reset'), [performResetAction])
 
   const handleClaimSet = (cardIds: number[]) => {
     if (cardIds.length !== 3 || claiming || gameState.active_claim) return
@@ -266,6 +285,7 @@ const MultiplayerGame: React.FC = () => {
         ? [...selectedCards, cardId]
         : selectedCards
 
+    if (nextSelected.length > selectedCards.length && nextSelected.length < 3) playSelection()
     setSelectedCards(nextSelected)
 
     // Auto-claim when the third card is selected
@@ -302,6 +322,7 @@ const MultiplayerGame: React.FC = () => {
         sidebar={
           <Scoreboard
             scores={gameState.scores}
+            scoreAnimationKeys={scoreAnimationKeys}
             names={gameState.names}
             playerId={playerId}
             deckCount={gameState.deck_count}
@@ -315,8 +336,8 @@ const MultiplayerGame: React.FC = () => {
             resetRequestedBy={gameState.reset_requested_by || null}
             isConnected={isConnected}
             onUpdateName={updatePlayerName}
-            onRequestReset={() => performResetAction('request_reset')}
-            onCancelReset={() => performResetAction('cancel_reset')}
+            onRequestReset={requestReset}
+            onCancelReset={cancelReset}
           />
         }
       />

@@ -3,6 +3,8 @@ import Header from './Header'
 import MultiplayerGame from './MultiplayerGame'
 import SolitaireGame from '../solitaire/SolitaireGame'
 import { usePresence } from '../hooks/usePresence'
+import { CardSymbols } from './CardFace'
+import { SoundProvider } from './SoundProvider'
 
 export type GameMode = 'multiplayer' | 'solo'
 
@@ -30,18 +32,6 @@ const App: React.FC = () => {
     document.title = mode === 'solo' ? 'Set — Solo' : 'Set — Multiplayer'
   }, [mode])
 
-  // Warm the browser cache with all 81 card images (~0.5 MB total) shortly
-  // after load so replacement cards appear instantly instead of popping in.
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      for (let id = 1; id <= 81; id++) {
-        const img = new Image()
-        img.src = `/cards/${id}.png`
-      }
-    }, 1500)
-    return () => window.clearTimeout(timer)
-  }, [])
-
   const switchMode = (next: GameMode) => {
     if (next === mode) return
     window.history.pushState({}, '', pathForMode(next))
@@ -49,10 +39,13 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-dvh bg-neutral-100 text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-100">
-      <Header mode={mode} onSwitchMode={switchMode} othersOnline={othersOnline} />
-      {mode === 'solo' ? <SolitaireGame /> : <MultiplayerGame />}
-    </div>
+    <SoundProvider>
+      <div className="min-h-dvh bg-neutral-100 text-neutral-900 antialiased dark:bg-[#111214] dark:text-neutral-100">
+        <CardSymbols />
+        <Header mode={mode} onSwitchMode={switchMode} othersOnline={othersOnline} />
+        {mode === 'solo' ? <SolitaireGame /> : <MultiplayerGame />}
+      </div>
+    </SoundProvider>
   )
 }
 

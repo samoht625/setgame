@@ -467,7 +467,7 @@ class GameEngine
       board: @board.dup,
       deck_count: @deck.length,
       scores: @scores.dup,
-      names: @names.dup,
+      names: current_names,
       status: @status,
       online_player_ids: @online_player_ids.to_a,
       idle_player_ids: @idle_player_ids.to_a,
@@ -481,6 +481,16 @@ class GameEngine
       reset_countdown: @reset_countdown,
       reset_requested_by: @reset_requested_by
     }
+  end
+
+  def current_names
+    player_ids = @online_player_ids.dup
+    player_ids.merge(@scores.keys)
+    @recent_claims.each { |claim| player_ids.add(claim[:player_id]) }
+    player_ids.add(@active_claim[:player_id]) if @active_claim
+    @placements.each { |placement| player_ids.add(placement[:player_id]) }
+    player_ids.add(@reset_requested_by) if @reset_requested_by
+    @names.slice(*player_ids.to_a)
   end
 
   def schedule_reset(reset_token)
