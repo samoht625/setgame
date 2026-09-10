@@ -1,6 +1,7 @@
 import React from 'react'
 import type { SoloStatus } from './SolitaireGame'
 import { Hud, HudChip, HudDivider, HudIconButton, HudStat, PauseIcon, PlayIcon, RestartIcon, TrophyIcon } from '../components/Hud'
+import ScoreValue from '../components/ScoreValue'
 import { formatTime } from './time'
 
 interface SolitaireHudProps {
@@ -9,6 +10,8 @@ interface SolitaireHudProps {
   isStarting: boolean
   deckCount: number
   setsFound: number
+  /** Changes on each live claim so restored counts do not animate. */
+  claimAnimationKey?: string | number | null
   status: SoloStatus
   onTogglePause: () => void
   onRestart: () => void
@@ -49,6 +52,7 @@ const SolitaireHud: React.FC<SolitaireHudProps> = ({
   isStarting,
   deckCount,
   setsFound,
+  claimAnimationKey,
   status,
   onTogglePause,
   onRestart,
@@ -93,7 +97,11 @@ const SolitaireHud: React.FC<SolitaireHudProps> = ({
       {statusChip && <HudChip tone={statusChip.tone}>{statusChip.label}</HudChip>}
       <HudDivider />
       <HudStat value={deckCount} label="cards left" shortLabel="left" />
-      <HudStat value={setsFound} label="sets found" shortLabel="sets" />
+      <HudStat
+        value={<ScoreValue value={setsFound} animationKey={claimAnimationKey} />}
+        label={setsFound === 1 ? 'set found' : 'sets found'}
+        shortLabel={setsFound === 1 ? 'set' : 'sets'}
+      />
     </Hud>
   )
 }

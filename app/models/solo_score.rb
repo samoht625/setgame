@@ -9,6 +9,7 @@ class SoloScore < ApplicationRecord
   validates :solo_game_id, uniqueness: true
 
   PERIODS = %w[daily weekly monthly].freeze
+  SUMMARY_COLUMNS = %i[id player_id display_name elapsed_ms completed_at].freeze
 
   def self.period_range(period)
     now = Time.zone.now
@@ -25,13 +26,15 @@ class SoloScore < ApplicationRecord
   end
 
   def self.leaderboard(period:, limit: 20)
-    where(completed_at: period_range(period))
+    select(*SUMMARY_COLUMNS)
+      .where(completed_at: period_range(period))
       .order(:elapsed_ms, :completed_at)
       .limit(limit)
   end
 
   def self.personal_best(player_id:, period:)
-    where(player_id: player_id, completed_at: period_range(period))
+    select(*SUMMARY_COLUMNS)
+      .where(player_id: player_id, completed_at: period_range(period))
       .order(:elapsed_ms, :completed_at)
       .first
   end
@@ -41,7 +44,7 @@ class SoloScore < ApplicationRecord
       daily: personal_best(player_id: player_id, period: "daily"),
       weekly: personal_best(player_id: player_id, period: "weekly"),
       monthly: personal_best(player_id: player_id, period: "monthly"),
-      all_time: where(player_id: player_id).order(:elapsed_ms, :created_at).first
+      all_time: select(*SUMMARY_COLUMNS).where(player_id: player_id).order(:elapsed_ms, :created_at).first
     }
   end
 end

@@ -53,7 +53,7 @@ export const HudIconButton: React.FC<HudIconButtonProps> = ({ label, active = fa
     type="button"
     aria-label={label}
     title={label}
-    className={`relative flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-100 disabled:cursor-not-allowed disabled:opacity-40 dark:focus-visible:ring-offset-neutral-950 ${
+    className={`relative flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-100 disabled:cursor-not-allowed disabled:opacity-40 dark:focus-visible:ring-offset-[#111214] ${
       active
         ? 'bg-neutral-900 text-white hover:bg-neutral-700 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300'
         : 'text-neutral-500 hover:bg-neutral-200/70 hover:text-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100'
@@ -64,7 +64,7 @@ export const HudIconButton: React.FC<HudIconButtonProps> = ({ label, active = fa
     {badge !== undefined && badge > 0 && (
       <span
         aria-hidden="true"
-        className={`absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums ring-2 ring-neutral-100 dark:ring-neutral-950 ${
+        className={`absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums ring-2 ring-neutral-100 dark:ring-[#111214] ${
           active ? 'bg-emerald-500 text-white' : 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'
         }`}
       >

@@ -1,10 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Hud, HudDivider, HudIconButton, HudStat, PeopleIcon, RestartIcon } from './Hud'
+import ScoreValue from './ScoreValue'
 
 interface MultiplayerHudProps {
   playerId: string
   names: Record<string, string>
   scores: Record<string, number>
+  /** Changes when this player's score grows from a live claim (not restoration). */
+  scoreAnimationKey?: string
   deckCount: number
   onlineCount: number
   isConnected: boolean
@@ -27,6 +30,7 @@ const MultiplayerHud: React.FC<MultiplayerHudProps> = ({
   playerId,
   names,
   scores,
+  scoreAnimationKey,
   deckCount,
   onlineCount,
   isConnected,
@@ -80,7 +84,7 @@ const MultiplayerHud: React.FC<MultiplayerHudProps> = ({
             disabled={!isConnected}
             aria-label={resetLabel}
             title={isResetPending ? `${resetRequesterName} requested a reset` : 'Reset game'}
-            className={`flex h-10 items-center gap-1.5 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-100 disabled:cursor-not-allowed disabled:opacity-40 dark:focus-visible:ring-offset-neutral-950 ${
+            className={`flex h-10 items-center gap-1.5 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-100 disabled:cursor-not-allowed disabled:opacity-40 dark:focus-visible:ring-offset-[#111214] ${
               isResetPending
                 ? 'bg-rose-100 px-3 text-xs font-semibold text-rose-700 hover:bg-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:hover:bg-rose-950'
                 : 'w-10 justify-center text-neutral-500 hover:bg-neutral-200/70 hover:text-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100'
@@ -103,22 +107,9 @@ const MultiplayerHud: React.FC<MultiplayerHudProps> = ({
         </>
       }
     >
-      <div aria-live="polite" aria-atomic="true" className={announcement ? 'min-w-0' : 'sr-only'}>
-        {announcement && (
-          <div
-            role="status"
-            className="flex items-center gap-2 truncate rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-100"
-          >
-            <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" aria-hidden="true" />
-            <span className="truncate">{announcement}</span>
-          </div>
-        )}
-      </div>
-
-      {!announcement && (
-        <>
-          <div className="flex min-w-0 items-center gap-2">
-            {isEditing ? (
+      <div className="flex min-w-0 items-center gap-2">
+        {!announcement && (
+          isEditing ? (
               <input
                 ref={inputRef}
                 value={tempName}
@@ -156,14 +147,33 @@ const MultiplayerHud: React.FC<MultiplayerHudProps> = ({
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                 </svg>
               </button>
-            )}
-            <span className="text-xl font-semibold tabular-nums tracking-tight text-neutral-900 dark:text-neutral-100 sm:text-2xl" aria-label="Your score">
-              {scores[playerId] || 0}
-            </span>
+            )
+        )}
+        <ScoreValue
+          value={scores[playerId] || 0}
+          animationKey={scoreAnimationKey}
+          className="text-xl font-semibold tabular-nums tracking-tight text-neutral-900 dark:text-neutral-100 sm:text-2xl"
+        />
+      </div>
+
+      {/* Set announcements briefly take the place of the stats. */}
+      <div aria-live="polite" aria-atomic="true" className={announcement ? 'min-w-0' : 'sr-only'}>
+        {announcement && (
+          <div
+            role="status"
+            className="flex items-center gap-2 truncate rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-100"
+          >
+            <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" aria-hidden="true" />
+            <span className="truncate">{announcement}</span>
           </div>
+        )}
+      </div>
+
+      {!announcement && (
+        <>
           <HudDivider />
           <HudStat value={deckCount} label="cards left" shortLabel="left" />
-          <span className="flex items-center gap-1.5 whitespace-nowrap text-xs text-neutral-400 dark:text-neutral-500">
+          <span className="flex items-center gap-1.5 whitespace-nowrap text-xs text-neutral-600 dark:text-neutral-300">
             <span className={`h-1.5 w-1.5 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-rose-500'}`} aria-hidden="true" />
             {isConnected ? 'Live' : 'Reconnecting…'}
           </span>

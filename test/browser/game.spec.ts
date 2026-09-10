@@ -63,7 +63,7 @@ test('solo claims, pause, resume, full completion, reload and mode history stay 
 
   for (let count = 1; count <= 10; count++) {
     await claim(page, findTriple(await cards(page)))
-    await expect(page.getByText(`${count} sets found`, { exact: true })).toBeVisible()
+    await expect(page.getByText(`${count} ${count === 1 ? 'set' : 'sets'} found`, { exact: true })).toBeVisible()
   }
   const boardAfterTen = await cards(page)
   await page.getByRole('button', { name: 'Multiplayer', exact: true }).click()
@@ -206,7 +206,7 @@ test('offline play and unavailable browser storage do not crash either mode', as
   await ready(page)
   await expect(page.getByRole('status').filter({ hasText: 'Offline' })).toBeVisible()
   await claim(page, findTriple(await cards(page)))
-  await expect(page.getByText('1 sets found', { exact: true })).toBeVisible()
+  await expect(page.getByText('1 set found', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Multiplayer', exact: true }).click()
   await expect(page.getByText('Live', { exact: true })).toBeVisible()
   await ready(page)
@@ -350,7 +350,9 @@ test('multiplayer synchronizes claims, names, reset cancellation, and reconnecti
     await expect(first.locator(`[data-card-id="${triple[0]}"]`)).toHaveCount(0)
     await ready(second)
     expect(await cards(second)).toEqual(await cards(first))
-    await expect(second.getByRole('img', { name: `Card ${triple[0]}` })).toBeVisible()
+    const recent = players.getByRole('list').filter({ has: second.getByRole('img') })
+    await expect(recent.getByRole('listitem').first()).toContainText('Browser Tester')
+    await expect(recent.getByRole('listitem').first().getByRole('img')).toHaveCount(3)
     await first.getByRole('button', { name: 'Reset game', exact: true }).click()
     await second.getByRole('button', { name: /Stop reset with/ }).click()
     await expect(first.getByRole('button', { name: 'Reset game', exact: true })).toBeVisible()

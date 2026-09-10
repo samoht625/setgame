@@ -1,4 +1,6 @@
 import React from 'react'
+import RecentSets from './RecentSets'
+import ScoreValue from './ScoreValue'
 
 interface RecentClaim {
   player_id: string
@@ -7,6 +9,8 @@ interface RecentClaim {
 
 interface PlayersPanelProps {
   scores: Record<string, number>
+  /** Per-player keys that change on live claims so restored scores don't animate. */
+  scoreAnimationKeys?: Record<string, string>
   names: Record<string, string>
   playerId: string
   onlinePlayerIds: string[]
@@ -14,30 +18,32 @@ interface PlayersPanelProps {
   recentClaims?: RecentClaim[]
 }
 
-const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="text-xs font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-500">{children}</div>
-)
+const EMPTY_IDS: string[] = []
+const EMPTY_CLAIMS: RecentClaim[] = []
 
 /** Everyone at the table, ranked by score, plus the last sets found. */
 const PlayersPanel: React.FC<PlayersPanelProps> = ({
   scores,
+  scoreAnimationKeys,
   names,
   playerId,
   onlinePlayerIds,
-  idlePlayerIds = [],
-  recentClaims = []
+  idlePlayerIds = EMPTY_IDS,
+  recentClaims = EMPTY_CLAIMS
 }) => {
   // Show online players sorted by score; make sure we always appear in the list
-  const visibleIds = new Set(onlinePlayerIds)
-  if (playerId) visibleIds.add(playerId)
-  const sortedPlayers = Array.from(visibleIds)
-    .map(pid => ({ pid, score: scores[pid] || 0 }))
-    .sort((a, b) => b.score - a.score)
+  const sortedPlayers = React.useMemo(() => {
+    const visibleIds = new Set(onlinePlayerIds)
+    if (playerId) visibleIds.add(playerId)
+    return Array.from(visibleIds)
+      .map(pid => ({ pid, score: scores[pid] || 0 }))
+      .sort((a, b) => b.score - a.score)
+  }, [onlinePlayerIds, playerId, scores])
 
   return (
     <div>
       {sortedPlayers.length === 0 ? (
-        <div className="py-2 text-sm text-neutral-400 dark:text-neutral-500">Waiting for players…</div>
+        <div className="py-2 text-sm text-neutral-600 dark:text-neutral-300">Waiting for players…</div>
       ) : (
         <ul className="space-y-1">
           {sortedPlayers.map(({ pid, score }, index) => {
@@ -51,47 +57,27 @@ const PlayersPanel: React.FC<PlayersPanelProps> = ({
                 }`}
               >
                 <div className="flex min-w-0 items-center gap-2 text-sm">
-                  <span className="w-4 shrink-0 text-xs tabular-nums text-neutral-400 dark:text-neutral-500">{index + 1}</span>
+                  <span className="w-4 shrink-0 text-xs tabular-nums text-neutral-600 dark:text-neutral-300">{index + 1}</span>
                   <span className={`truncate ${isYou ? 'font-medium text-neutral-900 dark:text-neutral-100' : 'text-neutral-700 dark:text-neutral-300'}`}>
                     {names[pid] || (isYou ? 'You' : 'Player')}
                   </span>
-                  {isYou && <span className="shrink-0 text-[11px] text-neutral-400">you</span>}
-                  {isIdle && <span className="shrink-0 text-[11px] text-neutral-400">idle</span>}
+                  {isYou && <span className="shrink-0 text-[11px] text-neutral-600 dark:text-neutral-300">you</span>}
+                  {isIdle && <span className="shrink-0 text-[11px] text-neutral-600 dark:text-neutral-300">idle</span>}
                 </div>
-                <span className="text-base font-semibold tabular-nums text-neutral-900 dark:text-neutral-100">{score}</span>
+                <ScoreValue
+                  value={score}
+                  animationKey={scoreAnimationKeys?.[pid]}
+                  className="text-base font-semibold tabular-nums text-neutral-900 dark:text-neutral-100"
+                />
               </li>
             )
           })}
         </ul>
       )}
 
-      {recentClaims.length > 0 && (
-        <div className="mt-5 border-t border-neutral-100 pt-4 dark:border-neutral-800">
-          <SectionLabel>Last sets found</SectionLabel>
-          <ul className="mt-2 space-y-2">
-            {recentClaims.map((claim, index) => (
-              <li key={index} className="flex items-center justify-between gap-2">
-                <div className="flex gap-1">
-                  {claim.cards.map((cardId) => (
-                    <img
-                      key={cardId}
-                      src={`/cards/${cardId}.png`}
-                      alt={`Card ${cardId}`}
-                      draggable={false}
-                      className="h-9 w-auto rounded border border-neutral-200 bg-white object-contain md:h-10 dark:border-neutral-700 dark:bg-white"
-                    />
-                  ))}
-                </div>
-                <span className="min-w-0 truncate text-xs text-neutral-500 dark:text-neutral-400">
-                  {names[claim.player_id] || 'Player'}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <RecentSets claims={recentClaims} names={names} />
     </div>
   )
 }
 
-export default PlayersPanel
+export default React.memo(PlayersPanel)

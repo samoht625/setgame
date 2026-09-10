@@ -1,4 +1,5 @@
 import React from 'react'
+import RecentSets from '../components/RecentSets'
 import type { LeaderboardEntry } from '../lib/solo_api'
 import { formatTime } from './time'
 
@@ -20,6 +21,7 @@ interface SolitairePanelProps {
   personalBest: LeaderboardEntry | null
   scoresLoading: boolean
   scoresError: string | null
+  personalBestError?: string | null
   onRetryScores: () => void
   period: LeaderboardPeriod
   onPeriodChange: (period: LeaderboardPeriod) => void
@@ -36,7 +38,7 @@ const RANK_BADGES: string[] = [
 ]
 
 const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="text-xs font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-500">{children}</div>
+  <div className="text-xs font-medium uppercase tracking-wide text-neutral-600 dark:text-neutral-300">{children}</div>
 )
 
 function formatDate(isoString: string): string {
@@ -78,6 +80,7 @@ const SolitairePanel: React.FC<SolitairePanelProps> = ({
   personalBest,
   scoresLoading,
   scoresError,
+  personalBestError = null,
   onRetryScores,
   period,
   onPeriodChange
@@ -113,7 +116,7 @@ const SolitairePanel: React.FC<SolitairePanelProps> = ({
             className={`min-h-9 flex-1 rounded-md px-2.5 text-xs font-medium capitalize transition-colors ${
               period === p
                 ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-600 dark:text-neutral-100'
-                : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200'
+                : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-neutral-100'
             }`}
           >
             {p}
@@ -123,10 +126,17 @@ const SolitairePanel: React.FC<SolitairePanelProps> = ({
 
       {personalBest && (
         <div className="mt-2.5 flex items-center justify-between rounded-lg bg-emerald-50 px-2.5 py-1.5 dark:bg-emerald-950/40">
-          <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">Your best</span>
+          <span className="text-xs font-medium text-emerald-800 dark:text-emerald-200">Your best</span>
           <span className="text-sm font-semibold tabular-nums text-emerald-800 dark:text-emerald-200">
             {formatTime(personalBest.elapsed_ms)}
           </span>
+        </div>
+      )}
+
+      {personalBestError && (
+        <div className="mt-2.5 rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-700 dark:bg-neutral-800/50 dark:text-neutral-200">
+          <p role="status">{personalBestError}</p>
+          <button type="button" onClick={onRetryScores} className="min-h-9 rounded-md font-medium underline underline-offset-4">Retry your best times</button>
         </div>
       )}
 
@@ -134,12 +144,12 @@ const SolitairePanel: React.FC<SolitairePanelProps> = ({
         <p role="status" className="mt-2.5 rounded-xl bg-neutral-50 px-3 py-6 text-center text-xs text-neutral-500 dark:bg-neutral-800/50 dark:text-neutral-400">Loading times…</p>
       ) : scoresError ? (
         <div className="mt-2.5 rounded-xl border border-dashed border-neutral-200 px-3 py-4 text-center dark:border-neutral-700">
-          <p role="status" className="text-xs text-neutral-500 dark:text-neutral-400">{scoresError}</p>
+          <p role="status" className="text-xs text-neutral-600 dark:text-neutral-300">{scoresError}</p>
           <button type="button" onClick={onRetryScores} className="mt-1 min-h-9 rounded-md px-3 text-xs font-medium underline underline-offset-4">Try again</button>
         </div>
       ) : leaderboard.length === 0 ? (
         <div className="mt-2.5 rounded-xl border border-dashed border-neutral-200 px-3 py-6 text-center dark:border-neutral-700">
-          <p className="text-xs text-neutral-400 dark:text-neutral-500">
+          <p className="text-xs text-neutral-600 dark:text-neutral-300">
             No times yet — finish a game to claim the top spot.
           </p>
         </div>
@@ -152,7 +162,7 @@ const SolitairePanel: React.FC<SolitairePanelProps> = ({
             >
               <span
                 className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold tabular-nums ${
-                  RANK_BADGES[index] ?? 'text-neutral-400 dark:text-neutral-500'
+                  RANK_BADGES[index] ?? 'text-neutral-600 dark:text-neutral-300'
                 }`}
               >
                 {index + 1}
@@ -164,7 +174,7 @@ const SolitairePanel: React.FC<SolitairePanelProps> = ({
                 <span className="text-sm font-semibold tabular-nums text-neutral-900 dark:text-neutral-100">
                   {formatTime(entry.elapsed_ms)}
                 </span>
-                <span className="text-[10px] text-neutral-400 dark:text-neutral-500">
+                <span className="text-[10px] text-neutral-600 dark:text-neutral-300">
                   {formatDate(entry.completed_at)}
                 </span>
               </span>
@@ -208,7 +218,7 @@ const SolitairePanel: React.FC<SolitairePanelProps> = ({
                       </span>
                     )}
                   </span>
-                  <span className="text-[11px] text-neutral-400 dark:text-neutral-500">{formatDate(entry.at)}</span>
+                  <span className="text-[11px] text-neutral-600 dark:text-neutral-300">{formatDate(entry.at)}</span>
                 </li>
               )
             })}
@@ -216,26 +226,7 @@ const SolitairePanel: React.FC<SolitairePanelProps> = ({
         </div>
       )}
 
-      {recentClaims.length > 0 && (
-        <div className="mt-5 border-t border-neutral-100 pt-4 dark:border-neutral-800">
-          <SectionLabel>Last sets found</SectionLabel>
-          <ul className="mt-2 space-y-2">
-            {recentClaims.map((claim, index) => (
-              <li key={index} className="flex gap-1">
-                {claim.cards.map((cardId) => (
-                  <img
-                    key={cardId}
-                    src={`/cards/${cardId}.png`}
-                    alt={`Card ${cardId}`}
-                    draggable={false}
-                    className="h-9 w-auto rounded border border-neutral-200 bg-white object-contain md:h-10 dark:border-neutral-700 dark:bg-white"
-                  />
-                ))}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <RecentSets claims={recentClaims} />
     </div>
   )
 }

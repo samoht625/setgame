@@ -117,6 +117,58 @@ class GameEngineTest < Minitest::Test
     assert(broadcasts.any? { |state| state[:reset_countdown].zero? })
   end
 
+  def test_outgoing_names_include_only_players_referenced_by_current_state
+    historical_names = 1000.times.to_h { |index| ["historical-#{index}", "Past #{index}"] }
+    referenced_names = {
+      'online' => 'Online Player',
+      'scorer' => 'Offline Scorer',
+      'recent' => 'Recent Claimant',
+      'active' => 'Active Claimant',
+      'placed' => 'Placed Player',
+      'reset' => 'Reset Requester'
+    }
+    all_names = historical_names.merge(referenced_names)
+    @engine.instance_variable_set(:@names, all_names)
+    @engine.instance_variable_set(:@online_player_ids, Set['online'])
+    @engine.instance_variable_set(:@scores, { 'scorer' => 2 })
+    @engine.instance_variable_set(:@recent_claims, [{ player_id: 'recent', cards: [4, 5, 6] }])
+    @engine.instance_variable_set(:@active_claim, { player_id: 'active', cards: [1, 2, 3] })
+    @engine.instance_variable_set(:@placements, [{ player_id: 'placed', name: 'Placed Player', score: 3, place: 1 }])
+    @engine.instance_variable_set(:@reset_requested_by, 'reset')
+
+    state = @engine.current_state
+    assert_equal referenced_names, state.fetch(:names)
+    assert_equal all_names, @engine.snapshot_payload.fetch('names')
+    state.fetch(:names).delete('online')
+    assert_equal 'Online Player', @engine.names.fetch('online')
+  end
+
+  def test_offline_claim_names_remain_until_a_new_round_and_reconnect_history_survives_restore
+    @engine.register_connection('player-one')
+    assert @engine.update_name('player-one', 'Remember Me')[:success]
+    assert @engine.claim_set('player-one', [1, 2, 3])[:success]
+    @engine.unregister_connection('player-one')
+
+    state = @engine.current_state
+    assert_empty state.fetch(:online_player_ids)
+    assert_equal 'Remember Me', state.fetch(:names).fetch('player-one')
+    assert_equal 'player-one', state.fetch(:recent_claims).first.fetch(:player_id)
+
+    @engine.start_new_round
+    assert_empty @engine.current_state.fetch(:names)
+    snapshot = @engine.snapshot_payload
+    assert_equal 'Remember Me', snapshot.fetch('names').fetch('player-one')
+
+    restored = GameEngine.new(auto_start: false, start_presence_sweeper: false)
+    restored.restore_from!(snapshot)
+    assert_empty restored.current_state.fetch(:names)
+    restored.register_connection('player-one')
+    assert_equal 'Remember Me', restored.current_state.fetch(:names).fetch('player-one')
+    restored.unregister_connection('player-one')
+    assert_empty restored.current_state.fetch(:names)
+    assert_equal 'Remember Me', restored.snapshot_payload.fetch('names').fetch('player-one')
+  end
+
   private
 
   def wait_until(timeout: 1)
