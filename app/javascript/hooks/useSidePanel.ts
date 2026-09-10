@@ -43,8 +43,14 @@ export function useSidePanel() {
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
   const [open, setOpenState] = useState(() => isDesktop && readPersistedOpen())
 
-  const setOpen = useCallback((next: boolean) => {
+  /**
+   * Open or close the panel. Pass `{ persist: false }` for app-driven changes
+   * (such as showing the leaderboard when a game ends) so they do not overwrite
+   * the preference the player expressed by opening or closing it themselves.
+   */
+  const setOpen = useCallback((next: boolean, { persist = true }: { persist?: boolean } = {}) => {
     setOpenState(next)
+    if (!persist) return
     try {
       localStorage.setItem(PANEL_OPEN_KEY, next ? '1' : '0')
     } catch {

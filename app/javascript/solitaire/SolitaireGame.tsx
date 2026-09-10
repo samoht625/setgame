@@ -392,7 +392,8 @@ const SolitaireGame: React.FC = () => {
       setElapsedMs(tMs)
       // The game is over, so the leaderboard is now the interesting thing. On
       // phones it would cover the finish card, so there it stays a tap away.
-      if (panel.isDesktop) panel.setOpen(true)
+      // This is a one-off peek, not the player's preference, so it is not saved.
+      if (panel.isDesktop) panel.setOpen(true, { persist: false })
       writeSave(deal, {
         status: 'round_over',
         recentClaims: updatedRecentClaims,

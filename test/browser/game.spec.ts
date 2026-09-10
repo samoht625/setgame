@@ -113,6 +113,11 @@ test('an eligible solo game submits a real replay and appears on the leaderboard
   await expect(page.getByText('Your best', { exact: true })).toBeVisible()
   await expect(page.getByText('Solo Browser Tester', { exact: true }).first()).toBeVisible()
   expect((await saved(page)).submissionStatus).toBe('submitted')
+  // The finish-time peek at the leaderboard is not saved as a preference.
+  expect(await page.evaluate(() => localStorage.getItem('setgame_panel_open'))).toBeNull()
+  await page.reload()
+  await expect(page.getByText('Finished', { exact: true })).toBeVisible()
+  await expect(page.getByRole('complementary', { name: 'Leaderboard' })).toHaveCount(0)
 })
 
 test('leaderboard requests are single, cancellable, and distinguish failure from empty data', async ({ page }) => {
