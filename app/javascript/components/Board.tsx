@@ -6,10 +6,11 @@ interface BoardProps {
   selectedCards: number[]
   rejectedCards?: number[]
   foundCards?: number[]
-  announcement?: string | null
   onCardClick: (cardId: number) => void
   claiming: boolean
   gameOver?: boolean
+  /** Shown centered over the dimmed board when the round is over. */
+  gameOverContent?: React.ReactNode
   paused?: boolean
   loading?: boolean
   onResume?: () => void
@@ -20,10 +21,10 @@ const Board: React.FC<BoardProps> = ({
   selectedCards,
   rejectedCards = [],
   foundCards = [],
-  announcement,
   onCardClick,
   claiming,
   gameOver = false,
+  gameOverContent,
   paused = false,
   loading = false,
   onResume
@@ -34,33 +35,20 @@ const Board: React.FC<BoardProps> = ({
   return (
     // Grid geometry stays constant regardless of how many cards are dealt:
     // extra cards simply add rows below, so existing cards never move or resize.
-    <div className={`relative mx-auto w-full max-w-2xl lg:max-w-4xl ${gameOver && cards.length === 0 ? 'min-h-48' : ''}`} aria-busy={loading}>
-      {announcement !== undefined && (
-        <div className="mb-3 flex h-9 items-center justify-center" aria-live="polite" aria-atomic="true">
-          {announcement && (
-            <div
-              role="status"
-              className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-sm font-semibold text-emerald-900 shadow-sm dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-100"
-            >
-              <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />
-              {announcement}
-            </div>
-          )}
-        </div>
-      )}
-
+    <div className={`relative w-full ${gameOver && cards.length === 0 ? 'min-h-64' : ''}`} aria-busy={loading}>
       {/* Round over overlay */}
       {gameOver && (
-        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-          <div className="rounded-full border border-neutral-200 bg-white/95 px-5 py-2 text-sm font-semibold text-neutral-900 shadow-sm dark:border-neutral-700 dark:bg-neutral-900/95 dark:text-neutral-100">
-            Round over
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-start justify-center pt-6 sm:items-center sm:pt-0">
+          <div className="pointer-events-auto w-full max-w-xs rounded-2xl border border-neutral-200 bg-white/95 p-5 text-center shadow-lg backdrop-blur dark:border-neutral-700 dark:bg-neutral-900/95">
+            <div className="text-xs font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-500">Round over</div>
+            {gameOverContent}
           </div>
         </div>
       )}
 
       {/* Paused overlay hides the board and blocks interaction */}
       {paused && !gameOver && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-neutral-100/70 backdrop-blur-md dark:bg-neutral-950/70">
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-neutral-100/70 backdrop-blur-md dark:bg-[#111214]/70">
           <div className="flex flex-col items-center gap-3 rounded-2xl border border-neutral-200 bg-white/95 px-6 py-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-900/95">
             <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Paused</span>
             {onResume && <button type="button" onClick={onResume} className="min-h-11 rounded-full bg-neutral-900 px-5 text-sm font-medium text-white transition-colors hover:bg-neutral-700 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300">Resume game</button>}
@@ -70,7 +58,7 @@ const Board: React.FC<BoardProps> = ({
 
       {loading && <div role="status" className="absolute inset-0 z-10 flex items-center justify-center text-sm font-medium text-neutral-500 dark:text-neutral-400">Dealing cards…</div>}
       <div
-        className={`grid grid-cols-3 gap-2 sm:gap-3 lg:grid-cols-4 ${gameOver || paused ? 'opacity-50 saturate-50' : ''}`}
+        className={`grid grid-cols-3 gap-2 sm:gap-3 lg:grid-cols-4 ${gameOver || paused ? 'opacity-40 saturate-50' : ''}`}
       >
         {loading ? Array.from({ length: 12 }, (_, index) => (
           <div key={index} aria-hidden="true" className="aspect-[258/167] rounded-xl border border-neutral-200 bg-white/60 dark:border-neutral-800 dark:bg-neutral-900" />

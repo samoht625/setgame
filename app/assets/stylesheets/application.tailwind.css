@@ -58,6 +58,22 @@ input:focus-visible {
   animation: fade-in-up 0.18s ease-out;
 }
 
+/* Bottom sheet (side panel on phones) slides up */
+@keyframes sheet-in {
+  from {
+    transform: translateY(1.5rem);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-sheet-in {
+  animation: sheet-in 0.2s ease-out;
+}
+
 /* Newly dealt / replaced cards ease in instead of popping */
 @keyframes card-in {
   from {

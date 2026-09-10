@@ -39,7 +39,7 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
         onClick={() => onSwitchMode(value)}
         aria-pressed={isActive}
         title={showJewel ? jewelTitle : undefined}
-        className={`relative min-h-9 rounded-full px-2.5 text-sm transition-colors sm:px-3.5 ${
+        className={`relative min-h-8 rounded-full px-2.5 text-sm transition-colors sm:px-3 ${
           isActive
             ? 'bg-white font-medium text-neutral-900 shadow-sm dark:bg-neutral-700 dark:text-neutral-100'
             : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white'
@@ -58,11 +58,11 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-neutral-200/80 bg-white/95 backdrop-blur dark:border-neutral-800/80 dark:bg-neutral-900/95">
-      <div className="mx-auto flex h-14 w-full max-w-screen-2xl items-center justify-between gap-1 px-3 md:px-8">
+    <header>
+      <div className="mx-auto flex h-12 w-full max-w-screen-2xl items-center justify-between gap-1 px-3 md:px-6 lg:px-10">
         <button type="button" aria-label="Set logo" onClick={tapLogo} className="flex min-h-11 shrink-0 items-center gap-1 rounded-lg sm:gap-2">
-          <span className="text-lg font-semibold tracking-tight">Set</span>
-          <span className="flex h-7 w-11 items-center justify-center gap-1" aria-hidden="true">
+          <span className="text-base font-semibold tracking-tight">Set</span>
+          <span className="flex h-6 w-11 items-center justify-center gap-1" aria-hidden="true">
             {showLogoSet ? (
               <span data-logo-set className="flex w-full gap-0.5 animate-logo-reveal">
                 {[1, 4, 7].map(cardId => <CardFace key={cardId} cardId={cardId} decorative className="h-auto min-w-0 flex-1 rounded-sm" />)}
@@ -79,7 +79,7 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
         </button>
 
         <div className="flex items-center gap-1 sm:gap-2">
-          <button type="button" onClick={sound.toggle} aria-label={sound.enabled ? 'Mute sound' : 'Enable sound'} aria-pressed={sound.enabled} title={sound.enabled ? 'Sound on' : 'Sound off'} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-neutral-600 transition-colors hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800">
+          <button type="button" onClick={sound.toggle} aria-label={sound.enabled ? 'Mute sound' : 'Enable sound'} aria-pressed={sound.enabled} title={sound.enabled ? 'Sound on' : 'Sound off'} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-600 transition-colors hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-4.5 w-4.5">
               <path d="M11 5 6 9H3v6h3l5 4z" />
               {sound.enabled ? <><path d="M15 8a6 6 0 0 1 0 8" /><path d="M18 5a10 10 0 0 1 0 14" /></> : <path d="m16 9 6 6m0-6-6 6" />}

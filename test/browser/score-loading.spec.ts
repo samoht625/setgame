@@ -21,6 +21,14 @@ async function expectBest(page: Page, time: string) {
   await expect(page.getByText('Your best', { exact: true }).locator('..')).toContainText(time)
 }
 
+// Scores are only fetched while the leaderboard panel is open. The open state
+// persists on desktop, so this only needs to happen once per test.
+async function openLeaderboard(page: Page) {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Leaderboard', exact: true }).click()
+  await expect(page.getByRole('complementary', { name: 'Leaderboard' })).toBeVisible()
+}
+
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/solo/games', route => route.fulfill({
     json: { game_id: '00000000-0000-4000-8000-000000000001', seed: 123, rules_version: 1 }
@@ -46,7 +54,7 @@ test('personal bests load independently and stay cached through period changes',
     if (period === 'weekly') weeklyFinished.resolve()
   })
 
-  await page.goto('/')
+  await openLeaderboard(page)
   await expect(page.getByText('daily leader', { exact: true })).toBeVisible()
   await expect.poll(() => personalRequests).toBe(1)
   await page.getByRole('button', { name: 'weekly', exact: true }).click()
@@ -82,7 +90,7 @@ test('personal-best failures leave leaderboards usable and explicit retry refres
     return route.fulfill({ status: failLeaderboard ? 503 : 200, json: { entries: [entry(`${period} leader`)] } })
   })
 
-  await page.goto('/')
+  await openLeaderboard(page)
   await expect(page.getByText('daily leader', { exact: true })).toBeVisible()
   await expect(page.getByText('Could not load times.', { exact: true })).toHaveCount(0)
   failLeaderboard = true
@@ -113,7 +121,7 @@ test('personal-best retry recovers independently without hiding a successful lea
   let fail = true
   await page.route('**/api/solo/personal_bests', route => route.fulfill({ status: fail ? 503 : 200, json: fail ? {} : personalBests() }))
   await page.route('**/api/solo/leaderboard?*', route => route.fulfill({ json: { entries: [entry('daily leader')] } }))
-  await page.goto('/')
+  await openLeaderboard(page)
   await expect(page.getByText('daily leader', { exact: true })).toBeVisible()
   await expect(page.getByText('Could not load your best times.', { exact: true })).toBeVisible()
   fail = false
@@ -136,7 +144,7 @@ test('remount refreshes personal bests and ignores an abandoned mount response',
   })
   await page.route('**/api/solo/leaderboard?*', route => route.fulfill({ json: { entries: [entry('daily leader')] } }))
 
-  await page.goto('/')
+  await openLeaderboard(page)
   await expect(page.getByText('daily leader', { exact: true })).toBeVisible()
   await expect.poll(() => personalRequests).toBe(1)
   await page.getByRole('button', { name: 'Multiplayer', exact: true }).click()
@@ -166,7 +174,7 @@ test('successful submission refreshes cached personal bests and the selected lea
     return route.fulfill({ json: { ok: true, is_personal_best: { daily: true } } })
   })
 
-  await page.goto('/')
+  await openLeaderboard(page)
   await expect(page.locator('[data-card-id]').first()).toBeEnabled()
   await page.evaluate(key => {
     const state = JSON.parse(localStorage.getItem(key)!)

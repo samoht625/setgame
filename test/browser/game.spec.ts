@@ -113,6 +113,11 @@ test('an eligible solo game submits a real replay and appears on the leaderboard
   await expect(page.getByText('Your best', { exact: true })).toBeVisible()
   await expect(page.getByText('Solo Browser Tester', { exact: true }).first()).toBeVisible()
   expect((await saved(page)).submissionStatus).toBe('submitted')
+  // The finish-time peek at the leaderboard is not saved as a preference.
+  expect(await page.evaluate(() => localStorage.getItem('setgame_panel_open'))).toBeNull()
+  await page.reload()
+  await expect(page.getByText('Finished', { exact: true })).toBeVisible()
+  await expect(page.getByRole('complementary', { name: 'Leaderboard' })).toHaveCount(0)
 })
 
 test('leaderboard requests are single, cancellable, and distinguish failure from empty data', async ({ page }) => {
@@ -125,6 +130,10 @@ test('leaderboard requests are single, cancellable, and distinguish failure from
     await route.fulfill({ status: fail ? 503 : 200, json: fail ? {} : { entries: [{ player_id: 'test', display_name: `${period} leader`, elapsed_ms: 120000, completed_at: '2026-09-07T12:00:00Z' }] } })
   })
   await page.goto('/')
+  await ready(page)
+  // Nothing is fetched until the leaderboard panel is opened.
+  expect(requests).toEqual([])
+  await page.getByRole('button', { name: 'Leaderboard', exact: true }).click()
   await expect(page.getByText('daily leader', { exact: true })).toBeVisible()
   expect(requests).toEqual(['daily'])
   await page.getByRole('button', { name: 'weekly', exact: true }).click()
@@ -138,6 +147,32 @@ test('leaderboard requests are single, cancellable, and distinguish failure from
   fail = false
   await page.getByRole('button', { name: 'Try again', exact: true }).click()
   await expect(page.getByText('daily leader', { exact: true })).toBeVisible()
+  // Closing hides the panel; the choice is remembered across reloads on desktop.
+  await page.getByRole('button', { name: 'Close leaderboard' }).click()
+  await expect(page.getByText('daily leader', { exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Leaderboard', exact: true }).click()
+  await page.reload()
+  await expect(page.getByText('daily leader', { exact: true })).toBeVisible()
+})
+
+test('the leaderboard opens as a sheet on phones and stays closed on reload', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 })
+  await page.goto('/')
+  await ready(page)
+  const toggle = page.getByRole('button', { name: 'Leaderboard', exact: true })
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  await toggle.click()
+  const sheet = page.getByRole('dialog', { name: 'Leaderboard' })
+  await expect(sheet).toBeVisible()
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+  await noOverflow(page)
+  await page.keyboard.press('Escape')
+  await expect(sheet).toHaveCount(0)
+  await toggle.click()
+  await expect(sheet).toBeVisible()
+  await page.reload()
+  await ready(page)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
 })
 
 test('a delayed abandoned new game cannot overwrite a more recent solo game', async ({ page }) => {
@@ -308,7 +343,10 @@ test('multiplayer synchronizes claims, names, reset cancellation, and reconnecti
     await first.getByTitle('Click to edit your name').click()
     await first.getByRole('textbox', { name: 'Your name' }).fill('Browser Tester')
     await first.getByRole('textbox', { name: 'Your name' }).press('Enter')
-    await expect(second.getByRole('button', { name: 'Browser Tester', exact: true })).toBeVisible()
+    await expect(first.getByTitle('Click to edit your name')).toHaveText('Browser Tester')
+    await second.getByRole('button', { name: 'Players', exact: true }).click()
+    const players = second.getByRole('complementary', { name: 'Players' })
+    await expect(players.getByText('Browser Tester', { exact: true }).first()).toBeVisible()
     const triple = findTriple(board)
     await claim(first, triple)
     await expect(first.getByRole('status')).toContainText('You found a set!')
@@ -317,6 +355,9 @@ test('multiplayer synchronizes claims, names, reset cancellation, and reconnecti
     await expect(first.locator(`[data-card-id="${triple[0]}"]`)).toHaveCount(0)
     await ready(second)
     expect(await cards(second)).toEqual(await cards(first))
+    const recent = players.getByRole('list').filter({ has: second.getByRole('img') })
+    await expect(recent.getByRole('listitem').first()).toContainText('Browser Tester')
+    await expect(recent.getByRole('listitem').first().getByRole('img')).toHaveCount(3)
     await first.getByRole('button', { name: 'Reset game', exact: true }).click()
     await second.getByRole('button', { name: /Stop reset with/ }).click()
     await expect(first.getByRole('button', { name: 'Reset game', exact: true })).toBeVisible()

@@ -2,9 +2,12 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { consumer } from '../cable'
 import Board from './Board'
 import GameLayout from './GameLayout'
+import MultiplayerHud from './MultiplayerHud'
+import PlayersPanel from './PlayersPanel'
+import SidePanel from './SidePanel'
 import Toast, { ToastMessage } from './Toast'
-import Scoreboard from './Scoreboard'
 import { useHeartbeat } from '../hooks/useHeartbeat'
+import { useSidePanel } from '../hooks/useSidePanel'
 import { useSound } from './SoundProvider'
 
 interface Placement {
@@ -72,6 +75,7 @@ const MultiplayerGame: React.FC = () => {
   const [playerId, setPlayerId] = useState<string>('')
   const [isConnected, setIsConnected] = useState(false)
   const [scoreAnimationKeys, setScoreAnimationKeys] = useState<Record<string, string>>({})
+  const panel = useSidePanel()
 
   const subscriptionRef = useRef<any>(null)
   const claimTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -301,44 +305,80 @@ const MultiplayerGame: React.FC = () => {
       : `${gameState.names[activeClaim.player_id] || 'A player'} found a set!`
     : null
 
+  const onlineCount = new Set([...gameState.online_player_ids, ...(playerId ? [playerId] : [])]).size
+
+  const roundSummary = (
+    <>
+      {gameState.placements.length > 0 && (
+        <ol className="mt-3 space-y-1 text-left text-sm">
+          {gameState.placements.map(p => (
+            <li key={p.player_id} className="flex items-center gap-2">
+              <span className="w-5 text-center">
+                {p.place === 1 ? '🥇' : p.place === 2 ? '🥈' : p.place === 3 ? '🥉' : `${p.place}.`}
+              </span>
+              <span className={`min-w-0 flex-1 truncate ${p.player_id === playerId ? 'font-semibold' : 'font-medium'}`}>
+                {p.name}
+              </span>
+              <span className="font-semibold tabular-nums">{p.score}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+      <div className="mt-3 text-sm text-neutral-600 dark:text-neutral-400">
+        Next round in <span className="font-semibold tabular-nums">{Math.max(0, gameState.countdown)}</span>…
+      </div>
+    </>
+  )
+
   return (
     <>
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}
 
       <GameLayout
+        hud={
+          <MultiplayerHud
+            playerId={playerId}
+            names={gameState.names}
+            scores={gameState.scores}
+            scoreAnimationKey={playerId ? scoreAnimationKeys[playerId] : undefined}
+            deckCount={gameState.deck_count}
+            onlineCount={onlineCount}
+            isConnected={isConnected}
+            announcement={announcement}
+            resetCountdown={gameState.reset_countdown || 0}
+            resetRequestedBy={gameState.reset_requested_by || null}
+            panelOpen={panel.open}
+            onTogglePanel={panel.toggle}
+            onUpdateName={updatePlayerName}
+            onRequestReset={requestReset}
+            onCancelReset={cancelReset}
+          />
+        }
         board={
           <Board
             cards={gameState.board}
             selectedCards={selectedCards}
             rejectedCards={rejectedCards}
             foundCards={activeClaim?.cards || []}
-            announcement={announcement}
             onCardClick={handleCardClick}
             claiming={claiming || !isConnected}
             loading={gameState.board.length === 0 && gameState.status === 'playing'}
             gameOver={gameState.status === 'round_over'}
+            gameOverContent={roundSummary}
           />
         }
-        sidebar={
-          <Scoreboard
-            scores={gameState.scores}
-            scoreAnimationKeys={scoreAnimationKeys}
-            names={gameState.names}
-            playerId={playerId}
-            deckCount={gameState.deck_count}
-            status={gameState.status}
-            onlinePlayerIds={gameState.online_player_ids}
-            idlePlayerIds={gameState.idle_player_ids}
-            countdown={gameState.countdown}
-            placements={gameState.placements}
-            recentClaims={gameState.recent_claims || []}
-            resetCountdown={gameState.reset_countdown || 0}
-            resetRequestedBy={gameState.reset_requested_by || null}
-            isConnected={isConnected}
-            onUpdateName={updatePlayerName}
-            onRequestReset={requestReset}
-            onCancelReset={cancelReset}
-          />
+        panel={
+          <SidePanel open={panel.open} onClose={() => panel.setOpen(false)} title="Players" isDesktop={panel.isDesktop}>
+            <PlayersPanel
+              scores={gameState.scores}
+              scoreAnimationKeys={scoreAnimationKeys}
+              names={gameState.names}
+              playerId={playerId}
+              onlinePlayerIds={gameState.online_player_ids}
+              idlePlayerIds={gameState.idle_player_ids}
+              recentClaims={gameState.recent_claims || []}
+            />
+          </SidePanel>
         }
       />
     </>

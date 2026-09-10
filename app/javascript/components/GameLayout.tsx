@@ -1,28 +1,27 @@
 import React from 'react'
 
 interface GameLayoutProps {
+  hud: React.ReactNode
   board: React.ReactNode
-  sidebar: React.ReactNode
-  controls?: React.ReactNode
+  /** The side panel (already knows whether it is open). */
+  panel: React.ReactNode
 }
 
-// Spanning both desktop rows keeps the board anchored while sidebar content changes.
-const GameLayout: React.FC<GameLayoutProps> = ({ board, sidebar, controls }) => {
-  const hasControls = Boolean(controls)
-
+/**
+ * Shared page layout for both modes: a slim HUD strip, then the board, which
+ * is the centerpiece. The side panel only takes room when it is open.
+ *
+ * Everything is anchored to the top so the board never re-centers (and never
+ * jumps) when rows are dealt or removed.
+ */
+const GameLayout: React.FC<GameLayoutProps> = ({ hud, board, panel }) => {
   return (
-    <main className={`mx-auto grid w-full max-w-screen-2xl grid-cols-1 items-start gap-y-3 px-3 pb-safe pt-4 md:px-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-x-10 lg:gap-y-4 lg:px-10 lg:pt-[max(2rem,5vh)] lg:pb-10 xl:grid-cols-[minmax(0,1fr)_20rem] ${hasControls ? 'lg:grid-rows-[auto_1fr]' : ''}`}>
-      {hasControls && (
-        <div className="mx-auto w-full max-w-2xl lg:col-start-2 lg:row-start-1 lg:mx-0 lg:max-w-none">
-          {controls}
-        </div>
-      )}
-      <section className={`flex min-w-0 items-start justify-center lg:col-start-1 lg:row-start-1 ${hasControls ? 'lg:row-span-2' : ''}`}>
+    <main className="mx-auto w-full max-w-screen-2xl px-3 pb-safe pt-2 md:px-6 lg:flex lg:items-start lg:justify-center lg:gap-8 lg:px-10 lg:pt-6 lg:pb-10">
+      <section className="mx-auto w-full max-w-2xl lg:mx-0 lg:min-w-0 lg:max-w-4xl lg:flex-1">
+        {hud}
         {board}
       </section>
-      <aside className={`mx-auto mt-3 w-full max-w-2xl lg:col-start-2 lg:mx-0 lg:mt-0 lg:max-w-none ${hasControls ? 'lg:row-start-2' : 'lg:row-start-1'}`}>
-        {sidebar}
-      </aside>
+      {panel}
     </main>
   )
 }

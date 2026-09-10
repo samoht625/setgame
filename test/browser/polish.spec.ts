@@ -45,7 +45,11 @@ test('both modes use crisp SVG cards and load no PNG card assets', async ({ page
   }
   await claim(page, await validTriple(page))
   await expect(page.getByText('1 set found', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Leaderboard', exact: true }).click()
+  await expect(page.getByRole('complementary', { name: 'Leaderboard' }).getByText('Last sets found')).toBeVisible()
   await expect(page.locator('aside img')).toHaveCount(0)
+  await expect(page.locator('aside svg[viewBox="0 0 258 167"]')).toHaveCount(3)
+  await page.getByRole('button', { name: 'Leaderboard', exact: true }).click()
   await page.getByRole('button', { name: 'Multiplayer', exact: true }).click()
   await expect(page.getByText('Live', { exact: true })).toBeVisible()
   await ready(page)
@@ -240,18 +244,20 @@ test('reduced motion keeps achievement text and logo secret without animation', 
 })
 
 for (const colorScheme of ['light', 'dark'] as const) {
-  test(`controls stay above the mobile board and beside the desktop board in ${colorScheme} mode`, async ({ page }) => {
+  test(`the HUD stays in one line above the board at every width in ${colorScheme} mode`, async ({ page }) => {
     await page.emulateMedia({ colorScheme })
     await page.goto('/')
     await ready(page)
     for (const width of [320, 375, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       const timer = await page.getByRole('timer').boundingBox()
+      const pause = await page.getByRole('button', { name: 'Pause', exact: true }).boundingBox()
       const card = await page.locator('[data-card-id]').first().boundingBox()
       expect(timer).not.toBeNull()
+      expect(pause).not.toBeNull()
       expect(card).not.toBeNull()
-      if (width < 1024) expect(timer!.y).toBeLessThan(card!.y)
-      else expect(timer!.x).toBeGreaterThan(card!.x)
+      expect(timer!.y + timer!.height).toBeLessThanOrEqual(card!.y)
+      expect(Math.abs(pause!.y + pause!.height / 2 - (timer!.y + timer!.height / 2))).toBeLessThan(8)
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
       await page.getByRole('button', { name: 'Pause', exact: true }).click()
       await expect(page.getByRole('button', { name: 'Resume game' })).toBeVisible()
