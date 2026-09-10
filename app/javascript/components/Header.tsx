@@ -21,7 +21,7 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
         onClick={() => onSwitchMode(value)}
         aria-pressed={isActive}
         title={showJewel ? jewelTitle : undefined}
-        className={`relative rounded-full px-3.5 py-1.5 text-sm transition-colors ${
+        className={`relative rounded-full px-3 py-1 text-sm transition-colors ${
           isActive
             ? 'bg-white font-medium text-neutral-900 shadow-sm dark:bg-neutral-700 dark:text-neutral-100'
             : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200'
@@ -40,10 +40,10 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-neutral-200/80 bg-white/85 backdrop-blur dark:border-neutral-800/80 dark:bg-neutral-900/85">
-      <div className="mx-auto flex h-14 w-full max-w-screen-2xl items-center justify-between px-4 md:px-8">
+    <header>
+      <div className="mx-auto flex h-12 w-full max-w-screen-2xl items-center justify-between px-3 md:px-6 lg:px-10">
         <div className="flex items-center gap-2.5">
-          <span className="text-lg font-semibold tracking-tight">Set</span>
+          <span className="text-base font-semibold tracking-tight">Set</span>
           <span className="flex items-center gap-1" aria-hidden="true">
             <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
             <span className="h-1.5 w-1.5 rounded-full bg-purple-600" />

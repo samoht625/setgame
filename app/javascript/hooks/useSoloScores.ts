@@ -3,7 +3,11 @@ import { fetchLeaderboard, fetchPersonalBests, type LeaderboardEntry } from '../
 
 type Period = 'daily' | 'weekly' | 'monthly'
 
-export function useSoloScores(period: Period) {
+/**
+ * Leaderboard + personal best for a period. Nothing is fetched while
+ * `enabled` is false (the panel is closed); opening it fetches fresh data.
+ */
+export function useSoloScores(period: Period, enabled: boolean) {
   const [revision, setRevision] = useState(0)
   const [scores, setScores] = useState<{
     period: Period
@@ -16,6 +20,7 @@ export function useSoloScores(period: Period) {
   const refresh = useCallback(() => setRevision(value => value + 1), [])
 
   useEffect(() => {
+    if (!enabled) return
     const request = new AbortController()
     setScores({ period, leaderboard: [], personalBest: null, loading: true, error: null })
 
@@ -33,7 +38,7 @@ export function useSoloScores(period: Period) {
       })
 
     return () => request.abort()
-  }, [period, revision])
+  }, [period, revision, enabled])
 
   return scores.period === period
     ? { ...scores, refresh }
