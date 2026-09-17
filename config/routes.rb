@@ -15,6 +15,9 @@ Rails.application.routes.draw do
     get "solo/personal_bests", to: "solo_scores#personal_bests"
   end
 
+  # Artwork comparison: original scans vs in-game SVG faces
+  get '/gallery' => 'home#gallery', as: :gallery
+
   # Multiplayer game ("m" for "meet me at the table")
   get '/m' => 'home#multiplayer', as: :multiplayer
 
