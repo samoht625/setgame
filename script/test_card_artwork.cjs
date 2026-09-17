@@ -27,6 +27,29 @@ try {
   const shadings = ['solid', 'striped', 'open']
   const symbols = renderToStaticMarkup(React.createElement(CardSymbols))
   assert.equal((symbols.match(/id="set-card-/g) || []).length, 6)
+
+  const squiggle = symbols.match(/id="set-card-squiggle" d="([^"]+)"/)[1]
+  const commands = squiggle.match(/[MCZ][^MCZ]*/g)
+  const coordinates = command => (command.match(/-?\d+(?:\.\d+)?/g) || []).map(Number)
+  const start = coordinates(commands[0])
+  let previous = start
+  const curves = commands.slice(1, -1).map(command => {
+    assert.equal(command[0], 'C', 'The squiggle outline uses cubic curves throughout')
+    const [x1, y1, x2, y2, x, y] = coordinates(command)
+    const curve = { start: previous, first: [x1, y1], last: [x2, y2], end: [x, y] }
+    previous = curve.end
+    return curve
+  })
+  assert.deepEqual(previous, start, 'The closing edge must not introduce a straight segment')
+  for (let i = 0; i < curves.length; i++) {
+    const curve = curves[i]
+    const next = curves[(i + 1) % curves.length]
+    const incoming = curve.end.map((value, axis) => value - curve.last[axis])
+    const outgoing = next.first.map((value, axis) => value - next.start[axis])
+    assert(Math.abs(incoming[0] * outgoing[1] - incoming[1] * outgoing[0]) < 1e-8, 'Squiggle tangents align at every join, including the closure')
+    assert(incoming[0] * outgoing[0] + incoming[1] * outgoing[1] > 0, 'Squiggle joins have no cusp')
+  }
+
   for (let id = 1; id <= 81; id++) {
     const value = id - 1
     const number = value % 3 + 1
