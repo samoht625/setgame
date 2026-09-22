@@ -6,7 +6,4 @@ class HomeController < ApplicationController
 
   def multiplayer
   end
-
-  def gallery
-  end
 end

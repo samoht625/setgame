@@ -8,6 +8,6 @@ Classic Set card game — no signup, no download.
 - **Multiplayer** — one shared live board with friends
 - Works on phone and desktop
 
-[Play now →](https://set.tido.site/) · [Multiplayer →](https://set.tido.site/m) · [Card gallery →](https://set.tido.site/gallery)
+[Play now →](https://set.tido.site/) · [Multiplayer →](https://set.tido.site/m)
 
 Fan site. Not affiliated with Set Enterprises.
