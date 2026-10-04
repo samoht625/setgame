@@ -25,7 +25,7 @@ try {
     outfile: bundle,
     logLevel: 'silent'
   })
-  const { dailyDate, paceRow, missesLabel, dailyShareText, ordinal, formatCountdown } = require(bundle)
+  const { dailyDate, paceRow, dailyShareText, ordinal, formatCountdown } = require(bundle)
 
   check('the client rolls the daily over at midnight Pacific, like the server', () => {
     assert.equal(dailyDate(new Date('2026-10-04T06:59:59Z')), '2026-10-03')
@@ -47,12 +47,10 @@ try {
     assert.equal(paceRow(fullGame), '🟨'.repeat(9))
   })
 
-  check('share text has the number, time, misses, pace and link, and nothing else', () => {
-    const text = dailyShareText({ number: 12, elapsedMs: 221_400, misses: 2, claimMs: [4000, 8000, 12000, 20000] })
-    assert.equal(text, 'Set Daily #12\n3:41 · 2 misses\n🟩🟨\nhttps://set.tido.site/daily')
-    assert.equal(missesLabel(0), 'no misses')
-    assert.equal(missesLabel(1), '1 miss')
-    assert.equal(dailyShareText({ number: 1, elapsedMs: 59_999, misses: 0, claimMs: [] }), 'Set Daily #1\n0:59 · no misses\nhttps://set.tido.site/daily')
+  check('share text has the number, time, pace and link, and nothing else', () => {
+    const text = dailyShareText({ number: 12, elapsedMs: 161_400, claimMs: [4000, 8000, 12000, 20000] })
+    assert.equal(text, 'Set Daily #12 · 2:41\n🟩🟨\nhttps://set.tido.site/daily')
+    assert.equal(dailyShareText({ number: 1, elapsedMs: 59_999, claimMs: [] }), 'Set Daily #1 · 0:59\nhttps://set.tido.site/daily')
   })
 
   check('ranks read as ordinals', () => {

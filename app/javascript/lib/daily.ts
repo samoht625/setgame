@@ -40,22 +40,15 @@ export function paceRow(claimMs: number[]): string {
   return row
 }
 
-export function missesLabel(misses: number): string {
-  if (misses === 0) return 'no misses'
-  return misses === 1 ? '1 miss' : `${misses} misses`
-}
-
 export type DailyShare = {
   number: number
   elapsedMs: number
-  misses: number
   claimMs: number[]
 }
 
-export function dailyShareText({ number, elapsedMs, misses, claimMs }: DailyShare): string {
+export function dailyShareText({ number, elapsedMs, claimMs }: DailyShare): string {
   return [
-    `Set Daily #${number}`,
-    `${formatTime(elapsedMs)} · ${missesLabel(misses)}`,
+    `Set Daily #${number} · ${formatTime(elapsedMs)}`,
     paceRow(claimMs),
     DAILY_URL
   ].filter(Boolean).join('\n')

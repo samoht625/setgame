@@ -12,7 +12,7 @@ const RANK_BADGES: string[] = [
 interface LeaderboardListProps<T extends LeaderboardEntry> {
   entries: T[]
   /** The small line under each time. */
-  detail: (entry: T) => string
+  detail?: (entry: T) => string
   /** Marks the player's own entry. */
   highlight?: (entry: T) => boolean
   /** Show only the top of the list, plus the player's own entry if it falls below. */
@@ -52,7 +52,7 @@ function LeaderboardList<T extends LeaderboardEntry>({ entries, detail, highligh
               <span className="text-sm font-semibold tabular-nums text-neutral-900 dark:text-neutral-100">
                 {formatTime(entry.elapsed_ms)}
               </span>
-              <span className="text-[10px] text-neutral-600 dark:text-neutral-300">{detail(entry)}</span>
+              {detail && <span className="text-[10px] text-neutral-600 dark:text-neutral-300">{detail(entry)}</span>}
             </span>
           </li>
         </React.Fragment>

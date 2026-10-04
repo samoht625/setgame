@@ -17,7 +17,6 @@ import {
   dailyDate,
   dailyShareText,
   formatCountdown,
-  missesLabel,
   ordinal,
   paceRow,
   shareText,
@@ -405,7 +404,6 @@ const DailyGame: React.FC = () => {
     ? {
         number: rankedRun.number,
         elapsedMs: rankedRun.elapsedMs,
-        misses: rankedRun.misses,
         claimMs: rankedRun.events.map(event => event.t_ms),
         rank: statusMatchesRanked ? serverResult?.rank : undefined,
         total: statusMatchesRanked ? serverResult?.total : undefined
@@ -414,7 +412,6 @@ const DailyGame: React.FC = () => {
       ? {
           number: status.number,
           elapsedMs: serverResult.elapsed_ms,
-          misses: serverResult.misses ?? 0,
           claimMs: serverResult.claim_ms,
           rank: serverResult.rank,
           total: serverResult.total
@@ -455,7 +452,7 @@ const DailyGame: React.FC = () => {
       <div className="mt-1 text-3xl font-semibold tabular-nums tracking-tight text-neutral-900 dark:text-neutral-100">
         {formatTime(elapsedMs)}
       </div>
-      <div className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">{detail}</div>
+      <div className="mt-0.5 min-h-5 text-sm text-neutral-500 dark:text-neutral-400">{detail}</div>
     </>
   )
 
@@ -470,7 +467,7 @@ const DailyGame: React.FC = () => {
   if (starting || run?.status === 'playing') {
     results = null
   } else if (run && !run.ranked) {
-    const detail = `${missesLabel(run.misses)} · not ranked`
+    const detail = 'Not ranked'
     const practiceAgain = (
       <button type="button" onClick={() => void begin(false)} disabled={starting} className={`${primaryButton} flex-1`}>
         Practice again
@@ -508,8 +505,7 @@ const DailyGame: React.FC = () => {
     }
   } else if (rankedResult) {
     const result = rankedResult
-    const detail = missesLabel(result.misses) +
-      (result.rank !== undefined && result.total !== undefined ? ` · ${ordinal(result.rank)} of ${result.total}` : '')
+    const detail = result.rank !== undefined && result.total !== undefined ? `${ordinal(result.rank)} of ${result.total}` : ''
     const practice = (
       <button type="button" onClick={() => void begin(false)} disabled={starting} className={secondaryButton}>
         Practice

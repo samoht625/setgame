@@ -159,19 +159,20 @@ test('the daily is one shared deal: ranked once, clocked from first paint, share
   const results = page.getByRole('dialog', { name: `Set Daily #${number}` })
   await expect(results).toBeVisible()
   await expect(page.getByRole('complementary', { name: 'Leaderboard' })).toHaveCount(0)
-  await expect(results.getByText(new RegExp(`^1 miss · ${body.daily.rank}(st|nd|rd|th) of ${body.daily.total}$`))).toBeVisible()
+  await expect(results.getByText(new RegExp(`^${body.daily.rank}(st|nd|rd|th) of ${body.daily.total}$`))).toBeVisible()
+  await expect(results.getByText(/miss/i)).toHaveCount(0)
   await expect(results.getByText('1-day streak', { exact: true })).toBeVisible()
   await expect(results.locator('[aria-current="true"]')).toBeVisible()
 
   await results.getByRole('button', { name: 'Share', exact: true }).click()
   await expect(results.getByText('Result copied — paste it anywhere')).toBeVisible()
   const shared = await page.evaluate(() => navigator.clipboard.readText())
-  expect(shared).toMatch(new RegExp(`^Set Daily #${number}\\n\\d+:\\d\\d · 1 miss\\n[🟩🟨🟧🟥]{8,9}\\nhttps://set\\.tido\\.site/daily$`, 'u'))
+  expect(shared).toMatch(new RegExp(`^Set Daily #${number} · \\d+:\\d\\d\\n[🟩🟨🟧🟥]{8,9}\\nhttps://set\\.tido\\.site/daily$`, 'u'))
   expect(named(events, 'daily_share')).toEqual([{ outcome: 'copied' }])
 
   // Coming back later shows the result on the board, with the full results a tap away.
   await page.reload()
-  await expect(page.getByText(new RegExp(`^1 miss · ${body.daily.rank}(st|nd|rd|th) of`))).toBeVisible()
+  await expect(page.getByText(new RegExp(`^${body.daily.rank}(st|nd|rd|th) of ${body.daily.total}$`))).toBeVisible()
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await page.getByRole('button', { name: 'Results', exact: true }).click()
   await expect(results.getByRole('button', { name: 'Share', exact: true })).toBeVisible()
@@ -188,7 +189,7 @@ test('the daily is one shared deal: ranked once, clocked from first paint, share
   await playOut(page)
   const practiceResults = page.getByRole('dialog', { name: `Practice · Daily #${number}` })
   await expect(practiceResults).toBeVisible()
-  await expect(practiceResults.getByText('no misses · not ranked', { exact: true })).toBeVisible()
+  await expect(practiceResults.getByText('Not ranked', { exact: true })).toBeVisible()
   expect(scoreRequests).toEqual([])
   expect(named(events, 'game_start')).toEqual([{ mode: 'daily', ranked: true }, { mode: 'daily', ranked: false }])
 
@@ -299,7 +300,8 @@ test.describe('on a phone', () => {
 
     await expect(page.getByText('Set Daily #7', { exact: true })).toBeVisible()
     await expect(page.getByRole('timer')).toHaveText('2:12')
-    await expect(page.getByText('2 misses', { exact: true })).toBeVisible()
+    // The run counted two misses, but misses aren't part of the result.
+    await expect(page.getByText(/miss/i)).toHaveCount(0)
     await noOverflow(page)
     // The board's result card grows the board instead of spilling over the page footer.
     const openResults = page.getByRole('button', { name: 'Results', exact: true })
@@ -316,7 +318,7 @@ test.describe('on a phone', () => {
 
     await share.click()
     await expect.poll(() => page.evaluate(() => (window as unknown as { __shared: ShareData[] }).__shared)).toEqual([
-      { text: 'Set Daily #7\n2:12 · 2 misses\n🟩🟨🟧🟥\nhttps://set.tido.site/daily' }
+      { text: 'Set Daily #7 · 2:12\n🟩🟨🟧🟥\nhttps://set.tido.site/daily' }
     ])
     await expect(page.getByText('Result copied — paste it anywhere')).toHaveCount(0)
   })

@@ -2,7 +2,7 @@ import React from 'react'
 import LeaderboardList from '../components/LeaderboardList'
 import { SectionLabel } from '../solitaire/SolitairePanel'
 import { formatTime } from '../solitaire/time'
-import { formatCountdown, missesLabel } from '../lib/daily'
+import { formatCountdown } from '../lib/daily'
 import type { DailyStatus } from '../lib/solo_api'
 
 interface DailyStandingsProps {
@@ -46,7 +46,6 @@ export const DailyStandings: React.FC<DailyStandingsProps> = ({ status, error, o
       ) : (
         <LeaderboardList
           entries={status.leaderboard}
-          detail={entry => missesLabel(entry.misses ?? 0)}
           highlight={entry => entry.player_id === playerId}
           limit={limit}
         />
