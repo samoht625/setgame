@@ -58,6 +58,21 @@ input:focus-visible {
   animation: fade-in-up 0.18s ease-out;
 }
 
+/* Dropdown menus fade in where they are. No transform: fade-in-up's translate(-50%)
+   is for centered toasts and made the header menu start off to the left, then jump. */
+@keyframes menu-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-menu-in {
+  animation: menu-in 0.12s ease-out;
+}
+
 /* Bottom sheet (side panel on phones) slides up */
 @keyframes sheet-in {
   from {

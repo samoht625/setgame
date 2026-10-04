@@ -234,6 +234,45 @@ test('New game is a visible button on the solo board row, and the header and boa
   await expect(page.getByRole('menuitem', { name: 'New game', exact: true })).toBeEnabled()
 })
 
+test('the header menu opens in its final place on the first frame on a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 700 })
+  await page.goto('/')
+  await ready(page)
+  // Record the menu's box the moment it's inserted and on the next painted frame.
+  await page.evaluate(() => {
+    const w = window as unknown as { __menuBoxes: DOMRect[] }
+    w.__menuBoxes = []
+    new MutationObserver((_, observer) => {
+      const menu = document.querySelector('[role="menu"]')
+      if (!menu) return
+      observer.disconnect()
+      w.__menuBoxes.push(menu.getBoundingClientRect())
+      requestAnimationFrame(() => {
+        w.__menuBoxes.push(menu.getBoundingClientRect())
+        requestAnimationFrame(() => w.__menuBoxes.push(menu.getBoundingClientRect()))
+      })
+    }).observe(document.body, { childList: true, subtree: true })
+  })
+  const button = page.getByRole('button', { name: 'Menu', exact: true })
+  await button.click()
+  const menu = page.getByRole('menu', { name: 'Menu' })
+  await expect(menu).toBeVisible()
+  await page.waitForTimeout(400) // well past any open animation
+  const final = await menu.evaluate(node => node.getBoundingClientRect().toJSON())
+  const early = await page.evaluate(() => (window as unknown as { __menuBoxes: DOMRect[] }).__menuBoxes.map(box => box.toJSON()))
+  expect(early).toHaveLength(3)
+  for (const box of early) {
+    expect(Math.abs(box.x - final.x)).toBeLessThan(0.5)
+    expect(Math.abs(box.y - final.y)).toBeLessThan(0.5)
+  }
+  // Final place: under the button, right edges lined up, fully on screen.
+  const anchorBox = (await button.boundingBox())!
+  expect(Math.abs(final.right - (anchorBox.x + anchorBox.width))).toBeLessThan(1)
+  expect(final.top).toBeGreaterThanOrEqual(anchorBox.y + anchorBox.height - 1)
+  expect(final.left).toBeGreaterThanOrEqual(0)
+  expect(final.right).toBeLessThanOrEqual(375)
+})
+
 test('leaderboard requests are single, cancellable, and distinguish failure from empty data', async ({ page }) => {
   const requests: string[] = []
   let fail = false

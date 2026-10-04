@@ -121,7 +121,7 @@ export const MenuButton: React.FC<MenuButtonProps> = ({ appItems, hasBadge = fal
           role="menu"
           aria-label="Menu"
           onKeyDown={onMenuKeyDown}
-          className="animate-fade-in-up absolute right-0 top-11 z-40 w-52 rounded-xl border border-neutral-200 bg-white p-1 shadow-xl dark:border-neutral-700 dark:bg-neutral-900"
+          className="animate-menu-in absolute right-0 top-11 z-40 w-52 rounded-xl border border-neutral-200 bg-white p-1 shadow-xl dark:border-neutral-700 dark:bg-neutral-900"
         >
           {gameItems.map(item => (
             <button key={item.label} type="button" role="menuitem" disabled={item.disabled} onClick={() => select(item)} className={itemClass}>
