@@ -1,23 +1,36 @@
-<footer class="mx-auto w-full max-w-2xl px-4 pt-16 pb-[calc(env(safe-area-inset-bottom,0px)+2.5rem)] text-xs leading-relaxed text-neutral-600 dark:text-neutral-400">
-  <h2 class="font-semibold text-neutral-700 dark:text-neutral-300">About Set</h2>
-  <p class="mt-1">
-    Set is a fast visual puzzle played with a deck of 81 cards: spot three cards that form a set before anyone else does.
-    Play it free in your browser, with timed solo games and daily, weekly and monthly leaderboards, a Daily deal that is the same for everyone, or on a live shared board with friends.
-  </p>
-  <h2 class="mt-4 font-semibold text-neutral-700 dark:text-neutral-300">How to play</h2>
-  <ul class="mt-1 list-disc space-y-0.5 pl-4">
-    <li>Every card has four features: number (one, two or three), color (red, purple or green), shape (diamond, oval or squiggle) and shading (solid, striped or open).</li>
-    <li>Three cards are a set when each feature is either the same on all three cards or different on all three.</li>
-    <li>Tap three cards to claim a set. Twelve cards are showing, and more are dealt when there is no set on the board.</li>
-    <li>Solo: clear the whole deck as fast as you can. Daily: everyone gets the same deal, with one ranked try a day and a new deal at midnight Pacific. Multiplayer: whoever finds the most sets wins the round.</li>
-  </ul>
-  <p class="mt-4">
-    <a href="/" class="underline underline-offset-2 hover:text-neutral-900 dark:hover:text-neutral-100">Solo</a>
-    &middot;
-    <a href="/daily" class="underline underline-offset-2 hover:text-neutral-900 dark:hover:text-neutral-100">Daily</a>
-    &middot;
-    <a href="/m" class="underline underline-offset-2 hover:text-neutral-900 dark:hover:text-neutral-100">Multiplayer</a>
-    &middot;
-    Fan site, not affiliated with Set Enterprises.
-  </p>
+<dialog id="how-to-play" aria-labelledby="how-to-play-title" class="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none items-center justify-center overflow-hidden border-0 bg-transparent p-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] open:flex backdrop:bg-neutral-900/40 backdrop:backdrop-blur-[2px] sm:p-6 dark:backdrop:bg-black/60">
+  <div class="animate-dialog-in relative flex max-h-full w-full max-w-sm flex-col overflow-y-auto overscroll-contain rounded-2xl border border-neutral-200 bg-white px-5 pb-5 pt-4 text-neutral-900 shadow-2xl dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100">
+    <form method="dialog">
+      <button type="submit" aria-label="Close" class="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700 dark:text-neutral-500 dark:hover:bg-neutral-800 dark:hover:text-neutral-200">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="h-4 w-4"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </form>
+    <h2 id="how-to-play-title" class="text-center text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">How to play</h2>
+    <div id="rules-demo-root" class="mt-3"></div>
+    <p class="mt-3 text-center text-sm font-medium">Find 3 cards: each feature all same or all different.</p>
+    <details class="mt-4 text-xs leading-relaxed text-neutral-600 dark:text-neutral-400">
+      <summary class="cursor-pointer text-center text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100">Full rules</summary>
+      <h3 class="mt-3 font-semibold text-neutral-700 dark:text-neutral-300">About Set</h3>
+      <p class="mt-1">
+        Set is a fast visual puzzle played with a deck of 81 cards: spot three cards that form a set before anyone else does.
+        Play it free in your browser, with timed solo games and daily, weekly and monthly leaderboards, a Daily deal that is the same for everyone, or on a live shared board with friends.
+      </p>
+      <h3 class="mt-3 font-semibold text-neutral-700 dark:text-neutral-300">Rules</h3>
+      <ul class="mt-1 list-disc space-y-0.5 pl-4">
+        <li>Every card has four features: number (one, two or three), color (red, purple or green), shape (diamond, oval or squiggle) and shading (solid, striped or open).</li>
+        <li>Three cards are a set when each feature is either the same on all three cards or different on all three.</li>
+        <li>Tap three cards to claim a set. Twelve cards are showing, and more are dealt when there is no set on the board.</li>
+        <li>Solo: clear the whole deck as fast as you can. Daily: everyone gets the same deal, with one ranked try a day and a new deal at midnight Pacific. Multiplayer: whoever finds the most sets wins the round.</li>
+      </ul>
+    </details>
+  </div>
+</dialog>
+<footer class="mx-auto w-full max-w-2xl px-4 pt-12 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] text-center text-[11px] text-neutral-500 dark:text-neutral-500">
+  <a href="/" class="hover:text-neutral-900 dark:hover:text-neutral-100">Solo</a>
+  &middot;
+  <a href="/daily" class="hover:text-neutral-900 dark:hover:text-neutral-100">Daily</a>
+  &middot;
+  <a href="/m" class="hover:text-neutral-900 dark:hover:text-neutral-100">Multiplayer</a>
+  &middot;
+  Fan site, not affiliated with Set Enterprises.
 </footer>

@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react'
 import type { GameMode } from './App'
 import CardFace from './CardFace'
 import { useSound } from './SoundProvider'
+import { openHowToPlay } from '../rules/HowToPlay'
+import { MenuButton } from './GameMenu'
 
 interface HeaderProps {
   mode: GameMode
@@ -47,8 +49,8 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
       >
         {narrowLabel ? (
           <>
-            <span aria-hidden="true" className="min-[360px]:hidden">{narrowLabel}</span>
-            <span className="max-[360px]:sr-only">{label}</span>
+            <span aria-hidden="true" className="min-[420px]:hidden">{narrowLabel}</span>
+            <span className="max-[420px]:sr-only">{label}</span>
           </>
         ) : label}
         {showJewel && (
@@ -83,18 +85,18 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
           {showLogoSet && <span role="status" className="sr-only">You found a little set!</span>}
         </button>
 
-        <div className="flex items-center gap-1 sm:gap-2">
-          <button type="button" onClick={sound.toggle} aria-label={sound.enabled ? 'Mute sound' : 'Enable sound'} aria-pressed={sound.enabled} title={sound.enabled ? 'Sound on' : 'Sound off'} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-neutral-600 transition-colors hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800">
-            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="h-4.5 w-4.5">
-              <path d="M11 5 6 9H3v6h3l5 4z" />
-              {sound.enabled ? <><path d="M15 8a6 6 0 0 1 0 8" /><path d="M18 5a10 10 0 0 1 0 14" /></> : <path d="m16 9 6 6m0-6-6 6" />}
-            </svg>
-          </button>
+        <div className="flex min-w-0 items-center gap-1 sm:gap-2">
           <nav aria-label="Game mode" className="flex items-center rounded-full bg-neutral-100 p-1 dark:bg-neutral-800">
             {segment('solo', 'Solo')}
             {segment('daily', 'Daily')}
             {segment('multiplayer', 'Multiplayer', 'Multi')}
           </nav>
+          <MenuButton
+            appItems={[
+              { label: 'How to play', onSelect: openHowToPlay },
+              { label: 'Sound', onSelect: sound.toggle, checked: sound.enabled }
+            ]}
+          />
         </div>
       </div>
     </header>

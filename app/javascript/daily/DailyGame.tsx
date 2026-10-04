@@ -3,7 +3,8 @@ import Board from '../components/Board'
 import GameLayout from '../components/GameLayout'
 import SidePanel from '../components/SidePanel'
 import Toast, { type ToastMessage, type ToastType } from '../components/Toast'
-import { Hud, HudChip, HudDivider, HudIconButton, HudStat, TrophyIcon } from '../components/Hud'
+import { Hud, HudChip, HudDivider, HudStat } from '../components/Hud'
+import { useGameMenu } from '../components/GameMenu'
 import ScoreValue from '../components/ScoreValue'
 import { useSound } from '../components/SoundProvider'
 import { useSidePanel } from '../hooks/useSidePanel'
@@ -400,8 +401,12 @@ const DailyGame: React.FC = () => {
   const toastNode = toast && <Toast message={toast} onClose={() => setToast(null)} />
   const playing = starting || run?.status === 'playing'
 
+  const showCard = !playing && Boolean(result || status?.me.attempted)
+  // The card has the leaderboard in it already.
+  useGameMenu(showCard ? [] : [{ label: 'Leaderboard', onSelect: panel.toggle }])
+
   // Once today's try is used, /daily is a result card, not a game.
-  if (!playing && (result || status?.me.attempted)) {
+  if (showCard) {
     const submissionNote = finishedRun && (
       submitting ? (
         <p role="status" className="mt-2 text-xs text-blue-600 dark:text-blue-400">Submitting…</p>
@@ -484,13 +489,7 @@ const DailyGame: React.FC = () => {
 
       <GameLayout
         hud={
-          <Hud
-            actions={
-              <HudIconButton label="Leaderboard" onClick={panel.toggle} active={panel.open} aria-expanded={panel.open}>
-                <TrophyIcon />
-              </HudIconButton>
-            }
-          >
+          <Hud>
             <SoloTimer
               startedAtMs={run?.startedAtMs ?? 0}
               elapsedMs={run?.status === 'finished' ? run.elapsedMs : 0}

@@ -120,7 +120,12 @@ function saveGame(state: Omit<SavedSoloState, 'savedAtMs'>): void {
   }
 }
 
-const SolitaireGame: React.FC = () => {
+interface SolitaireGameProps {
+  /** Wait to restore or deal (and start the clock) until this turns false. */
+  holdDeal?: boolean
+}
+
+const SolitaireGame: React.FC<SolitaireGameProps> = ({ holdDeal = false }) => {
   const { playSelection, playSet } = useSound()
   const [bestImprovementMs, setBestImprovementMs] = useState<number | null>(null)
   const [claimAnimationKey, setClaimAnimationKey] = useState(0)
@@ -649,6 +654,7 @@ const SolitaireGame: React.FC = () => {
   }, [isStarting, status, startedAtMs, elapsedMs])
 
   useEffect(() => {
+    if (holdDeal) return
     const saved = loadSavedGame()
     const staleInProgress =
       saved !== null &&
@@ -688,7 +694,7 @@ const SolitaireGame: React.FC = () => {
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
       if (rejectTimeoutRef.current) clearTimeout(rejectTimeoutRef.current)
     }
-  }, [])
+  }, [holdDeal])
 
   const isFinished = !isStarting && status === 'round_over'
   const showResults = resultsOpen && isFinished

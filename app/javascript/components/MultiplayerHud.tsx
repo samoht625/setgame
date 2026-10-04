@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Hud, HudDivider, HudIconButton, HudStat, PeopleIcon, RestartIcon } from './Hud'
+import { Hud, HudDivider, HudStat, RestartIcon } from './Hud'
+import { useGameMenu } from './GameMenu'
 import ScoreValue from './ScoreValue'
 
 interface MultiplayerHudProps {
@@ -74,38 +75,27 @@ const MultiplayerHud: React.FC<MultiplayerHudProps> = ({
     ? `${resetRequesterName} requested a reset. Stop reset with ${resetSeconds} seconds remaining`
     : 'Reset game'
 
+  useGameMenu([
+    { label: 'Players', onSelect: onTogglePanel, badge: onlineCount },
+    ...(isResetPending ? [] : [{ label: 'Reset game', onSelect: onRequestReset, disabled: !isConnected }])
+  ])
+
   return (
     <Hud
-      actions={
-        <>
-          <button
-            type="button"
-            onClick={isResetPending ? onCancelReset : onRequestReset}
-            disabled={!isConnected}
-            aria-label={resetLabel}
-            title={isResetPending ? `${resetRequesterName} requested a reset` : 'Reset game'}
-            className={`flex h-10 items-center gap-1.5 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-100 disabled:cursor-not-allowed disabled:opacity-40 dark:focus-visible:ring-offset-[#111214] ${
-              isResetPending
-                ? 'bg-rose-100 px-3 text-xs font-semibold text-rose-700 hover:bg-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:hover:bg-rose-950'
-                : 'w-10 justify-center text-neutral-500 hover:bg-neutral-200/70 hover:text-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100'
-            }`}
-          >
-            <RestartIcon />
-            {isResetPending && (
-              <span aria-live="assertive" className="whitespace-nowrap tabular-nums">Stop · {resetSeconds}s</span>
-            )}
-          </button>
-          <HudIconButton
-            label="Players"
-            onClick={onTogglePanel}
-            active={panelOpen}
-            aria-expanded={panelOpen}
-            badge={onlineCount}
-          >
-            <PeopleIcon />
-          </HudIconButton>
-        </>
-      }
+      // A pending reset is the one control that stays on screen: anyone can stop it in time.
+      actions={isResetPending ? (
+        <button
+          type="button"
+          onClick={onCancelReset}
+          disabled={!isConnected}
+          aria-label={resetLabel}
+          title={`${resetRequesterName} requested a reset`}
+          className="flex h-10 items-center gap-1.5 rounded-full bg-rose-100 px-3 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-100 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-rose-950/60 dark:text-rose-300 dark:hover:bg-rose-950 dark:focus-visible:ring-offset-[#111214]"
+        >
+          <RestartIcon />
+          <span aria-live="assertive" className="whitespace-nowrap tabular-nums">Stop · {resetSeconds}s</span>
+        </button>
+      ) : undefined}
     >
       <div className="flex min-w-0 items-center gap-2">
         {!announcement && (

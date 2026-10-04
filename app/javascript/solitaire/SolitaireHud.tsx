@@ -1,6 +1,7 @@
 import React from 'react'
 import type { SoloStatus } from './SolitaireGame'
-import { Hud, HudChip, HudDivider, HudIconButton, HudStat, PauseIcon, PlayIcon, RestartIcon, TrophyIcon } from '../components/Hud'
+import { Hud, HudChip, HudDivider, HudStat } from '../components/Hud'
+import { useGameMenu } from '../components/GameMenu'
 import ScoreValue from '../components/ScoreValue'
 import { formatTime } from './time'
 
@@ -45,7 +46,7 @@ export const SoloTimer: React.FC<{ startedAtMs: number; elapsedMs: number; runni
   )
 }
 
-/** Timer, the two numbers that matter, and the controls. Nothing else. */
+/** Timer and the two numbers that matter; the controls live in the header menu. */
 const SolitaireHud: React.FC<SolitaireHudProps> = ({
   elapsedMs,
   startedAtMs,
@@ -71,28 +72,14 @@ const SolitaireHud: React.FC<SolitaireHudProps> = ({
         ? { label: 'Paused', tone: 'neutral' as const }
         : null
 
+  useGameMenu([
+    ...(isFinished ? [] : [{ label: isPaused ? 'Resume' : 'Pause', onSelect: onTogglePause, disabled: isStarting }]),
+    { label: 'New game', onSelect: onRestart, disabled: isStarting },
+    { label: 'Leaderboard', onSelect: onTogglePanel }
+  ])
+
   return (
-    <Hud
-      actions={
-        <>
-          {!isFinished && (
-            <HudIconButton
-              label={isPaused ? 'Resume' : 'Pause'}
-              onClick={onTogglePause}
-              disabled={isStarting}
-            >
-              {isPaused ? <PlayIcon /> : <PauseIcon />}
-            </HudIconButton>
-          )}
-          <HudIconButton label="New game" onClick={onRestart} disabled={isStarting}>
-            <RestartIcon />
-          </HudIconButton>
-          <HudIconButton label="Leaderboard" onClick={onTogglePanel} active={panelOpen} aria-expanded={panelOpen}>
-            <TrophyIcon />
-          </HudIconButton>
-        </>
-      }
-    >
+    <Hud>
       <SoloTimer startedAtMs={startedAtMs} elapsedMs={elapsedMs} running={!isStarting && status === 'playing'} loading={isStarting} />
       {statusChip && <HudChip tone={statusChip.tone}>{statusChip.label}</HudChip>}
       <HudDivider />

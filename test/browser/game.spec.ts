@@ -1,6 +1,12 @@
 import { test, expect, type Page } from '@playwright/test'
 import { isSet } from '../../app/javascript/lib/rules'
 
+/** Picks an action from the header's overflow menu. */
+async function menu(page: Page, name: string) {
+  await page.getByRole('button', { name: 'Menu', exact: true }).click()
+  await page.getByRole('menuitem', { name, exact: true }).click()
+}
+
 const SAVE_KEY = 'setgame_solo_state_v2'
 
 async function cards(page: Page): Promise<number[]> {
@@ -62,7 +68,7 @@ test('solo claims, pause, resume, full completion, reload and mode history stay 
   await expect(page.getByRole('status')).toContainText('Not a valid set')
   expect(await cards(page)).toEqual(initial)
 
-  await page.getByRole('button', { name: 'Pause', exact: true }).click()
+  await menu(page, 'Pause')
   await expect(page.getByRole('button', { name: 'Resume game' })).toBeVisible()
   await expect(first).toBeDisabled()
   const pausedTime = await page.getByRole('timer').innerText()
@@ -170,7 +176,7 @@ test('a finished game shows its results in a dialog that closes by button, Escap
 test('the results dialog leaves a leaderboard panel the player opened alone', async ({ page }) => {
   await page.goto('/')
   await ready(page)
-  await page.getByRole('button', { name: 'Leaderboard', exact: true }).click()
+  await menu(page, 'Leaderboard')
   const panel = page.getByRole('complementary', { name: 'Leaderboard' })
   await expect(panel).toBeVisible()
   await oneSetLeft(page)
@@ -216,7 +222,7 @@ test('leaderboard requests are single, cancellable, and distinguish failure from
   await ready(page)
   // Nothing is fetched until the leaderboard panel is opened.
   expect(requests).toEqual([])
-  await page.getByRole('button', { name: 'Leaderboard', exact: true }).click()
+  await menu(page, 'Leaderboard')
   await expect(page.getByText('daily leader', { exact: true })).toBeVisible()
   expect(requests).toEqual(['daily'])
   await page.getByRole('button', { name: 'weekly', exact: true }).click()
@@ -233,7 +239,7 @@ test('leaderboard requests are single, cancellable, and distinguish failure from
   // Closing hides the panel; the choice is remembered across reloads on desktop.
   await page.getByRole('button', { name: 'Close leaderboard' }).click()
   await expect(page.getByText('daily leader', { exact: true })).toHaveCount(0)
-  await page.getByRole('button', { name: 'Leaderboard', exact: true }).click()
+  await menu(page, 'Leaderboard')
   await page.reload()
   await expect(page.getByText('daily leader', { exact: true })).toBeVisible()
 })
@@ -242,16 +248,14 @@ test('the leaderboard opens as a sheet on phones and stays closed on reload', as
   await page.setViewportSize({ width: 375, height: 800 })
   await page.goto('/')
   await ready(page)
-  const toggle = page.getByRole('button', { name: 'Leaderboard', exact: true })
-  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
-  await toggle.click()
   const sheet = page.getByRole('dialog', { name: 'Leaderboard' })
+  await expect(sheet).toHaveCount(0)
+  await menu(page, 'Leaderboard')
   await expect(sheet).toBeVisible()
-  await expect(toggle).toHaveAttribute('aria-expanded', 'true')
   await noOverflow(page)
   await page.keyboard.press('Escape')
   await expect(sheet).toHaveCount(0)
-  await toggle.click()
+  await menu(page, 'Leaderboard')
   await expect(sheet).toBeVisible()
   await page.reload()
   await ready(page)
@@ -270,14 +274,16 @@ test('a delayed abandoned new game cannot overwrite a more recent solo game', as
   })
   await page.goto('/')
   await expect(page.getByText('Dealing cards…', { exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'New game', exact: true })).toBeDisabled()
+  await page.getByRole('button', { name: 'Menu', exact: true }).click()
+  await expect(page.getByRole('menuitem', { name: 'New game', exact: true })).toBeDisabled()
+  await page.keyboard.press('Escape')
   await page.getByRole('button', { name: 'Multiplayer', exact: true }).click()
   await expect(page.getByText('Live', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Solo', exact: true }).click()
   await ready(page)
   expect((await saved(page)).gameId).toBe('game-2')
   release()
-  await page.getByRole('button', { name: 'Pause', exact: true }).click()
+  await menu(page, 'Pause')
   expect((await saved(page)).gameId).toBe('game-2')
   expect(requests).toBe(2)
 })
@@ -330,7 +336,7 @@ test('offline play and unavailable browser storage do not crash either mode', as
 test('a paused save keeps its idle deadline and corrupted local times are ignored', async ({ page }) => {
   await page.goto('/')
   await ready(page)
-  await page.getByRole('button', { name: 'Pause', exact: true }).click()
+  await menu(page, 'Pause')
   await page.evaluate(key => {
     const state = JSON.parse(localStorage.getItem(key)!)
     state.savedAtMs = Date.now() - 14 * 60 * 1000
@@ -390,7 +396,7 @@ test('expanded and empty boards retain usable layouts and reload safely', async 
     for (const width of [1440, 375]) {
       await page.setViewportSize({ width, height: 900 })
       await noOverflow(page)
-      await page.getByRole('button', { name: 'Pause', exact: true }).click()
+      await menu(page, 'Pause')
       await expect(page.locator('[data-card-id]').first()).toBeDisabled()
       await page.getByRole('button', { name: 'Resume game' }).click()
     }
@@ -418,7 +424,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await noOverflow(page)
       const first = page.locator('[data-card-id]').first()
       expect(await first.evaluate(node => getComputedStyle(node).animationName)).toBe('none')
-      await page.getByRole('button', { name: 'Pause', exact: true }).click()
+      await menu(page, 'Pause')
       await noOverflow(page)
       await page.screenshot({ path: `tmp/after-${colorScheme}-${width}-solo.png`, fullPage: true })
       await page.getByRole('button', { name: 'Resume game' }).click()
@@ -451,7 +457,7 @@ test('multiplayer synchronizes claims, names, reset cancellation, and reconnecti
     await first.getByRole('textbox', { name: 'Your name' }).fill('Browser Tester')
     await first.getByRole('textbox', { name: 'Your name' }).press('Enter')
     await expect(first.getByTitle('Click to edit your name')).toHaveText('Browser Tester')
-    await second.getByRole('button', { name: 'Players', exact: true }).click()
+    await menu(second, 'Players')
     const players = second.getByRole('complementary', { name: 'Players' })
     await expect(players.getByText('Browser Tester', { exact: true }).first()).toBeVisible()
     const triple = findTriple(board)
@@ -465,9 +471,12 @@ test('multiplayer synchronizes claims, names, reset cancellation, and reconnecti
     const recent = players.getByRole('list').filter({ has: second.getByRole('img') })
     await expect(recent.getByRole('listitem').first()).toContainText('Browser Tester')
     await expect(recent.getByRole('listitem').first().getByRole('img')).toHaveCount(3)
-    await first.getByRole('button', { name: 'Reset game', exact: true }).click()
+    await menu(first, 'Reset game')
     await second.getByRole('button', { name: /Stop reset with/ }).click()
-    await expect(first.getByRole('button', { name: 'Reset game', exact: true })).toBeVisible()
+    await expect(first.getByRole('button', { name: /Stop reset with/ })).toHaveCount(0)
+    await first.getByRole('button', { name: 'Menu', exact: true }).click()
+    await expect(first.getByRole('menuitem', { name: 'Reset game', exact: true })).toBeVisible()
+    await first.keyboard.press('Escape')
     await firstContext.setOffline(true)
     await expect(first.getByText('Reconnecting…', { exact: true })).toBeVisible()
     await expect(first.locator('[data-card-id]').first()).toBeDisabled()
