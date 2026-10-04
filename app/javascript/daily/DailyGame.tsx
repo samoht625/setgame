@@ -378,6 +378,8 @@ const DailyGame: React.FC = () => {
   const serverResult = status?.me.result ?? null
   const finishedRun = run?.status === 'finished' ? run : null
   const statusMatchesRun = status !== null && finishedRun !== null && status.date === finishedRun.date
+  // A run finished after midnight shows yesterday's result while today's deal is already open.
+  const staleRun = status !== null && finishedRun !== null && status.date !== finishedRun.date
   const result: DailyResult | null = finishedRun
     ? {
         number: finishedRun.number,
@@ -432,6 +434,7 @@ const DailyGame: React.FC = () => {
           onShare={result ? () => void share(result) : undefined}
           shareNote={shareNote}
           onNextDeal={goToToday}
+          stale={staleRun}
         />
       </>
     )
