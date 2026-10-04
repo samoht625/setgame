@@ -1,23 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react'
 import Board from '../components/Board'
 import GameLayout from '../components/GameLayout'
-import ResultDialog from '../components/ResultDialog'
 import SidePanel from '../components/SidePanel'
 import Toast, { type ToastMessage, type ToastType } from '../components/Toast'
-import { Hud, HudChip, HudDivider, HudIconButton, HudStat, RestartIcon, TrophyIcon } from '../components/Hud'
+import { Hud, HudChip, HudDivider, HudIconButton, HudStat, TrophyIcon } from '../components/Hud'
 import ScoreValue from '../components/ScoreValue'
 import { useSound } from '../components/SoundProvider'
 import { useSidePanel } from '../hooks/useSidePanel'
 import { SoloTimer } from '../solitaire/SolitaireHud'
-import { formatTime } from '../solitaire/time'
-import DailyPanel, { DailyStandings } from './DailyPanel'
+import DailyPanel from './DailyPanel'
+import DailyCard, { primaryButton } from './DailyCard'
 import { afterNextPaint } from '../lib/after_paint'
 import { seconds, track } from '../lib/analytics'
 import {
   dailyDate,
   dailyShareText,
-  formatCountdown,
-  ordinal,
   shareText,
   type DailyShare
 } from '../lib/daily'
@@ -36,14 +33,11 @@ import {
 const SAVE_KEY = 'setgame_daily_v1'
 // Session-scoped so a reload mid-game doesn't report the same quit twice.
 const QUIT_REPORTED_KEY = 'setgame_daily_quit_reported'
-// The results dialog shows the top of the leaderboard; the side panel has the rest.
-const RESULTS_LEADERBOARD_SIZE = 5
 
 type DailyRun = {
   date: string
   number: number
-  ranked: boolean
-  gameId: string | null
+  gameId: string
   seed: number
   board: number[]
   deck: number[]
@@ -57,10 +51,10 @@ type DailyRun = {
   submission?: 'pending' | 'submitted' | 'rejected'
 }
 
-// The ranked run stays put while practicing, so its result is always one tap away.
-type DailySave = { ranked: DailyRun | null; practice: DailyRun | null }
+// Today's one try. Stored under `ranked` so runs saved before practice was removed still load.
+type DailySave = { ranked: DailyRun | null }
 
-type RankedResult = DailyShare & { rank?: number; total?: number }
+type DailyResult = DailyShare & { rank?: number; total?: number }
 
 const isCard = (id: unknown) => Number.isInteger(id) && (id as number) >= 1 && (id as number) <= 81
 
@@ -70,7 +64,7 @@ function isRun(value: unknown): value is DailyRun {
   return (
     typeof run.date === 'string' &&
     Number.isInteger(run.number) &&
-    typeof run.ranked === 'boolean' &&
+    typeof run.gameId === 'string' &&
     Number.isFinite(run.seed) &&
     Array.isArray(run.board) &&
     Array.isArray(run.deck) &&
@@ -84,18 +78,14 @@ function isRun(value: unknown): value is DailyRun {
   )
 }
 
-/** Today's runs. An unfinished ranked run from yesterday is kept so it can still be finished. */
+/** Today's run. An unfinished run from yesterday is kept so it can still be finished. */
 function loadSave(today: string): DailySave {
   try {
     const parsed = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null') as Partial<DailySave> | null
     const ranked = parsed?.ranked
-    const practice = parsed?.practice
-    return {
-      ranked: isRun(ranked) && (ranked.date === today || ranked.status === 'playing') ? ranked : null,
-      practice: isRun(practice) && practice.date === today ? practice : null
-    }
+    return { ranked: isRun(ranked) && (ranked.date === today || ranked.status === 'playing') ? ranked : null }
   } catch {
-    return { ranked: null, practice: null }
+    return { ranked: null }
   }
 }
 
@@ -116,9 +106,6 @@ function useNow(intervalMs: number): number {
   return now
 }
 
-const primaryButton = 'min-h-11 rounded-full bg-neutral-900 px-4 text-sm font-medium text-white transition-colors hover:bg-neutral-700 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300'
-const secondaryButton = 'min-h-11 flex-1 rounded-full border border-neutral-300 px-4 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-600 dark:text-neutral-200 dark:hover:bg-neutral-800'
-
 const DailyGame: React.FC = () => {
   const { playSelection, playSet } = useSound()
   const panel = useSidePanel()
@@ -135,16 +122,15 @@ const DailyGame: React.FC = () => {
   const [rejectedCards, setRejectedCards] = useState<number[]>([])
   const [claimAnimationKey, setClaimAnimationKey] = useState(0)
   const [toast, setToast] = useState<ToastMessage | null>(null)
-  const [resultsOpen, setResultsOpen] = useState(false)
   const [shareNote, setShareNote] = useState<string | null>(null)
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const rejectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const shareNoteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const progressSentRef = useRef<{ gameId: string; sets: number } | null>(null)
-  const showingTimes = panel.open || resultsOpen
+  const showingTimes = panel.open
   const showedTimesRef = useRef(showingTimes)
 
-  const run = save.practice ?? save.ranked
+  const run = save.ranked
   const playerId = getPlayerId()
 
   const commit = (next: DailySave) => {
@@ -153,11 +139,9 @@ const DailyGame: React.FC = () => {
     storeSave(next)
   }
 
-  const putRun = (next: DailyRun) => {
-    commit(next.ranked ? { ...saveRef.current, ranked: next } : { ...saveRef.current, practice: next })
-  }
+  const putRun = (next: DailyRun) => commit({ ranked: next })
 
-  const currentRun = () => saveRef.current.practice ?? saveRef.current.ranked
+  const currentRun = () => saveRef.current.ranked
 
   const refreshStatus = () => setStatusRevision(value => value + 1)
 
@@ -212,7 +196,7 @@ const DailyGame: React.FC = () => {
 
   const syncProgress = (current: DailyRun) => {
     const sets = current.events.length
-    if (!current.ranked || !current.gameId || sets === 0) return
+    if (sets === 0) return
     const sent = progressSentRef.current
     if (sent?.gameId === current.gameId && sent.sets >= sets) return
     progressSentRef.current = { gameId: current.gameId, sets }
@@ -225,7 +209,7 @@ const DailyGame: React.FC = () => {
     const onPageHide = () => {
       const current = currentRun()
       if (current?.status !== 'playing') return
-      const key = `${current.date}:${current.ranked ? 'ranked' : 'practice'}:${current.startedAtMs}`
+      const key = `${current.date}:ranked:${current.startedAtMs}`
       let reported = false
       try {
         reported = sessionStorage.getItem(QUIT_REPORTED_KEY) === key
@@ -255,14 +239,18 @@ const DailyGame: React.FC = () => {
     }
   }, [isPlaying])
 
-  const begin = async (wantRanked: boolean) => {
+  const begin = async () => {
     if (starting) return
     setStarting(true)
-    setResultsOpen(false)
     setSelectedCards([])
     setRejectedCards([])
     const started = await startDailyGame()
     setStarting(false)
+    if (started === 'already_played') {
+      showToast('You’ve already played today’s deal', 'error')
+      refreshStatus()
+      return
+    }
     if (!started) {
       showToast('Couldn’t load today’s deal. Check your connection.', 'error')
       return
@@ -272,7 +260,6 @@ const DailyGame: React.FC = () => {
     const fresh: DailyRun = {
       date: started.date,
       number: started.number,
-      ranked: started.ranked,
       gameId: started.game_id,
       seed: started.seed,
       board: deal.board,
@@ -284,14 +271,13 @@ const DailyGame: React.FC = () => {
       events: [],
       misses: 0
     }
-    commit(fresh.ranked ? { ranked: fresh, practice: null } : { ...saveRef.current, practice: fresh })
+    commit({ ranked: fresh })
     setClockPending(true)
-    track('game_start', { mode: 'daily', ranked: fresh.ranked })
-    if (wantRanked && !fresh.ranked) showToast('Today’s ranked try is used — this one is practice', 'error')
+    track('game_start', { mode: 'daily', ranked: true })
   }
 
   const submit = async (finished: DailyRun) => {
-    if (!finished.gameId || submitting) return
+    if (submitting) return
     setSubmitting(true)
     const res = await submitSoloScore({
       game_id: finished.gameId,
@@ -339,7 +325,7 @@ const DailyGame: React.FC = () => {
       events,
       elapsedMs: tMs,
       status: finished ? 'finished' : 'playing',
-      submission: finished && current.ranked ? 'pending' : current.submission
+      submission: finished ? 'pending' : current.submission
     }
     putRun(next)
     setClaimAnimationKey(value => value + 1)
@@ -357,10 +343,9 @@ const DailyGame: React.FC = () => {
       seconds: seconds(tMs),
       misses: next.misses,
       sets: events.length,
-      ranked: next.ranked
+      ranked: true
     })
-    setResultsOpen(true)
-    if (next.ranked) void submit(next)
+    void submit(next)
   }
 
   const handleCardClick = (cardId: number) => {
@@ -384,28 +369,22 @@ const DailyGame: React.FC = () => {
     shareNoteTimeoutRef.current = setTimeout(() => setShareNote(null), 3000)
   }
 
-  const backToResult = () => {
-    commit({ ...saveRef.current, practice: null })
-    setResultsOpen(true)
-  }
-
   const goToToday = () => {
-    setResultsOpen(false)
     commit(loadSave(dailyDate()))
     setStatus(null)
     refreshStatus()
   }
 
   const serverResult = status?.me.result ?? null
-  const rankedRun = save.ranked?.status === 'finished' ? save.ranked : null
-  const statusMatchesRanked = status !== null && rankedRun !== null && status.date === rankedRun.date
-  const rankedResult: RankedResult | null = rankedRun
+  const finishedRun = run?.status === 'finished' ? run : null
+  const statusMatchesRun = status !== null && finishedRun !== null && status.date === finishedRun.date
+  const result: DailyResult | null = finishedRun
     ? {
-        number: rankedRun.number,
-        elapsedMs: rankedRun.elapsedMs,
-        rank: statusMatchesRanked ? serverResult?.rank : undefined,
-        total: statusMatchesRanked ? serverResult?.total : undefined,
-        token: statusMatchesRanked ? serverResult?.share_token : undefined
+        number: finishedRun.number,
+        elapsedMs: finishedRun.elapsedMs,
+        rank: statusMatchesRun ? serverResult?.rank : undefined,
+        total: statusMatchesRun ? serverResult?.total : undefined,
+        token: statusMatchesRun ? serverResult?.share_token : undefined
       }
     : status && serverResult
       ? {
@@ -418,161 +397,49 @@ const DailyGame: React.FC = () => {
       : null
   const streak = status && (!run || run.date === status.date) ? status.me.streak : 0
   const number = run?.number ?? status?.number
+  const toastNode = toast && <Toast message={toast} onClose={() => setToast(null)} />
+  const playing = starting || run?.status === 'playing'
 
-  const nextDeal = status && (
-    Date.parse(status.next_at) > nowMs ? (
-      <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
-        Next deal in {formatCountdown(Date.parse(status.next_at) - nowMs)}
-      </p>
-    ) : (
-      <button type="button" onClick={goToToday} className="mt-3 min-h-9 text-xs font-medium underline underline-offset-4">
-        Play today’s deal
-      </button>
-    )
-  )
-
-  const submissionNote = rankedRun && (
-    submitting ? (
-      <p role="status" className="mt-2 text-xs text-blue-600 dark:text-blue-400">Submitting…</p>
-    ) : rankedRun.submission === 'pending' ? (
-      <div className="mt-3 rounded-xl bg-amber-50 p-2.5 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-        <p role="status">Your time is saved. Retry when you’re connected.</p>
-        <button type="button" onClick={() => void submit(rankedRun)} className="mt-1 min-h-9 rounded-md px-1 font-semibold underline underline-offset-4">
-          Retry submission
-        </button>
-      </div>
-    ) : rankedRun.submission === 'rejected' ? (
-      <p role="status" className="mt-2 text-xs text-rose-700 dark:text-rose-300">This run couldn’t be verified, so it isn’t ranked.</p>
-    ) : null
-  )
-
-  const summary = (elapsedMs: number, detail: string) => (
-    <>
-      <div className="mt-1 text-3xl font-semibold tabular-nums tracking-tight text-neutral-900 dark:text-neutral-100">
-        {formatTime(elapsedMs)}
-      </div>
-      <div className="mt-0.5 min-h-5 text-sm text-neutral-500 dark:text-neutral-400">{detail}</div>
-    </>
-  )
-
-  const standings = (
-    <div className="mt-5 border-t border-neutral-100 pt-4 text-left dark:border-neutral-800">
-      <DailyStandings status={status} error={statusError} onRetry={refreshStatus} playerId={playerId} limit={RESULTS_LEADERBOARD_SIZE} />
-    </div>
-  )
-
-  // How a finished run is presented: in the results dialog, and on the board once that is closed.
-  let results: { label: string; dialog: React.ReactNode; actions: React.ReactNode; card: React.ReactNode } | null = null
-  if (starting || run?.status === 'playing') {
-    results = null
-  } else if (run && !run.ranked) {
-    const detail = 'Not ranked'
-    const practiceAgain = (
-      <button type="button" onClick={() => void begin(false)} disabled={starting} className={`${primaryButton} flex-1`}>
-        Practice again
-      </button>
-    )
-    results = {
-      label: `Practice · Daily #${run.number}`,
-      dialog: (
-        <>
-          {summary(run.elapsedMs, detail)}
-          {standings}
-        </>
-      ),
-      actions: (
-        <div className="flex gap-2">
-          {practiceAgain}
-          {rankedResult && (
-            <button type="button" onClick={backToResult} className={secondaryButton}>
-              Your result
-            </button>
-          )}
+  // Once today's try is used, /daily is a result card, not a game.
+  if (!playing && (result || status?.me.attempted)) {
+    const submissionNote = finishedRun && (
+      submitting ? (
+        <p role="status" className="mt-2 text-xs text-blue-600 dark:text-blue-400">Submitting…</p>
+      ) : finishedRun.submission === 'pending' ? (
+        <div className="mt-3 rounded-xl bg-amber-50 p-2.5 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+          <p role="status">Your time is saved. Retry when you’re connected.</p>
+          <button type="button" onClick={() => void submit(finishedRun)} className="mt-1 min-h-9 rounded-md px-1 font-semibold underline underline-offset-4">
+            Retry submission
+          </button>
         </div>
-      ),
-      card: (
-        <>
-          {summary(run.elapsedMs, detail)}
-          <div className="mt-4 flex gap-2">
-            {practiceAgain}
-            <button type="button" onClick={rankedResult ? backToResult : () => setResultsOpen(true)} className={secondaryButton}>
-              {rankedResult ? 'Your result' : 'Results'}
-            </button>
-          </div>
-        </>
-      )
-    }
-  } else if (rankedResult) {
-    const result = rankedResult
-    const detail = result.rank !== undefined && result.total !== undefined ? `${ordinal(result.rank)} of ${result.total}` : ''
-    const practice = (
-      <button type="button" onClick={() => void begin(false)} disabled={starting} className={secondaryButton}>
-        Practice
-      </button>
+      ) : finishedRun.submission === 'rejected' ? (
+        <p role="status" className="mt-2 text-xs text-rose-700 dark:text-rose-300">This run couldn’t be verified, so it isn’t ranked.</p>
+      ) : null
     )
-    results = {
-      label: `Set Daily #${result.number}`,
-      dialog: (
-        <>
-          {summary(result.elapsedMs, detail)}
-          {streak > 0 && (
-            <p className="mt-3 text-xs font-medium text-emerald-700 dark:text-emerald-300">{streak}-day streak</p>
-          )}
-          {submissionNote}
-          {standings}
-          {nextDeal}
-        </>
-      ),
-      actions: (
-        <>
-          <div className="flex gap-2">
-            <button type="button" onClick={() => void share(result)} className={`${primaryButton} flex-1`}>
-              Share
-            </button>
-            {practice}
-          </div>
-          {shareNote && <p role="status" className="mt-2 text-xs text-neutral-600 dark:text-neutral-300">{shareNote}</p>}
-        </>
-      ),
-      card: (
-        <>
-          {summary(result.elapsedMs, detail)}
-          {submissionNote}
-          <div className="mt-4 flex gap-2">
-            <button type="button" onClick={() => setResultsOpen(true)} className={`${primaryButton} flex-1`}>
-              Results
-            </button>
-            {practice}
-          </div>
-          {nextDeal}
-        </>
-      )
-    }
+    return (
+      <>
+        {toastNode}
+        <DailyCard
+          number={result?.number ?? status!.number}
+          result={result}
+          streak={streak}
+          note={submissionNote}
+          status={status}
+          statusError={statusError}
+          onRetryStatus={refreshStatus}
+          playerId={playerId}
+          nowMs={nowMs}
+          onShare={result ? () => void share(result) : undefined}
+          shareNote={shareNote}
+          onNextDeal={goToToday}
+        />
+      </>
+    )
   }
 
-  const showResults = resultsOpen && results !== null
-
   let overlay: { label: string; content: React.ReactNode } | null = null
-  if (starting || run?.status === 'playing') {
+  if (playing) {
     overlay = null
-  } else if (results) {
-    overlay = { label: results.label, content: showResults ? undefined : results.card }
-  } else if (status?.me.attempted) {
-    overlay = {
-      label: `Set Daily #${status.number}`,
-      content: (
-        <>
-          <p className="mt-2 text-sm font-medium text-neutral-900 dark:text-neutral-100">You’ve used today’s ranked try.</p>
-          <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-            It wasn’t finished, so it isn’t on the leaderboard. You can still practice this deal.
-          </p>
-          <button type="button" onClick={() => void begin(false)} disabled={starting} className={`${primaryButton} mt-4 w-full`}>
-            Practice this deal
-          </button>
-          {nextDeal}
-        </>
-      )
-    }
   } else if (status) {
     overlay = {
       label: `Set Daily #${status.number}`,
@@ -580,9 +447,9 @@ const DailyGame: React.FC = () => {
         <>
           <p className="mt-2 text-sm font-medium text-neutral-900 dark:text-neutral-100">Same deal for everyone today.</p>
           <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-            One ranked try. The clock starts when the cards appear and runs until you clear the deck.
+            One try. The clock starts when the cards appear and runs until you clear the deck.
           </p>
-          <button type="button" onClick={() => void begin(true)} disabled={starting} className={`${primaryButton} mt-4 w-full`}>
+          <button type="button" onClick={() => void begin()} disabled={starting} className={`${primaryButton} mt-4 w-full`}>
             Start
           </button>
           {streak > 0 && (
@@ -607,44 +474,21 @@ const DailyGame: React.FC = () => {
 
   const chip = starting
     ? { label: 'Dealing', tone: 'neutral' as const }
-    : run && !run.ranked
-      ? { label: 'Practice', tone: 'amber' as const }
-      : run?.status === 'finished'
-        ? { label: 'Finished', tone: 'amber' as const }
-        : number !== undefined
-          ? { label: `Daily #${number}`, tone: 'neutral' as const }
-          : null
-
-  const toastNode = toast && <Toast message={toast} onClose={() => setToast(null)} />
+    : number !== undefined
+      ? { label: `Daily #${number}`, tone: 'neutral' as const }
+      : null
 
   return (
     <>
-      {!showResults && toastNode}
-
-      <ResultDialog
-        open={showResults}
-        onClose={() => setResultsOpen(false)}
-        label={results?.label ?? ''}
-        toast={toastNode}
-        actions={results?.actions}
-      >
-        {results?.dialog}
-      </ResultDialog>
+      {toastNode}
 
       <GameLayout
         hud={
           <Hud
             actions={
-              <>
-                {run && !run.ranked && (
-                  <HudIconButton label="New practice" onClick={() => void begin(false)} disabled={starting}>
-                    <RestartIcon />
-                  </HudIconButton>
-                )}
-                <HudIconButton label="Leaderboard" onClick={panel.toggle} active={panel.open} aria-expanded={panel.open}>
-                  <TrophyIcon />
-                </HudIconButton>
-              </>
+              <HudIconButton label="Leaderboard" onClick={panel.toggle} active={panel.open} aria-expanded={panel.open}>
+                <TrophyIcon />
+              </HudIconButton>
             }
           >
             <SoloTimer

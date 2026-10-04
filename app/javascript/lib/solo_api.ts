@@ -55,9 +55,7 @@ export type DailyStart = {
   next_at: string
   seed: number
   rules_version: number
-  /** False once today's ranked try is used: the same deal, as practice. */
-  ranked: boolean
-  game_id: string | null
+  game_id: string
 }
 
 export async function startSoloGame(signal?: AbortSignal): Promise<SoloGameStart | null> {
@@ -150,7 +148,8 @@ export async function fetchDailyStatus(signal?: AbortSignal): Promise<DailyStatu
   return await res.json()
 }
 
-export async function startDailyGame(): Promise<DailyStart | null> {
+/** Deals today's one try, or says it's already been used. */
+export async function startDailyGame(): Promise<DailyStart | 'already_played' | null> {
   try {
     const res = await fetch('/api/daily/games', {
       method: 'POST',
@@ -158,6 +157,7 @@ export async function startDailyGame(): Promise<DailyStart | null> {
       credentials: 'same-origin',
       signal: AbortSignal.timeout(8000)
     })
+    if (res.status === 409) return 'already_played'
     if (!res.ok) return null
     return (await res.json()) as DailyStart
   } catch {

@@ -58,8 +58,7 @@ async function saved(page: Page) {
 }
 
 async function currentRun(page: Page) {
-  const save = await saved(page)
-  return save.practice ?? save.ranked
+  return (await saved(page)).ranked
 }
 
 async function playOut(page: Page, gapMs = 0) {
@@ -82,7 +81,6 @@ async function seedFinishedRun(page: Page, claimMs: number[], misses: number) {
     const run = {
       date: `${part('year')}-${part('month')}-${part('day')}`,
       number: 7,
-      ranked: true,
       gameId: 'seeded',
       seed: 1,
       board: [1, 2, 4, 5, 10, 14, 20, 30, 40],
@@ -95,11 +93,11 @@ async function seedFinishedRun(page: Page, claimMs: number[], misses: number) {
       misses,
       submission: 'submitted'
     }
-    localStorage.setItem(key, JSON.stringify({ ranked: run, practice: null }))
+    localStorage.setItem(key, JSON.stringify({ ranked: run }))
   }, { key: SAVE_KEY, claimMs, misses })
 }
 
-test('the daily is one shared deal: ranked once, clocked from first paint, shared, then practiced', async ({ page, context }) => {
+test('the daily is one shared deal: played once, clocked from first paint, then a result card', async ({ page, context }) => {
   test.setTimeout(120_000)
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
@@ -130,7 +128,6 @@ test('the daily is one shared deal: ranked once, clocked from first paint, share
   await ready(page)
   const started = (await saved(page)).ranked
   const cardsShownAt = await page.evaluate(() => (window as unknown as { __cardsShownAt: number }).__cardsShownAt)
-  expect(started.ranked).toBe(true)
   expect(started.number).toBe(number)
   expect(started.startedAtMs).toBeGreaterThanOrEqual(requestedAt + 1500)
   expect(started.startedAtMs).toBeGreaterThanOrEqual(cardsShownAt)
@@ -155,14 +152,17 @@ test('the daily is one shared deal: ranked once, clocked from first paint, share
   expect(body.daily).toMatchObject({ number, rank: expect.any(Number), total: expect.any(Number), streak: 1 })
   expect(named(events, 'game_complete')).toEqual([{ mode: 'daily', seconds: expect.any(Number), misses: 1, sets: expect.any(Number), ranked: true }])
 
-  // The result opens in the end-of-game dialog, not in the side panel.
-  const results = page.getByRole('dialog', { name: `Set Daily #${number}` })
+  // The game gives way to the result card on the page itself: no dialog to dismiss.
+  const results = page.getByRole('region', { name: `Set Daily #${number}` })
   await expect(results).toBeVisible()
-  await expect(page.getByRole('complementary', { name: 'Leaderboard' })).toHaveCount(0)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.locator('[data-card-id]')).toHaveCount(0)
   await expect(results.getByText(new RegExp(`^${body.daily.rank}(st|nd|rd|th) of ${body.daily.total}$`))).toBeVisible()
   await expect(results.getByText(/miss/i)).toHaveCount(0)
   await expect(results.getByText('1-day streak', { exact: true })).toBeVisible()
   await expect(results.locator('[aria-current="true"]')).toBeVisible()
+  await expect(results.getByText(/^Next deal in /)).toBeVisible()
+  await expect(results.getByRole('button', { name: /practice/i })).toHaveCount(0)
 
   await results.getByRole('button', { name: 'Share', exact: true }).click()
   await expect(results.getByText('Result copied — paste it anywhere')).toBeVisible()
@@ -180,35 +180,22 @@ test('the daily is one shared deal: ranked once, clocked from first paint, share
   expect(png.status()).toBe(200)
   expect(png.headers()['content-type']).toBe('image/png')
 
-  // Coming back later shows the result on the board, with the full results a tap away.
-  await page.reload()
-  await expect(page.getByText(new RegExp(`^${body.daily.rank}(st|nd|rd|th) of ${body.daily.total}$`))).toBeVisible()
-  await expect(page.getByRole('dialog')).toHaveCount(0)
-  await page.getByRole('button', { name: 'Results', exact: true }).click()
-  await expect(results.getByRole('button', { name: 'Share', exact: true })).toBeVisible()
-
-  // Practice replays the very same deal and never reaches the leaderboard.
+  // Coming back later shows the same card, not the game.
   await page.unroute('**/api/daily/games')
-  const scoreRequests: string[] = []
-  page.on('request', request => { if (request.url().endsWith('/api/solo/scores')) scoreRequests.push(request.url()) })
-  await results.getByRole('button', { name: 'Practice', exact: true }).click()
-  await ready(page)
-  await expect(page.getByRole('dialog')).toHaveCount(0)
-  expect(await cards(page)).toEqual(rankedBoard)
-  await expect(page.getByText('Practice', { exact: true })).toBeVisible()
-  await playOut(page)
-  const practiceResults = page.getByRole('dialog', { name: `Practice · Daily #${number}` })
-  await expect(practiceResults).toBeVisible()
-  await expect(practiceResults.getByText('Not ranked', { exact: true })).toBeVisible()
-  expect(scoreRequests).toEqual([])
-  expect(named(events, 'game_start')).toEqual([{ mode: 'daily', ranked: true }, { mode: 'daily', ranked: false }])
-
-  await practiceResults.getByRole('button', { name: 'Your result', exact: true }).click()
+  await page.reload()
+  await expect(results.getByText(new RegExp(`^${body.daily.rank}(st|nd|rd|th) of ${body.daily.total}$`))).toBeVisible()
   await expect(results.getByRole('button', { name: 'Share', exact: true })).toBeVisible()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.locator('[data-card-id]')).toHaveCount(0)
+
+  // There is no second deal: the other way to keep playing is the solo game.
+  await results.getByRole('link', { name: 'Play solo', exact: true }).click()
+  await expect(page).toHaveURL(/\/$/)
+  await expect(page.getByRole('button', { name: 'Solo', exact: true })).toHaveAttribute('aria-pressed', 'true')
   expect(errors).toEqual([])
 })
 
-test('a started ranked daily survives reloads, and after that the deal can only be practiced', async ({ page }) => {
+test('a started daily survives reloads, and losing it doesn’t buy another try', async ({ page }) => {
   await page.goto('/daily')
   await page.getByRole('button', { name: 'Start', exact: true }).click()
   await ready(page)
@@ -223,19 +210,19 @@ test('a started ranked daily survives reloads, and after that the deal can only 
   await expect(page.getByText('1 set found', { exact: true })).toBeVisible()
   await expect(page.getByText(/^Daily #\d+$/)).toBeVisible()
 
-  // Losing the saved game doesn't buy another ranked try.
+  // Losing the saved game doesn't buy another try, or a second deal of the same cards.
   await page.evaluate(key => localStorage.removeItem(key), SAVE_KEY)
   await page.reload()
-  await expect(page.getByText('You’ve used today’s ranked try.')).toBeVisible()
+  const card = page.getByRole('region', { name: /^Set Daily #\d+$/ })
+  await expect(card.getByText('You’ve used today’s try.')).toBeVisible()
+  await expect(page.locator('[data-card-id]')).toHaveCount(0)
+  await expect(card.getByRole('button', { name: 'Share' })).toHaveCount(0)
+  await expect(card.getByRole('link', { name: 'Play solo', exact: true })).toHaveAttribute('href', '/')
   const playerId = await page.evaluate(() => localStorage.getItem('setgame_player_id')!)
   const again = await page.request.post('/api/daily/games', { headers: { 'X-Player-Id': playerId } })
-  expect(await again.json()).toMatchObject({ ranked: false, game_id: null })
-
-  await page.getByRole('button', { name: 'Practice this deal', exact: true }).click()
-  await ready(page)
-  expect(await cards(page)).toEqual(dealt)
-  await expect(page.getByText('Practice', { exact: true })).toBeVisible()
-  await expect(page.getByText('0 sets found', { exact: true })).toBeVisible()
+  expect(again.status()).toBe(409)
+  expect(await again.json()).toMatchObject({ error: 'already_played' })
+  expect(await again.json()).not.toHaveProperty('seed')
 })
 
 test('the daily still plays when browser storage is unavailable', async ({ page }) => {
@@ -274,19 +261,12 @@ test('the daily fits every width from intro to result', async ({ page }) => {
 
   await seedFinishedRun(page, [5, 11, 18, 26, 33, 41, 50, 58, 66].map(s => s * 1000), 0)
   await page.reload()
-  for (const width of widths) {
-    await page.setViewportSize({ width, height: 900 })
-    await expect(page.getByRole('button', { name: 'Results', exact: true })).toBeInViewport()
-    await noOverflow(page)
-  }
-
-  await page.getByRole('button', { name: 'Results', exact: true }).click()
   const sizes: [number, number][] = [...widths.map((width): [number, number] => [width, 900]), [320, 480]]
   for (const [width, height] of sizes) {
     await page.setViewportSize({ width, height })
-    // The dialog scrolls inside itself; its buttons stay on screen.
+    // The result's actions sit at the top of the card, on screen without scrolling.
     await expect(page.getByRole('button', { name: 'Share', exact: true })).toBeInViewport({ ratio: 1 })
-    await expect(page.getByRole('button', { name: 'Close', exact: true })).toBeInViewport({ ratio: 1 })
+    await expect(page.getByRole('link', { name: 'Play solo', exact: true })).toBeInViewport({ ratio: 1 })
     await noOverflow(page)
   }
 })
@@ -308,23 +288,21 @@ test.describe('on a phone', () => {
     await seedFinishedRun(page, [4, 8, 12, 20, 28, 36, 48, 60, 72, 92, 112, 132].map(s => s * 1000), 2)
     await page.reload()
 
-    await expect(page.getByText('Set Daily #7', { exact: true })).toBeVisible()
-    await expect(page.getByRole('timer')).toHaveText('2:12')
+    const results = page.getByRole('region', { name: 'Set Daily #7' })
+    await expect(results).toBeVisible()
+    await expect(results.getByText('2:12', { exact: true })).toBeVisible()
     // The run counted two misses, but misses aren't part of the result.
     await expect(page.getByText(/miss/i)).toHaveCount(0)
+    await expect(results.getByText(/[🟩🟨🟧🟥]/u)).toHaveCount(0)
+    await expect(page.getByRole('dialog')).toHaveCount(0)
     await noOverflow(page)
-    // The board's result card grows the board instead of spilling over the page footer.
-    const openResults = page.getByRole('button', { name: 'Results', exact: true })
-    const cardBottom = await openResults.evaluate(node => node.closest('.rounded-2xl')!.getBoundingClientRect().bottom)
+    // The card sits above the page footer.
+    const cardBottom = await results.evaluate(node => node.getBoundingClientRect().bottom)
     const footerTop = await page.locator('footer').evaluate(node => node.getBoundingClientRect().top)
     expect(cardBottom).toBeLessThanOrEqual(footerTop)
-
-    await openResults.click()
-    const results = page.getByRole('dialog', { name: 'Set Daily #7' })
-    await expect(results.getByText(/[🟩🟨🟧🟥]/u)).toHaveCount(0)
     const share = results.getByRole('button', { name: 'Share', exact: true })
     await expect(share).toBeInViewport({ ratio: 1 })
-    await noOverflow(page)
+    await expect(results.getByRole('link', { name: 'Play solo', exact: true })).toBeInViewport({ ratio: 1 })
 
     await share.click()
     await expect.poll(() => page.evaluate(() => (window as unknown as { __shared: ShareData[] }).__shared)).toEqual([

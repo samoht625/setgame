@@ -12,10 +12,12 @@ interface DailyStandingsProps {
   playerId: string
   /** Show only the top of the leaderboard (the player's own row is always shown). */
   limit?: number
+  /** Heading over the list; defaults to the deal's number. */
+  label?: string
 }
 
 /** Today's leaderboard, with the player's row even when they are below the cut. */
-export const DailyStandings: React.FC<DailyStandingsProps> = ({ status, error, onRetry, playerId, limit }) => {
+export const DailyStandings: React.FC<DailyStandingsProps> = ({ status, error, onRetry, playerId, limit, label }) => {
   if (!status) {
     return error ? (
       <div className="mt-2 rounded-xl border border-dashed border-neutral-200 px-3 py-4 text-center dark:border-neutral-700">
@@ -33,7 +35,7 @@ export const DailyStandings: React.FC<DailyStandingsProps> = ({ status, error, o
   return (
     <div>
       <div className="flex items-baseline justify-between">
-        <SectionLabel>Daily #{status.number}</SectionLabel>
+        <SectionLabel>{label ?? `Daily #${status.number}`}</SectionLabel>
         <span className="text-[11px] text-neutral-600 dark:text-neutral-300">
           {status.total} {status.total === 1 ? 'finisher' : 'finishers'}
         </span>
