@@ -167,7 +167,7 @@ test('the daily is one shared deal: ranked once, clocked from first paint, share
   await results.getByRole('button', { name: 'Share', exact: true }).click()
   await expect(results.getByText('Result copied — paste it anywhere')).toBeVisible()
   const shared = await page.evaluate(() => navigator.clipboard.readText())
-  expect(shared).toMatch(new RegExp(`^Set Daily #${number} · \\d+:\\d\\d\\n[🟩🟨🟧🟥]{8,9}\\nhttps://set\\.tido\\.site/daily\\?r=[\\w-]+$`, 'u'))
+  expect(shared).toMatch(new RegExp(`^Set Daily #${number} · \\d+:\\d\\d\\nhttps://set\\.tido\\.site/daily\\?r=[\\w-]+$`, 'u'))
   expect(named(events, 'daily_share')).toEqual([{ outcome: 'copied' }])
 
   // The shared link previews this result: crawlers get a personalized title and image.
@@ -304,7 +304,7 @@ test.describe('on a phone', () => {
     await expect(page.getByText('Same deal for everyone today.')).toBeVisible()
     await noOverflow(page)
 
-    // A finished ranked run: three sets per square at 4s, 8s, 12s and 20s a set.
+    // A finished ranked run.
     await seedFinishedRun(page, [4, 8, 12, 20, 28, 36, 48, 60, 72, 92, 112, 132].map(s => s * 1000), 2)
     await page.reload()
 
@@ -321,14 +321,14 @@ test.describe('on a phone', () => {
 
     await openResults.click()
     const results = page.getByRole('dialog', { name: 'Set Daily #7' })
-    await expect(results.getByRole('img', { name: /Pace/ })).toHaveText('🟩🟨🟧🟥')
+    await expect(results.getByText(/[🟩🟨🟧🟥]/u)).toHaveCount(0)
     const share = results.getByRole('button', { name: 'Share', exact: true })
     await expect(share).toBeInViewport({ ratio: 1 })
     await noOverflow(page)
 
     await share.click()
     await expect.poll(() => page.evaluate(() => (window as unknown as { __shared: ShareData[] }).__shared)).toEqual([
-      { text: 'Set Daily #7 · 2:12\n🟩🟨🟧🟥\nhttps://set.tido.site/daily' }
+      { text: 'Set Daily #7 · 2:12\nhttps://set.tido.site/daily' }
     ])
     await expect(page.getByText('Result copied — paste it anywhere')).toHaveCount(0)
   })

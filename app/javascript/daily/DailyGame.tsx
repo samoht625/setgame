@@ -18,7 +18,6 @@ import {
   dailyShareText,
   formatCountdown,
   ordinal,
-  paceRow,
   shareText,
   type DailyShare
 } from '../lib/daily'
@@ -404,7 +403,6 @@ const DailyGame: React.FC = () => {
     ? {
         number: rankedRun.number,
         elapsedMs: rankedRun.elapsedMs,
-        claimMs: rankedRun.events.map(event => event.t_ms),
         rank: statusMatchesRanked ? serverResult?.rank : undefined,
         total: statusMatchesRanked ? serverResult?.total : undefined,
         token: statusMatchesRanked ? serverResult?.share_token : undefined
@@ -413,7 +411,6 @@ const DailyGame: React.FC = () => {
       ? {
           number: status.number,
           elapsedMs: serverResult.elapsed_ms,
-          claimMs: serverResult.claim_ms,
           rank: serverResult.rank,
           total: serverResult.total,
           token: serverResult.share_token
@@ -518,9 +515,6 @@ const DailyGame: React.FC = () => {
       dialog: (
         <>
           {summary(result.elapsedMs, detail)}
-          <div role="img" aria-label="Pace: one square per three sets, green is fastest" className="mt-3 text-lg leading-none tracking-[0.15em]">
-            {paceRow(result.claimMs)}
-          </div>
           {streak > 0 && (
             <p className="mt-3 text-xs font-medium text-emerald-700 dark:text-emerald-300">{streak}-day streak</p>
           )}

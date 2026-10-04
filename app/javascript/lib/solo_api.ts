@@ -42,7 +42,6 @@ export type DailyStatus = {
     result: {
       elapsed_ms: number
       misses: number | null
-      claim_ms: number[]
       rank: number
       total: number
       share_token: string
