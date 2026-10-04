@@ -17,11 +17,11 @@ interface LeaderboardListProps<T extends LeaderboardEntry> {
   highlight?: (entry: T) => boolean
   /** Show only the top of the list, plus the player's own entry if it falls below. */
   limit?: number
-  /** Replaces a row's name (e.g. an "Add your name" button on the player's own row); null keeps the default. */
-  renderName?: (entry: T, isMine: boolean) => React.ReactNode
+  /** Extra content on its own line under a row (e.g. a prompt under the player's own row). */
+  renderAfter?: (entry: T, isMine: boolean) => React.ReactNode
 }
 
-function LeaderboardList<T extends LeaderboardEntry>({ entries, detail, highlight, limit, renderName }: LeaderboardListProps<T>) {
+function LeaderboardList<T extends LeaderboardEntry>({ entries, detail, highlight, limit, renderAfter }: LeaderboardListProps<T>) {
   const rows = entries.map((entry, index) => ({ entry, rank: index + 1, isMine: highlight?.(entry) ?? false }))
   let shown = rows
   if (limit !== undefined && rows.length > limit) {
@@ -47,11 +47,9 @@ function LeaderboardList<T extends LeaderboardEntry>({ entries, detail, highligh
             >
               {rank}
             </span>
-            {renderName?.(entry, isMine) ?? (
-              <span className="min-w-0 flex-1 truncate text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                {entry.display_name || 'Anonymous'}
-              </span>
-            )}
+            <span className="min-w-0 flex-1 truncate text-sm font-medium text-neutral-900 dark:text-neutral-100">
+              {entry.display_name || 'Anonymous'}
+            </span>
             <span className="flex shrink-0 flex-col items-end">
               <span className="text-sm font-semibold tabular-nums text-neutral-900 dark:text-neutral-100">
                 {formatTime(entry.elapsed_ms)}
@@ -59,6 +57,7 @@ function LeaderboardList<T extends LeaderboardEntry>({ entries, detail, highligh
               {detail && <span className="text-[10px] text-neutral-600 dark:text-neutral-300">{detail(entry)}</span>}
             </span>
           </li>
+          {renderAfter?.(entry, isMine)}
         </React.Fragment>
       ))}
     </ol>

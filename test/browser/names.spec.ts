@@ -84,91 +84,60 @@ function findSet(board: number[]): number[] {
   throw new Error('no set')
 }
 
-test('the daily intro asks for an optional name and saves it on Start', async ({ page }) => {
+test('the daily intro doesn’t ask for a name', async ({ page }) => {
   await asNewPlayer(page)
   await page.goto('/daily')
-  const field = page.getByLabel('Name for the leaderboard')
-  await expect(field).toBeVisible()
-  await expect(field).toHaveValue('')
-  await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeInViewport({ ratio: 1 })
-  await field.fill('<b>')
-  await expect(page.getByText('Letters, numbers, spaces, _ and - only')).toBeVisible()
-  await field.fill('  Ada  L ')
-  await expect(page.getByText('Letters, numbers, spaces, _ and - only')).toHaveCount(0)
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-  await page.screenshot({ path: 'tmp/name-intro.png' })
+  await expect(page.getByText('Same deal for everyone today.')).toBeVisible()
+  await expect(page.getByRole('textbox')).toHaveCount(0)
   await page.getByRole('button', { name: 'Start', exact: true }).click()
   await expect(page.locator('[data-card-id]').first()).toBeEnabled()
-  expect(await savedName(page)).toBe('Ada L')
 })
 
-test('the name field never blocks starting and is skipped once a name is saved', async ({ page, browser }) => {
-  await asNewPlayer(page)
-  await page.goto('/daily')
-  await page.getByLabel('Name for the leaderboard').fill('Nope!')
-  await page.getByRole('button', { name: 'Start', exact: true }).click()
-  await expect(page.locator('[data-card-id]').first()).toBeEnabled()
-  expect(await savedName(page)).toBeNull()
-
-  const named = await browser.newPage({ viewport: PHONE })
-  await named.addInitScript(() => localStorage.setItem('setgame_name', 'Old Name'))
-  await named.goto('/daily')
-  await expect(named.getByText('Same deal for everyone today.')).toBeVisible()
-  await expect(named.getByLabel('Name for the leaderboard')).toHaveCount(0)
-  await named.close()
-})
-
-test('an Anonymous result row offers Add your name, edited in place, and only sends the player’s own game', async ({ page }) => {
+test('after finishing as Anonymous, the card prompts for a name under the player’s row and saving renames today’s score', async ({ page }) => {
   await asPlayer(page)
   const api = await finishedAnonymously(page)
   await page.goto('/daily')
   const card = page.getByRole('region', { name: 'Set Daily #12' })
+  const prompt = card.getByRole('group', { name: 'Add your name to the leaderboard' })
+  await expect(prompt).toBeVisible()
+  await expect(prompt).toBeInViewport({ ratio: 1 })
+  // Right under the player's own row, and only there.
   const mine = card.locator('li[aria-current="true"]')
-  const add = mine.getByRole('button', { name: 'Add your name' })
-  await expect(add).toBeVisible()
-  await expect(add).toBeInViewport({ ratio: 1 })
-  // Only the player's own row; another Anonymous row has no button.
-  await expect(card.getByRole('button', { name: 'Add your name' })).toHaveCount(1)
-  await page.screenshot({ path: 'tmp/name-card-anonymous.png' })
-
-  await add.click()
-  const input = mine.getByRole('textbox', { name: 'Your name' })
-  await expect(input).toBeFocused()
-  await input.fill('Sam')
-  await page.screenshot({ path: 'tmp/name-editing.png' })
+  const rowBox = (await mine.boundingBox())!
+  const promptBox = (await prompt.boundingBox())!
+  expect(promptBox.y).toBeGreaterThanOrEqual(rowBox.y + rowBox.height - 1)
+  expect(promptBox.y - (rowBox.y + rowBox.height)).toBeLessThan(12)
+  await expect(card.getByRole('group', { name: 'Add your name to the leaderboard' })).toHaveCount(1)
+  // Highlighted, not focused: no phone keyboard popping up over the result.
+  const input = prompt.getByRole('textbox', { name: 'Your name' })
+  await expect(input).not.toBeFocused()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.screenshot({ path: 'tmp/name-postfinish.png' })
 
-  // A failed save keeps the editor open with a note.
+  await expect(prompt.getByRole('button', { name: 'Save' })).toBeDisabled()
+  await input.fill('<b>')
+  await expect(prompt.getByText('Letters, numbers, spaces, _ and - only')).toBeVisible()
+  await expect(prompt.getByRole('button', { name: 'Save' })).toBeDisabled()
+  await input.fill('Sam')
+
+  // A failed save keeps the prompt open with a note.
   api.failOnce()
   await input.press('Enter')
-  await expect(mine.getByText('Couldn’t save. Try again.')).toBeVisible()
-  await expect(input).toBeVisible()
+  await expect(prompt.getByText('Couldn’t save. Try again.')).toBeVisible()
   expect(await savedName(page)).toBeNull()
 
-  await mine.getByRole('button', { name: 'Save' }).click()
+  await prompt.getByRole('button', { name: 'Save' }).click()
   await expect(mine).toContainText('Sam')
-  await expect(card.getByRole('button', { name: 'Add your name' })).toHaveCount(0)
+  await expect(prompt).toHaveCount(0)
   expect(api.renames).toEqual([{ game_id: 'my-game', display_name: 'Sam' }, { game_id: 'my-game', display_name: 'Sam' }])
   expect(await savedName(page)).toBe('Sam')
-})
-
-test('Escape cancels editing without saving', async ({ page }) => {
-  await asPlayer(page)
-  const api = await finishedAnonymously(page)
-  await page.goto('/daily')
-  const mine = page.locator('li[aria-current="true"]')
-  await mine.getByRole('button', { name: 'Add your name' }).click()
-  await mine.getByRole('textbox', { name: 'Your name' }).fill('Zed')
-  await page.keyboard.press('Escape')
-  await expect(mine.getByRole('button', { name: 'Add your name' })).toBeVisible()
-  expect(api.renames).toEqual([])
 })
 
 test('the header menu edits the name, and it also goes on today’s Anonymous score', async ({ page }) => {
   await asPlayer(page, 'Old')
   const api = await finishedAnonymously(page)
   await page.goto('/daily')
-  await expect(page.getByRole('button', { name: 'Add your name' })).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Add your name to the leaderboard' })).toBeVisible()
   await page.getByRole('button', { name: 'Menu', exact: true }).click()
   await page.getByRole('menuitem', { name: 'Your name', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Your name' })
@@ -181,6 +150,7 @@ test('the header menu edits the name, and it also goes on today’s Anonymous sc
   expect(await savedName(page)).toBe('New Me')
   await expect.poll(() => api.renames).toEqual([{ game_id: 'my-game', display_name: 'New Me' }])
   await expect(page.locator('li[aria-current="true"]')).toContainText('New Me')
+  await expect(page.getByRole('group', { name: 'Add your name to the leaderboard' })).toHaveCount(0)
 })
 
 test('the menu name shows up at the multiplayer table right away', async ({ page }) => {
@@ -209,12 +179,15 @@ test('end to end: finish the daily anonymously, then add a name that sticks on t
     await page.waitForTimeout(250)
   }
   // The player's row, in the top ten or below it.
-  const mine = page.getByRole('region', { name: /^Set Daily #\d+$/ }).locator('[aria-current="true"]')
-  await mine.getByRole('button', { name: 'Add your name' }).click()
-  await mine.getByRole('textbox', { name: 'Your name' }).fill('E2E Player')
-  await mine.getByRole('button', { name: 'Save' }).click()
-  await expect(mine).toContainText('E2E Player')
+  const card = page.getByRole('region', { name: /^Set Daily #\d+$/ })
+  const mine = card.locator('[aria-current="true"]')
+  const prompt = card.getByRole('group', { name: 'Add your name to the leaderboard' })
+  await prompt.getByRole('textbox', { name: 'Your name' }).fill('E2E Player')
+  await prompt.getByRole('button', { name: 'Save' }).click()
+  await expect(prompt).toHaveCount(0)
   await page.reload()
-  await expect(mine).toContainText('E2E Player')
-  await expect(page.getByRole('button', { name: 'Add your name' })).toHaveCount(0)
+  await expect(mine).toBeVisible()
+  await expect(prompt).toHaveCount(0)
+  const status = await page.evaluate(async () => (await fetch('/api/daily', { headers: { 'X-Player-Id': localStorage.getItem('setgame_player_id')! } })).json())
+  expect(status.me.result.display_name).toBe('E2E Player')
 })
