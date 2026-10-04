@@ -19,7 +19,7 @@ interface SolitaireHudProps {
   onTogglePanel: () => void
 }
 
-const SoloTimer: React.FC<{ startedAtMs: number; elapsedMs: number; running: boolean; loading: boolean }> = ({
+export const SoloTimer: React.FC<{ startedAtMs: number; elapsedMs: number; running: boolean; loading: boolean }> = ({
   startedAtMs, elapsedMs, running, loading
 }) => {
   const [now, setNow] = React.useState(Date.now)

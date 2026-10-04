@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_04_030000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_04_040000) do
   create_table "game_snapshots", force: :cascade do |t|
     t.string "name", default: "default", null: false
     t.integer "version", default: 1, null: false
@@ -31,6 +31,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_04_030000) do
     t.datetime "updated_at", null: false
     t.integer "sets_found", default: 0, null: false
     t.datetime "progress_at"
+    t.date "daily_on"
+    t.index ["daily_on", "player_id"], name: "index_solo_games_on_daily_on_and_player_id", unique: true, where: "daily_on IS NOT NULL"
     t.index ["player_id"], name: "index_solo_games_on_player_id"
     t.index ["started_at"], name: "index_solo_games_on_started_at"
     t.index ["status"], name: "index_solo_games_on_status"
@@ -45,7 +47,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_04_030000) do
     t.json "events", default: [], null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.date "daily_on"
+    t.integer "misses"
     t.index ["completed_at"], name: "index_solo_scores_on_completed_at"
+    t.index ["daily_on", "elapsed_ms"], name: "index_solo_scores_on_daily_on_and_elapsed_ms"
     t.index ["elapsed_ms"], name: "index_solo_scores_on_elapsed_ms"
     t.index ["player_id", "completed_at"], name: "index_solo_scores_on_player_id_and_completed_at"
     t.index ["solo_game_id"], name: "index_solo_scores_on_solo_game_id", unique: true

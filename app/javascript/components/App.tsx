@@ -2,31 +2,37 @@ import React, { useEffect, useState } from 'react'
 import Header from './Header'
 import MultiplayerGame from './MultiplayerGame'
 import SolitaireGame from '../solitaire/SolitaireGame'
+import DailyGame from '../daily/DailyGame'
 import { usePresence } from '../hooks/usePresence'
 import { CardSymbols } from './CardFace'
 import { SoundProvider } from './SoundProvider'
 
-export type GameMode = 'multiplayer' | 'solo'
+export type GameMode = 'multiplayer' | 'daily' | 'solo'
 
-// Solo lives at the root; multiplayer at /m.
-function modeFromPath(pathname: string): GameMode {
-  return pathname === '/m' || pathname.startsWith('/m/') ? 'multiplayer' : 'solo'
+const PATHS: Record<GameMode, string> = {
+  solo: '/',
+  daily: '/daily',
+  multiplayer: '/m'
 }
 
-function pathForMode(mode: GameMode): string {
-  return mode === 'multiplayer' ? '/m' : '/'
+// Solo lives at the root, the daily deal at /daily, multiplayer at /m.
+function modeFromPath(pathname: string): GameMode {
+  if (pathname === '/m' || pathname.startsWith('/m/')) return 'multiplayer'
+  if (pathname === '/daily' || pathname.startsWith('/daily/')) return 'daily'
+  return 'solo'
 }
 
 // Must match the <title> each route renders in app/views/home.
 const TITLES: Record<GameMode, string> = {
   solo: 'Set — Play the card game online, free',
+  daily: 'Set Daily — Today’s deal, same for everyone',
   multiplayer: 'Set Multiplayer — Race friends to find sets'
 }
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<GameMode>(() => modeFromPath(window.location.pathname))
-  // Only polled while in solo mode; multiplayer already shows the live roster.
-  const othersOnline = usePresence(mode === 'solo')
+  // Not polled in multiplayer, which already shows the live roster.
+  const othersOnline = usePresence(mode !== 'multiplayer')
 
   useEffect(() => {
     const onPopState = () => setMode(modeFromPath(window.location.pathname))
@@ -40,7 +46,7 @@ const App: React.FC = () => {
 
   const switchMode = (next: GameMode) => {
     if (next === mode) return
-    window.history.pushState({}, '', pathForMode(next))
+    window.history.pushState({}, '', PATHS[next])
     setMode(next)
   }
 
@@ -49,7 +55,7 @@ const App: React.FC = () => {
       <div className="min-h-dvh bg-neutral-100 text-neutral-900 antialiased dark:bg-[#111214] dark:text-neutral-100">
         <CardSymbols />
         <Header mode={mode} onSwitchMode={switchMode} othersOnline={othersOnline} />
-        {mode === 'solo' ? <SolitaireGame /> : <MultiplayerGame />}
+        {mode === 'solo' ? <SolitaireGame /> : mode === 'daily' ? <DailyGame /> : <MultiplayerGame />}
       </div>
     </SoundProvider>
   )

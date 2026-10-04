@@ -74,6 +74,22 @@ input:focus-visible {
   animation: sheet-in 0.2s ease-out;
 }
 
+/* End-of-game dialog settles into place */
+@keyframes dialog-in {
+  from {
+    transform: translateY(0.75rem) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-dialog-in {
+  animation: dialog-in 0.2s ease-out;
+}
+
 /* Newly dealt / replaced cards ease in instead of popping */
 @keyframes card-in {
   from {

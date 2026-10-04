@@ -14,11 +14,13 @@
     "typecheck": "tsc --noEmit",
     "test:browser": "playwright test",
     "test:rules": "node script/test_solo_rules.cjs",
+    "test:daily": "node script/test_daily.cjs",
     "test:cards": "node script/test_card_artwork.cjs",
     "assets:brand": "node script/generate_brand_assets.cjs"
   },
   "dependencies": {
     "@rails/actioncable": "^8.0.300",
+    "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/cli": "^4.1.14",
     "@types/node": "^24.8.1",
     "@types/react": "^19.2.2",

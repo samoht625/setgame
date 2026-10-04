@@ -241,6 +241,7 @@ test('reduced motion keeps achievement text and logo secret without animation', 
   await claim(page, [1, 2, 3])
   await expect(page.getByText('New personal best!', { exact: true })).toBeVisible()
   await expect(page.locator('[data-celebration-particles]')).toHaveCount(0)
+  await page.keyboard.press('Escape')
   for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Set logo', exact: true }).click()
   await expect(page.locator('[data-logo-set]')).toBeVisible()
   expect(await page.locator('[data-logo-set]').evaluate(node => getComputedStyle(node).animationName)).toBe('none')

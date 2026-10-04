@@ -28,7 +28,7 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
     logoTimeout.current = setTimeout(() => setShowLogoSet(false), 4000)
   }
 
-  const segment = (value: GameMode, label: string) => {
+  const segment = (value: GameMode, label: string, narrowLabel?: string) => {
     const isActive = mode === value
     const showJewel = value === 'multiplayer' && !isActive && othersOnline > 0
     const jewelTitle = `${othersOnline} ${othersOnline === 1 ? 'person is' : 'people are'} playing multiplayer right now`
@@ -45,7 +45,12 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
             : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white'
         }`}
       >
-        {label}
+        {narrowLabel ? (
+          <>
+            <span aria-hidden="true" className="min-[360px]:hidden">{narrowLabel}</span>
+            <span className="max-[360px]:sr-only">{label}</span>
+          </>
+        ) : label}
         {showJewel && (
           <span className="absolute -right-0.5 -top-0.5 flex h-2.5 w-2.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" aria-hidden="true" />
@@ -87,7 +92,8 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
           </button>
           <nav aria-label="Game mode" className="flex items-center rounded-full bg-neutral-100 p-1 dark:bg-neutral-800">
             {segment('solo', 'Solo')}
-            {segment('multiplayer', 'Multiplayer')}
+            {segment('daily', 'Daily')}
+            {segment('multiplayer', 'Multiplayer', 'Multi')}
           </nav>
         </div>
       </div>

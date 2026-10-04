@@ -14,10 +14,18 @@ Rails.application.routes.draw do
     post "solo/scores", to: "solo_scores#create"
     get "solo/leaderboard", to: "solo_scores#leaderboard"
     get "solo/personal_bests", to: "solo_scores#personal_bests"
+    get "daily", to: "daily#show"
+    post "daily/games", to: "daily#create"
   end
 
   # Multiplayer game ("m" for "meet me at the table")
   get '/m' => 'home#multiplayer', as: :multiplayer
+
+  # Today's shared solo deal
+  get '/daily' => 'home#daily', as: :daily
+
+  # Link-preview image for a shared daily result (token from DailyShare)
+  get '/og/daily/:token.png' => 'og_images#daily', as: :daily_og_image, format: false
 
   # Tiny JSON endpoint: who is at the multiplayer table right now
   get '/presence' => 'presence#show', defaults: { format: :json }
@@ -26,7 +34,7 @@ Rails.application.routes.draw do
   get '/s' => redirect('/')
 
   # Shortcut icon route (common favicon shortcut)
-  get '/favicon.ico' => redirect('/icon.png')
+  get '/favicon.ico' => redirect('/icon-32.png')
 
   # Solo is the default experience at the root path
   root "home#solo"

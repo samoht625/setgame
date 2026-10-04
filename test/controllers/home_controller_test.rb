@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "minitest/mock"
 
 class HomeControllerTest < ActionDispatch::IntegrationTest
   PREVIEW_BOTS = {
@@ -15,6 +16,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
   test "each page has its own title, description, canonical URL and share preview" do
     {
       "/" => ["Set — Play the card game online, free", "https://set.tido.site/"],
+      "/daily" => ["Set Daily — Today’s deal, same for everyone", "https://set.tido.site/daily"],
       "/m" => ["Set Multiplayer — Race friends to find sets", "https://set.tido.site/m"]
     }.each do |path, (title, url)|
       get path
@@ -43,13 +45,60 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "a shared daily link previews the result but still opens today's deal" do
+    token = DailyShare.token(number: 12, elapsed_ms: 161_400)
+
+    PREVIEW_BOTS.values_at("Slack", "X").each do |user_agent|
+      get "/daily", params: { r: token }, headers: { "User-Agent" => user_agent }
+      assert_response :success
+      assert_select "title", text: "Set Daily — Today’s deal, same for everyone"
+      assert_select "link[rel=canonical][href=?]", "https://set.tido.site/daily"
+      assert_select "meta[property='og:title'][content=?]", "I completed Set Daily #12 in 2:41"
+      assert_select "meta[name='twitter:title'][content=?]", "I completed Set Daily #12 in 2:41"
+      assert_select "meta[property='og:url'][content=?]", "https://set.tido.site/daily?r=#{token}"
+      assert_select "meta[property='og:image'][content=?]", "https://set.tido.site/og/daily/#{token}.png"
+      assert_select "meta[name='twitter:image'][content=?]", "https://set.tido.site/og/daily/#{token}.png"
+      assert_select "#root"
+    end
+
+    get "/daily", params: { r: "c-3gk0-abcdefghijkl" }
+    assert_select "meta[property='og:title'][content=?]", "Set Daily — Today’s deal, same for everyone"
+    assert_select "meta[property='og:image'][content=?]", "https://set.tido.site/og-image.png"
+  end
+
+  test "Safari 17.0 on iOS gets the app; browsers too old to render it do not" do
+    get "/", headers: { "User-Agent" => "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" }
+    assert_response :success
+    get "/", headers: { "User-Agent" => "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15" }
+    assert_response :success
+    get "/", headers: { "User-Agent" => "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.6 Safari/605.1.15" }
+    assert_response :not_acceptable
+  end
+
+  test "the Umami tracker is on production pages, exactly once" do
+    tracker = "script[defer][src='https://analytics.tido.site/script.js'][data-website-id='b4235c8a-975d-4920-85d3-0a87a4af920c']"
+    get "/"
+    assert_select tracker, count: 0
+
+    Rails.stub(:env, ActiveSupport::EnvironmentInquirer.new("production")) { get "/daily" }
+    assert_select "head #{tracker}", count: 1
+  end
+
+  test "tab icons are the small bold ones" do
+    get "/"
+    assert_select "link[rel=icon][href='/icon-16.png'][sizes='16x16']"
+    assert_select "link[rel=icon][href='/icon-32.png'][sizes='32x32']"
+    assert_select "link[rel=icon][href='/icon.svg']"
+    %w[icon-16.png icon-32.png icon.svg].each { |file| assert Rails.root.join("public", file).file? }
+  end
+
   test "crawl and install files point at the canonical domain" do
     robots = Rails.root.join("public/robots.txt").read
     assert_includes robots, "Sitemap: https://set.tido.site/sitemap.xml"
 
     sitemap = Nokogiri::XML(Rails.root.join("public/sitemap.xml").read)
     locations = sitemap.remove_namespaces!.xpath("//url/loc").map(&:text)
-    assert_equal %w[https://set.tido.site/ https://set.tido.site/m], locations
+    assert_equal %w[https://set.tido.site/ https://set.tido.site/daily https://set.tido.site/m], locations
 
     manifest = JSON.parse(Rails.root.join("public/manifest.json").read)
     assert_equal "/", manifest.fetch("start_url")

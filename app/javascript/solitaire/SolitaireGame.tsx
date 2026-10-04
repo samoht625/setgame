@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Board from '../components/Board'
 import GameLayout from '../components/GameLayout'
+import ResultDialog from '../components/ResultDialog'
 import SidePanel from '../components/SidePanel'
 import Toast, { ToastMessage, ToastType } from '../components/Toast'
 import SolitaireHud from './SolitaireHud'
-import SolitairePanel, { type LeaderboardPeriod } from './SolitairePanel'
+import SolitairePanel, { SoloLeaderboard, type LeaderboardPeriod } from './SolitairePanel'
 import { formatTime } from './time'
 import PersonalBestCelebration from '../components/PersonalBestCelebration'
 import { useSound } from '../components/SoundProvider'
@@ -22,9 +23,11 @@ import {
   reportSoloProgress,
   startSoloGame,
   submitSoloScore,
-  type ClaimEvent
+  type ClaimEvent,
+  type LeaderboardEntry
 } from '../lib/solo_api'
 import { seconds, track, type GameModeEvent } from '../lib/analytics'
+import { afterNextPaint } from '../lib/after_paint'
 
 const MODE: GameModeEvent = 'solo'
 const LOCAL_STORAGE_KEY = 'setgame_solo_state_v2'
@@ -35,6 +38,11 @@ const BEST_TIMES_KEY = 'setgame_solo_best_times'
 const IDLE_RESET_MS = 15 * 60 * 1000
 // While playing with the tab visible, refresh the saved activity stamp this often.
 const ACTIVITY_SAVE_INTERVAL_MS = 10_000
+// The results dialog shows the top of the leaderboard; the side panel has the rest.
+const RESULTS_LEADERBOARD_SIZE = 5
+
+const primaryButton = 'min-h-11 rounded-full bg-neutral-900 px-4 text-sm font-medium text-white transition-colors hover:bg-neutral-700 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300'
+const secondaryButton = 'min-h-11 rounded-full border border-neutral-300 px-4 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-200 dark:hover:bg-neutral-800'
 
 interface RecentClaim {
   cards: number[]
@@ -130,8 +138,13 @@ const SolitaireGame: React.FC = () => {
   const [submissionError, setSubmissionError] = useState<string | null>(null)
   const submissionStatusRef = useRef<SavedSoloState['submissionStatus']>(undefined)
   const [isStarting, setIsStarting] = useState(true)
+  // A fresh deal's clock waits until its cards are on screen.
+  const [clockPending, setClockPending] = useState(false)
+  const [resultsOpen, setResultsOpen] = useState(false)
+  // This game's accepted score, so the results can point it out on the leaderboard.
+  const [submittedScore, setSubmittedScore] = useState<LeaderboardEntry | null>(null)
   const panel = useSidePanel()
-  const scores = useSoloScores(period, panel.open)
+  const scores = useSoloScores(period, panel.open || resultsOpen)
   const startRequestRef = useRef<AbortController | null>(null)
   const gameGenerationRef = useRef(0)
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -266,6 +279,7 @@ const SolitaireGame: React.FC = () => {
     const st = opts.status || 'playing'
     setStatus(st)
     setIsStarting(false)
+    setClockPending(opts.startedAtMs === undefined && st === 'playing')
     setSelectedCards([])
     setRejectedCards([])
     submittedRef.current = st === 'round_over'
@@ -294,8 +308,10 @@ const SolitaireGame: React.FC = () => {
     startRequestRef.current = request
     gameGenerationRef.current += 1
     setIsStarting(true)
+    setResultsOpen(false)
     setSubmitting(false)
     setSubmissionError(null)
+    setSubmittedScore(null)
     setBestImprovementMs(null)
     submissionStatusRef.current = undefined
     setSelectedCards([])
@@ -390,6 +406,7 @@ const SolitaireGame: React.FC = () => {
     }
 
     if (res.ok) {
+      setSubmittedScore(res.score ?? null)
       showToast(`Submitted! ${formatTime(finalMs)}`, 'success')
       scores.refresh()
     } else if (res.retryable) {
@@ -463,10 +480,7 @@ const SolitaireGame: React.FC = () => {
       submissionStatusRef.current = eligibleRef.current ? 'pending' : undefined
       setStatus('round_over')
       setElapsedMs(tMs)
-      // The game is over, so the leaderboard is now the interesting thing. On
-      // phones it would cover the finish card, so there it stays a tap away.
-      // This is a one-off peek, not the player's preference, so it is not saved.
-      if (panel.isDesktop) panel.setOpen(true, { persist: false })
+      setResultsOpen(true)
       writeSave(deal, {
         status: 'round_over',
         recentClaims: updatedRecentClaims,
@@ -494,7 +508,7 @@ const SolitaireGame: React.FC = () => {
   }
 
   const handleCardClick = (cardId: number) => {
-    if (isStarting || status !== 'playing') return
+    if (isStarting || clockPending || status !== 'playing') return
     if (Date.now() - lastActivityAtRef.current >= IDLE_RESET_MS) {
       startFreshAfterIdle()
       return
@@ -563,7 +577,28 @@ const SolitaireGame: React.FC = () => {
   }
 
   useEffect(() => {
-    if (isStarting || status !== 'playing') return
+    if (!clockPending) return
+    return afterNextPaint(() => {
+      const now = Date.now()
+      setStartedAtMs(now)
+      setClockPending(false)
+      if (dealStateRef.current && eventsRef.current.length === 0) {
+        writeSave(dealStateRef.current, {
+          status: 'playing',
+          recentClaims: recentClaimsRef.current,
+          startedAtMs: now,
+          elapsedMs: 0,
+          gameId: gameIdRef.current,
+          seed: seedRef.current,
+          events: eventsRef.current,
+          eligible: eligibleRef.current
+        })
+      }
+    })
+  }, [clockPending])
+
+  useEffect(() => {
+    if (isStarting || clockPending || status !== 'playing') return
 
     const saveActivity = () => {
       if (document.visibilityState !== 'visible' || startRequestRef.current) return
@@ -595,7 +630,7 @@ const SolitaireGame: React.FC = () => {
       clearInterval(timer)
       document.removeEventListener('visibilitychange', saveActivity)
     }
-  }, [isStarting, status, startedAtMs])
+  }, [isStarting, clockPending, status, startedAtMs])
 
   useEffect(() => {
     if (isStarting || (status !== 'playing' && status !== 'paused')) return
@@ -656,14 +691,20 @@ const SolitaireGame: React.FC = () => {
   }, [])
 
   const isFinished = !isStarting && status === 'round_over'
+  const showResults = resultsOpen && isFinished
+  const toastNode = toast && <Toast message={toast} onClose={() => setToast(null)} />
 
-  const finishCard = (
+  const resultTime = (
     <>
       <div className="mt-1 text-3xl font-semibold tabular-nums tracking-tight text-neutral-900 dark:text-neutral-100">
         {formatTime(elapsedMs)}
       </div>
       <div className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">Cleared the deck</div>
-      {bestImprovementMs !== null && <PersonalBestCelebration improvementMs={bestImprovementMs} />}
+    </>
+  )
+
+  const submissionNote = (
+    <>
       {submitting && (
         <p role="status" className="mt-2 text-xs text-blue-600 dark:text-blue-400">Submitting…</p>
       )}
@@ -679,30 +720,62 @@ const SolitaireGame: React.FC = () => {
           </button>
         </div>
       )}
+    </>
+  )
+
+  // What stays on the board once the results are closed.
+  const finishCard = (
+    <>
+      {resultTime}
+      {submissionNote}
       <div className="mt-4 flex gap-2">
-        <button
-          type="button"
-          onClick={() => void startNewGame()}
-          className="min-h-11 flex-1 rounded-full bg-neutral-900 px-4 text-sm font-medium text-white transition-colors hover:bg-neutral-700 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
-        >
+        <button type="button" onClick={() => void startNewGame()} className={`${primaryButton} flex-1`}>
           Play again
         </button>
-        {!panel.open && (
-          <button
-            type="button"
-            onClick={() => panel.setOpen(true)}
-            className="min-h-11 rounded-full border border-neutral-300 px-4 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-200 dark:hover:bg-neutral-800"
-          >
-            Leaderboard
-          </button>
-        )}
+        <button type="button" onClick={() => setResultsOpen(true)} className={secondaryButton}>
+          Results
+        </button>
       </div>
     </>
   )
 
   return (
     <>
-      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
+      {!showResults && toastNode}
+
+      <ResultDialog
+        open={showResults}
+        onClose={() => setResultsOpen(false)}
+        label="Round over"
+        toast={toastNode}
+        actions={
+          <button type="button" onClick={() => void startNewGame()} className={`${primaryButton} w-full`}>
+            Play again
+          </button>
+        }
+      >
+        {resultTime}
+        {bestImprovementMs !== null && <PersonalBestCelebration improvementMs={bestImprovementMs} />}
+        {submissionNote}
+        <div className="mt-5 border-t border-neutral-100 pt-4 text-left dark:border-neutral-800">
+          <SoloLeaderboard
+            leaderboard={scores.leaderboard}
+            personalBest={scores.personalBest}
+            scoresLoading={scores.loading}
+            scoresError={scores.error}
+            personalBestError={scores.personalBestError}
+            onRetryScores={scores.refresh}
+            period={period}
+            onPeriodChange={setPeriod}
+            limit={RESULTS_LEADERBOARD_SIZE}
+            highlight={entry => (
+              submittedScore !== null &&
+              entry.player_id === submittedScore.player_id &&
+              entry.completed_at === submittedScore.completed_at
+            )}
+          />
+        </div>
+      </ResultDialog>
 
       <GameLayout
         hud={
@@ -726,10 +799,10 @@ const SolitaireGame: React.FC = () => {
             selectedCards={selectedCards}
             rejectedCards={rejectedCards}
             onCardClick={handleCardClick}
-            claiming={isStarting}
+            claiming={isStarting || clockPending}
             loading={isStarting}
             gameOver={isFinished}
-            gameOverContent={finishCard}
+            gameOverContent={showResults ? undefined : finishCard}
             paused={!isStarting && status === 'paused'}
             onResume={togglePause}
           />
