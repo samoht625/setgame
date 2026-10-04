@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_06_150000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_04_030000) do
   create_table "game_snapshots", force: :cascade do |t|
     t.string "name", default: "default", null: false
     t.integer "version", default: 1, null: false
@@ -29,6 +29,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_06_150000) do
     t.datetime "completed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "sets_found", default: 0, null: false
+    t.datetime "progress_at"
     t.index ["player_id"], name: "index_solo_games_on_player_id"
     t.index ["started_at"], name: "index_solo_games_on_started_at"
     t.index ["status"], name: "index_solo_games_on_status"

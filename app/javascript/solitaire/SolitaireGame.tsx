@@ -19,12 +19,17 @@ import {
 } from '../lib/solo_deal'
 import {
   getPlayerDisplayName,
+  reportSoloProgress,
   startSoloGame,
   submitSoloScore,
   type ClaimEvent
 } from '../lib/solo_api'
+import { seconds, track, type GameModeEvent } from '../lib/analytics'
 
+const MODE: GameModeEvent = 'solo'
 const LOCAL_STORAGE_KEY = 'setgame_solo_state_v2'
+// Session-scoped so a reload mid-game doesn't report the same quit twice.
+const QUIT_REPORTED_KEY = 'setgame_quit_reported'
 const BEST_TIMES_KEY = 'setgame_solo_best_times'
 // Discard an in-progress solo game once the player has been away this long.
 const IDLE_RESET_MS = 15 * 60 * 1000
@@ -36,6 +41,8 @@ interface RecentClaim {
 }
 
 export type SoloStatus = 'playing' | 'paused' | 'round_over'
+
+type QuitReason = 'new_game' | 'idle' | 'page_hide'
 
 type SavedSoloState = {
   board: number[]
@@ -49,6 +56,8 @@ type SavedSoloState = {
   rngState: number
   events: ClaimEvent[]
   eligible: boolean
+  // Invalid claims so far; informational only, the server never sees them.
+  misses: number
   submissionStatus?: 'pending' | 'submitted' | 'rejected'
   // Wall-clock time of the last save (i.e. last meaningful activity).
   savedAtMs: number
@@ -77,6 +86,7 @@ function loadSavedGame(): SavedSoloState | null {
       ...parsed,
       events: Array.isArray(parsed.events) ? parsed.events : [],
       eligible: Boolean(parsed.eligible && parsed.gameId),
+      misses: Number.isInteger(parsed.misses) && parsed.misses > 0 ? parsed.misses : 0,
       rngState: typeof parsed.rngState === 'number' ? parsed.rngState : 0,
       gameId: parsed.gameId || null,
       // Older saves have no savedAtMs; approximate last activity from the
@@ -133,6 +143,8 @@ const SolitaireGame: React.FC = () => {
   const seedRef = useRef(0)
   const submittedRef = useRef(false)
   const recentClaimsRef = useRef<RecentClaim[]>([])
+  const missesRef = useRef(0)
+  const progressSentRef = useRef<{ gameId: string; sets: number } | null>(null)
   // Wall-clock time of the last meaningful activity (save or visible timer tick).
   const lastActivityAtRef = useRef(Date.now())
   const lastActivitySaveRef = useRef(0)
@@ -178,9 +190,42 @@ const SolitaireGame: React.FC = () => {
       rngState: deal.rng.getState(),
       events: opts.events,
       eligible: opts.eligible,
+      misses: missesRef.current,
       submissionStatus: submissionStatusRef.current
     })
     lastActivityAtRef.current = Date.now()
+  }
+
+  const syncProgress = () => {
+    const gameId = gameIdRef.current
+    const sets = eventsRef.current.length
+    if (!gameId || sets === 0) return
+    const sent = progressSentRef.current
+    if (sent?.gameId === gameId && sent.sets >= sets) return
+    progressSentRef.current = { gameId, sets }
+    reportSoloProgress(gameId, sets)
+  }
+
+  /** Reports the current game as abandoned if it is still being played. */
+  const reportQuit = (reason: QuitReason) => {
+    if (isStarting || !dealStateRef.current || (status !== 'playing' && status !== 'paused')) return
+    const key = gameIdRef.current ?? `local:${seedRef.current}`
+    let reported = false
+    try {
+      reported = sessionStorage.getItem(QUIT_REPORTED_KEY) === key
+      sessionStorage.setItem(QUIT_REPORTED_KEY, key)
+    } catch {
+      // Without session storage a reload may report the same quit twice.
+    }
+    if (!reported) {
+      track('game_quit', {
+        mode: MODE,
+        reason,
+        sets: eventsRef.current.length,
+        seconds: seconds(status === 'playing' ? Date.now() - startedAtMs : elapsedMs)
+      })
+    }
+    syncProgress()
   }
 
   const applyDeal = (
@@ -194,10 +239,12 @@ const SolitaireGame: React.FC = () => {
       startedAtMs?: number
       recentClaims?: RecentClaim[]
       events?: ClaimEvent[]
+      misses?: number
       savedAtMs?: number
     }
   ) => {
     dealStateRef.current = deal
+    missesRef.current = opts.misses ?? 0
     setBoard([...deal.board])
     setDeck([...deal.deck])
 
@@ -240,7 +287,8 @@ const SolitaireGame: React.FC = () => {
     })
   }
 
-  const startNewGame = async () => {
+  const startNewGame = async (quitReason: QuitReason = 'new_game') => {
+    reportQuit(quitReason)
     startRequestRef.current?.abort()
     const request = new AbortController()
     startRequestRef.current = request
@@ -267,6 +315,7 @@ const SolitaireGame: React.FC = () => {
         status: 'playing',
         events: []
       })
+      track('game_start', { mode: MODE, ranked: true })
       return
     }
 
@@ -279,6 +328,7 @@ const SolitaireGame: React.FC = () => {
       status: 'playing',
       events: []
     })
+    track('game_start', { mode: MODE, ranked: false })
     showToast("Offline — won't count for leaderboard", 'error')
   }
 
@@ -286,7 +336,7 @@ const SolitaireGame: React.FC = () => {
     // Stamp activity first so overlapping timer ticks don't re-trigger the reset.
     lastActivityAtRef.current = Date.now()
     showToast('New game — previous game was idle for 15+ minutes', 'success')
-    void startNewGame()
+    void startNewGame('idle')
   }
 
   const finishGame = async (finalMs: number, claimEvents: ClaimEvent[]) => {
@@ -311,6 +361,7 @@ const SolitaireGame: React.FC = () => {
     if (!eligibleRef.current || !gameIdRef.current) {
       if (!eligibleRef.current) {
         showToast('Finished — not submitted (ineligible)', 'error')
+        syncProgress()
       }
       return
     }
@@ -345,6 +396,7 @@ const SolitaireGame: React.FC = () => {
       setSubmissionError('Your time is saved. Retry when you’re connected.')
     } else {
       showToast(res.error || 'Submit failed', 'error')
+      syncProgress()
     }
   }
 
@@ -360,6 +412,17 @@ const SolitaireGame: React.FC = () => {
     const sortedCards = [...cardIds].sort((a, b) => a - b)
     const result = applySoloClaim(deal, sortedCards)
     if (!result.ok) {
+      missesRef.current += 1
+      writeSave(deal, {
+        status: 'playing',
+        recentClaims,
+        startedAtMs,
+        elapsedMs: Date.now() - startedAtMs,
+        gameId: gameIdRef.current,
+        seed: seedRef.current,
+        events: eventsRef.current,
+        eligible: eligibleRef.current
+      })
       showToast(result.error, 'error')
       flashRejection(cardIds)
       setSelectedCards([])
@@ -386,7 +449,17 @@ const SolitaireGame: React.FC = () => {
     setRecentClaims(updatedRecentClaims)
     recentClaimsRef.current = updatedRecentClaims
 
+    if (newEvents.length === 1) track('first_set', { mode: MODE, seconds: seconds(tMs) })
+    if (newEvents.length === 10) track('set_10', { mode: MODE, seconds: seconds(tMs) })
+
     if (isRoundOver(deal)) {
+      track('game_complete', {
+        mode: MODE,
+        seconds: seconds(tMs),
+        misses: missesRef.current,
+        sets: newEvents.length,
+        ranked: eligibleRef.current
+      })
       submissionStatusRef.current = eligibleRef.current ? 'pending' : undefined
       setStatus('round_over')
       setElapsedMs(tMs)
@@ -525,6 +598,22 @@ const SolitaireGame: React.FC = () => {
   }, [isStarting, status, startedAtMs])
 
   useEffect(() => {
+    if (isStarting || (status !== 'playing' && status !== 'paused')) return
+    // Closing or navigating away mid-game is the clearest abandon signal; any
+    // hide (tab switch, phone lock) may be the last chance to record progress.
+    const onPageHide = () => reportQuit('page_hide')
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') syncProgress()
+    }
+    window.addEventListener('pagehide', onPageHide)
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => {
+      window.removeEventListener('pagehide', onPageHide)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
+  }, [isStarting, status, startedAtMs, elapsedMs])
+
+  useEffect(() => {
     const saved = loadSavedGame()
     const staleInProgress =
       saved !== null &&
@@ -532,6 +621,8 @@ const SolitaireGame: React.FC = () => {
       Date.now() - saved.savedAtMs >= IDLE_RESET_MS
     if (staleInProgress) {
       // The player was away 15+ minutes: discard the stale game, deal fresh.
+      track('game_quit', { mode: MODE, reason: 'idle', sets: saved.events.length })
+      if (saved.gameId && saved.events.length > 0) reportSoloProgress(saved.gameId, saved.events.length)
       startFreshAfterIdle()
     } else if (saved && (saved.board.length > 0 || saved.status === 'round_over')) {
       const deal = restoreSoloDeal(saved.board, saved.deck, saved.rngState)
@@ -550,6 +641,7 @@ const SolitaireGame: React.FC = () => {
           saved.status === 'playing' ? saved.startedAtMs : Date.now() - saved.elapsedMs,
         recentClaims: saved.recentClaims,
         events: saved.events,
+        misses: saved.misses,
         savedAtMs: saved.savedAtMs
       })
     } else {

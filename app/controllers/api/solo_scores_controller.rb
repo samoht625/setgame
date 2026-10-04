@@ -27,7 +27,7 @@ module Api
         completed_at: Time.current,
         events: events
       )
-      game.mark_completed!
+      game.mark_completed!(sets_found: events.length)
 
       personal = SoloScore.personal_bests(player_id: current_player_id)
       render json: {
