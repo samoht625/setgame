@@ -12,11 +12,10 @@ module Api
       @headers = { "X-Player-Id" => @player_id }
     end
 
-    test "the first start of the day is ranked; every later one is practice on the same deal" do
+    test "each player gets one try at the day's deal" do
       travel_to EVENING do
         first = start_daily
         assert_response :created
-        assert first.fetch("ranked")
         assert_equal "2026-10-03", first.fetch("date")
         assert_equal 1, first.fetch("number")
         assert_equal "2026-10-04T00:00:00-07:00", first.fetch("next_at")
@@ -25,14 +24,14 @@ module Api
         assert_equal first.fetch("seed"), game.seed.to_i
 
         again = start_daily
-        assert_response :ok
-        refute again.fetch("ranked")
-        assert_nil again.fetch("game_id")
-        assert_equal first.fetch("seed"), again.fetch("seed")
+        assert_response :conflict
+        assert_equal "already_played", again.fetch("error")
+        assert_equal 1, again.fetch("number")
+        refute again.key?("seed"), "no second deal once today's try is used"
         assert_equal 1, SoloGame.where(player_id: @player_id).count
 
         other = start_daily(headers: { "X-Player-Id" => SecureRandom.uuid })
-        assert other.fetch("ranked")
+        assert_response :created
         assert_equal first.fetch("seed"), other.fetch("seed"), "everyone plays the same deal"
 
         get "/api/daily", headers: @headers
@@ -43,8 +42,7 @@ module Api
 
       travel_to Time.utc(2026, 10, 4, 7) do
         tomorrow = start_daily
-        assert_response :created
-        assert tomorrow.fetch("ranked"), "a new day brings a new ranked try"
+        assert_response :created, "a new day brings a new try"
         assert_equal "2026-10-04", tomorrow.fetch("date")
         assert_equal 2, tomorrow.fetch("number")
       end
@@ -74,7 +72,7 @@ module Api
         assert_equal [elapsed_ms - 1_000, elapsed_ms], status.fetch("leaderboard").map { |entry| entry.fetch("elapsed_ms") }
         assert_equal({ "player_id" => @player_id, "display_name" => "Daily", "misses" => 3 }, status.fetch("leaderboard").last.slice("player_id", "display_name", "misses"))
         assert_equal(
-          { "attempted" => true, "streak" => 2, "result" => { "elapsed_ms" => elapsed_ms, "misses" => 3, "claim_ms" => events.map { |e| e[:t_ms] }, "rank" => 2, "total" => 2,
+          { "attempted" => true, "streak" => 2, "result" => { "elapsed_ms" => elapsed_ms, "misses" => 3, "rank" => 2, "total" => 2,
                                                          "share_token" => DailyShare.token(number: 2, elapsed_ms: elapsed_ms) } },
           status.fetch("me")
         )

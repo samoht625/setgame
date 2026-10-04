@@ -17,18 +17,18 @@ module Api
       )
     end
 
-    # The first start of the day is the ranked attempt; every later one is an
-    # unranked practice deal of the same cards.
+    # Each player gets one try at the day's deal; once it's started there is
+    # nothing more to deal until tomorrow.
     def create
       puzzle = DailyPuzzle.today
       game = puzzle.start_ranked_game(current_player_id)
+      return render json: summary(puzzle).merge(error: "already_played"), status: :conflict unless game
 
       render json: summary(puzzle).merge(
         seed: puzzle.seed,
         rules_version: SoloGame::RULES_VERSION,
-        ranked: game.present?,
-        game_id: game&.id
-      ), status: game ? :created : :ok
+        game_id: game.id
+      ), status: :created
     end
 
     private
@@ -51,7 +51,6 @@ module Api
       {
         elapsed_ms: score.elapsed_ms,
         misses: score.misses,
-        claim_ms: Array(score.events).map { |event| event["t_ms"].to_i },
         rank: puzzle.rank_of(score),
         total: puzzle.total,
         share_token: DailyShare.token(number: puzzle.number, elapsed_ms: score.elapsed_ms)

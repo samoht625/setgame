@@ -16,44 +16,18 @@ export function dailyDate(now: Date = new Date()): string {
   return `${part('year')}-${part('month')}-${part('day')}`
 }
 
-const SETS_PER_SQUARE = 3
-// Upper bound on the average time per set within a square.
-const PACE_SQUARES: Array<[number, string]> = [
-  [6_000, '🟩'],
-  [10_000, '🟨'],
-  [16_000, '🟧'],
-  [Infinity, '🟥']
-]
-
-/**
- * One square per three sets, colored by how quickly they were found, so a
- * whole game fits on one line: 🟩 under 6s a set, 🟨 under 10s, 🟧 under 16s, 🟥 slower.
- */
-export function paceRow(claimMs: number[]): string {
-  let row = ''
-  for (let start = 0; start < claimMs.length; start += SETS_PER_SQUARE) {
-    const chunk = claimMs.slice(start, start + SETS_PER_SQUARE)
-    const from = start === 0 ? 0 : claimMs[start - 1]!
-    const perSet = (chunk[chunk.length - 1]! - from) / chunk.length
-    row += PACE_SQUARES.find(([max]) => perSet < max)![1]
-  }
-  return row
-}
-
 export type DailyShare = {
   number: number
   elapsedMs: number
-  claimMs: number[]
   // Signed by the server; lets link previews show this result.
   token?: string
 }
 
-export function dailyShareText({ number, elapsedMs, claimMs, token }: DailyShare): string {
+export function dailyShareText({ number, elapsedMs, token }: DailyShare): string {
   return [
     `Set Daily #${number} · ${formatTime(elapsedMs)}`,
-    paceRow(claimMs),
     token ? `${DAILY_URL}?r=${encodeURIComponent(token)}` : DAILY_URL
-  ].filter(Boolean).join('\n')
+  ].join('\n')
 }
 
 const ORDINAL_SUFFIXES: Partial<Record<Intl.LDMLPluralRule, string>> = { one: 'st', two: 'nd', few: 'rd' }

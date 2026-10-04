@@ -25,7 +25,7 @@ try {
     outfile: bundle,
     logLevel: 'silent'
   })
-  const { dailyDate, paceRow, dailyShareText, ordinal, formatCountdown } = require(bundle)
+  const { dailyDate, dailyShareText, ordinal, formatCountdown } = require(bundle)
 
   check('the client rolls the daily over at midnight Pacific, like the server', () => {
     assert.equal(dailyDate(new Date('2026-10-04T06:59:59Z')), '2026-10-03')
@@ -34,24 +34,10 @@ try {
     assert.equal(dailyDate(new Date('2026-12-01T08:00:00Z')), '2026-12-01')
   })
 
-  check('the pace row has one square per three sets, colored by time per set', () => {
-    const seconds = list => list.map(s => s * 1000)
-    assert.equal(paceRow([]), '')
-    assert.equal(paceRow(seconds([4, 8, 12, 20, 28, 36, 48, 60, 72, 92, 112, 132])), '🟩🟨🟧🟥')
-    // Boundaries: under 6s a set is green, exactly 6s is not.
-    assert.equal(paceRow(seconds([5.9, 11.8, 17.9])), '🟩')
-    assert.equal(paceRow(seconds([6, 12, 18])), '🟨')
-    // A short last square averages only the sets it has.
-    assert.equal(paceRow(seconds([3, 6, 9, 39])), '🟩🟥')
-    const fullGame = Array.from({ length: 27 }, (_, i) => (i + 1) * 7000)
-    assert.equal(paceRow(fullGame), '🟨'.repeat(9))
-  })
-
-  check('share text has the number, time, pace and link, and nothing else', () => {
-    const text = dailyShareText({ number: 12, elapsedMs: 161_400, claimMs: [4000, 8000, 12000, 20000] })
-    assert.equal(text, 'Set Daily #12 · 2:41\n🟩🟨\nhttps://set.tido.site/daily')
-    assert.equal(dailyShareText({ number: 1, elapsedMs: 59_999, claimMs: [] }), 'Set Daily #1 · 0:59\nhttps://set.tido.site/daily')
-    assert.equal(dailyShareText({ number: 12, elapsedMs: 161_400, claimMs: [], token: 'c-3gk0-abcdefghijkl' }),
+  check('share text has the number, time and link, and nothing else', () => {
+    assert.equal(dailyShareText({ number: 12, elapsedMs: 161_400 }), 'Set Daily #12 · 2:41\nhttps://set.tido.site/daily')
+    assert.equal(dailyShareText({ number: 1, elapsedMs: 59_999 }), 'Set Daily #1 · 0:59\nhttps://set.tido.site/daily')
+    assert.equal(dailyShareText({ number: 12, elapsedMs: 161_400, token: 'c-3gk0-abcdefghijkl' }),
       'Set Daily #12 · 2:41\nhttps://set.tido.site/daily?r=c-3gk0-abcdefghijkl')
   })
 
