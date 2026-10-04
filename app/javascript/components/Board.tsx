@@ -9,7 +9,7 @@ interface BoardProps {
   onCardClick: (cardId: number) => void
   claiming: boolean
   gameOver?: boolean
-  /** Shown centered over the dimmed board when the round is over. */
+  /** Shown centered over the dimmed board when the round is over; omit for no card. */
   gameOverContent?: React.ReactNode
   /** Small heading on that card. */
   gameOverLabel?: string
@@ -43,7 +43,7 @@ const Board: React.FC<BoardProps> = ({
     // The round-over card shares the board's grid cell, so a card taller than
     // the remaining rows grows the board instead of spilling over the page.
     <div className="relative grid w-full" aria-busy={loading}>
-      {gameOver && (
+      {gameOver && gameOverContent != null && (
         <div className="pointer-events-none z-10 col-start-1 row-start-1 flex items-start justify-center py-6 sm:items-center">
           <div className="pointer-events-auto w-full max-w-xs rounded-2xl border border-neutral-200 bg-white/95 p-5 text-center shadow-lg backdrop-blur dark:border-neutral-700 dark:bg-neutral-900/95">
             <div className="text-xs font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-500">{gameOverLabel}</div>

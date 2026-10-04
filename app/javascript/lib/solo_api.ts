@@ -81,7 +81,7 @@ export async function submitSoloScore(body: {
   events: ClaimEvent[]
   misses?: number
   display_name?: string | null
-}): Promise<{ ok: true; is_personal_best?: Record<string, boolean> } | { ok: false; error: string; retryable: boolean }> {
+}): Promise<{ ok: true; score?: LeaderboardEntry } | { ok: false; error: string; retryable: boolean }> {
   try {
     const res = await fetch('/api/solo/scores', {
       method: 'POST',
@@ -94,7 +94,7 @@ export async function submitSoloScore(body: {
     // The server checks ownership before reporting an already accepted game.
     if (res.status === 422 && data.error === 'already_completed') return { ok: true }
     if (!res.ok) return { ok: false, error: data.error || 'submit_failed', retryable: res.status >= 500 || res.status === 429 }
-    return { ok: true, is_personal_best: data.is_personal_best }
+    return { ok: true, score: data.score }
   } catch {
     return { ok: false, error: 'network_error', retryable: true }
   }

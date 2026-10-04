@@ -5,43 +5,34 @@ import { formatTime } from '../solitaire/time'
 import { formatCountdown, missesLabel } from '../lib/daily'
 import type { DailyStatus } from '../lib/solo_api'
 
-interface DailyPanelProps {
+interface DailyStandingsProps {
   status: DailyStatus | null
   error: boolean
   onRetry: () => void
   playerId: string
-  nowMs: number
+  /** Show only the top of the leaderboard (the player's own row is always shown). */
+  limit?: number
 }
 
-/** Your streak, today's leaderboard and when the next deal lands. */
-const DailyPanel: React.FC<DailyPanelProps> = ({ status, error, onRetry, playerId, nowMs }) => {
+/** Today's leaderboard, with the player's row even when they are below the cut. */
+export const DailyStandings: React.FC<DailyStandingsProps> = ({ status, error, onRetry, playerId, limit }) => {
   if (!status) {
     return error ? (
-      <div className="rounded-xl border border-dashed border-neutral-200 px-3 py-4 text-center dark:border-neutral-700">
+      <div className="mt-2 rounded-xl border border-dashed border-neutral-200 px-3 py-4 text-center dark:border-neutral-700">
         <p role="status" className="text-xs text-neutral-600 dark:text-neutral-300">Could not load today’s times.</p>
         <button type="button" onClick={onRetry} className="mt-1 min-h-9 rounded-md px-3 text-xs font-medium underline underline-offset-4">Try again</button>
       </div>
     ) : (
-      <p role="status" className="rounded-xl bg-neutral-50 px-3 py-6 text-center text-xs text-neutral-500 dark:bg-neutral-800/50 dark:text-neutral-400">Loading times…</p>
+      <p role="status" className="mt-2 rounded-xl bg-neutral-50 px-3 py-6 text-center text-xs text-neutral-500 dark:bg-neutral-800/50 dark:text-neutral-400">Loading times…</p>
     )
   }
 
-  const { streak, result } = status.me
-  const msLeft = Date.parse(status.next_at) - nowMs
+  const { result } = status.me
   const rankedBelowList = result && result.rank > status.leaderboard.length
 
   return (
     <div>
-      <div className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 ${
-        streak > 0 ? 'bg-emerald-50 dark:bg-emerald-950/40' : 'bg-neutral-50 dark:bg-neutral-800/50'
-      }`}>
-        <span className={`text-xs font-medium ${streak > 0 ? 'text-emerald-800 dark:text-emerald-200' : 'text-neutral-600 dark:text-neutral-300'}`}>Your streak</span>
-        <span className={`text-sm font-semibold tabular-nums ${streak > 0 ? 'text-emerald-800 dark:text-emerald-200' : 'text-neutral-600 dark:text-neutral-300'}`}>
-          {streak} {streak === 1 ? 'day' : 'days'}
-        </span>
-      </div>
-
-      <div className="mt-4 flex items-baseline justify-between">
+      <div className="flex items-baseline justify-between">
         <SectionLabel>Daily #{status.number}</SectionLabel>
         <span className="text-[11px] text-neutral-600 dark:text-neutral-300">
           {status.total} {status.total === 1 ? 'finisher' : 'finishers'}
@@ -56,7 +47,8 @@ const DailyPanel: React.FC<DailyPanelProps> = ({ status, error, onRetry, playerI
         <LeaderboardList
           entries={status.leaderboard}
           detail={entry => missesLabel(entry.misses ?? 0)}
-          highlightPlayerId={playerId}
+          highlight={entry => entry.player_id === playerId}
+          limit={limit}
         />
       )}
 
@@ -67,6 +59,39 @@ const DailyPanel: React.FC<DailyPanelProps> = ({ status, error, onRetry, playerI
           <span className="text-sm font-semibold tabular-nums text-neutral-900 dark:text-neutral-100">{formatTime(result.elapsed_ms)}</span>
         </div>
       )}
+    </div>
+  )
+}
+
+interface DailyPanelProps {
+  status: DailyStatus | null
+  error: boolean
+  onRetry: () => void
+  playerId: string
+  nowMs: number
+}
+
+/** Your streak, today's leaderboard and when the next deal lands. */
+const DailyPanel: React.FC<DailyPanelProps> = ({ status, error, onRetry, playerId, nowMs }) => {
+  if (!status) return <DailyStandings status={status} error={error} onRetry={onRetry} playerId={playerId} />
+
+  const { streak } = status.me
+  const msLeft = Date.parse(status.next_at) - nowMs
+
+  return (
+    <div>
+      <div className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 ${
+        streak > 0 ? 'bg-emerald-50 dark:bg-emerald-950/40' : 'bg-neutral-50 dark:bg-neutral-800/50'
+      }`}>
+        <span className={`text-xs font-medium ${streak > 0 ? 'text-emerald-800 dark:text-emerald-200' : 'text-neutral-600 dark:text-neutral-300'}`}>Your streak</span>
+        <span className={`text-sm font-semibold tabular-nums ${streak > 0 ? 'text-emerald-800 dark:text-emerald-200' : 'text-neutral-600 dark:text-neutral-300'}`}>
+          {streak} {streak === 1 ? 'day' : 'days'}
+        </span>
+      </div>
+
+      <div className="mt-4">
+        <DailyStandings status={status} error={error} onRetry={onRetry} playerId={playerId} />
+      </div>
 
       <p className="mt-4 text-[11px] leading-relaxed text-neutral-600 dark:text-neutral-300">
         {msLeft > 0 ? `Next deal in ${formatCountdown(msLeft)}` : 'A new deal is ready'} · new deals at midnight Pacific

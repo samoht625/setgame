@@ -35,6 +35,17 @@ async function noOverflow(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 }
 
+/** Leaves the current game one (unranked) set from the end. */
+async function oneSetLeft(page: Page) {
+  await page.evaluate(key => {
+    const state = JSON.parse(localStorage.getItem(key)!)
+    Object.assign(state, { board: [1, 2, 3], deck: [], events: [], recentClaims: [], status: 'playing', elapsedMs: 31000, startedAtMs: Date.now() - 31000, eligible: false })
+    localStorage.setItem(key, JSON.stringify(state))
+  }, SAVE_KEY)
+  await page.reload()
+  await ready(page)
+}
+
 test('solo claims, pause, resume, full completion, reload and mode history stay consistent', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
@@ -110,6 +121,7 @@ test('an eligible solo game submits a real replay and appears on the leaderboard
   }
   expect((await response).status()).toBe(200)
   await expect(page.getByText('Finished', { exact: true })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Round over' })).toBeVisible()
   await expect(page.getByText('Your best', { exact: true })).toBeVisible()
   await expect(page.getByText('Solo Browser Tester', { exact: true }).first()).toBeVisible()
   expect((await saved(page)).submissionStatus).toBe('submitted')
@@ -118,6 +130,77 @@ test('an eligible solo game submits a real replay and appears on the leaderboard
   await page.reload()
   await expect(page.getByText('Finished', { exact: true })).toBeVisible()
   await expect(page.getByRole('complementary', { name: 'Leaderboard' })).toHaveCount(0)
+})
+
+test('a finished game shows its results in a dialog that closes by button, Escape, backdrop or a new game', async ({ page }) => {
+  await page.goto('/')
+  await ready(page)
+  await oneSetLeft(page)
+  await claim(page, [1, 2, 3])
+  const results = page.getByRole('dialog', { name: 'Round over' })
+  await expect(results).toBeVisible()
+  await expect(results.getByRole('button', { name: 'Close', exact: true })).toBeFocused()
+  await expect(page.getByRole('complementary', { name: 'Leaderboard' })).toHaveCount(0)
+
+  const viewport = page.viewportSize()!
+  const dismissals = [
+    () => results.getByRole('button', { name: 'Close', exact: true }).click(),
+    () => page.keyboard.press('Escape'),
+    () => page.mouse.click(12, viewport.height - 12)
+  ]
+  for (const dismiss of dismissals) {
+    await dismiss()
+    await expect(results).toBeHidden()
+    // The board keeps a small card to play again or bring the results back.
+    await expect(page.getByText('Cleared the deck', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Results', exact: true }).click()
+    await expect(results).toBeVisible()
+  }
+
+  await results.getByText('Cleared the deck', { exact: true }).click()
+  await expect(results).toBeVisible()
+
+  await results.getByRole('button', { name: 'Play again', exact: true }).click()
+  await ready(page)
+  await expect(page.getByText('0 sets found', { exact: true })).toBeVisible()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.getByRole('complementary', { name: 'Leaderboard' })).toHaveCount(0)
+})
+
+test('the results dialog leaves a leaderboard panel the player opened alone', async ({ page }) => {
+  await page.goto('/')
+  await ready(page)
+  await page.getByRole('button', { name: 'Leaderboard', exact: true }).click()
+  const panel = page.getByRole('complementary', { name: 'Leaderboard' })
+  await expect(panel).toBeVisible()
+  await oneSetLeft(page)
+  await claim(page, [1, 2, 3])
+  const results = page.getByRole('dialog', { name: 'Round over' })
+  await expect(results).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(results).toBeHidden()
+  await expect(panel).toBeVisible()
+  await page.getByRole('button', { name: 'Play again', exact: true }).click()
+  await ready(page)
+  await expect(panel).toBeVisible()
+})
+
+test('the results dialog fits a phone screen and closes with a tap outside', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 })
+  await page.goto('/')
+  await ready(page)
+  await oneSetLeft(page)
+  await claim(page, [1, 2, 3])
+  const results = page.getByRole('dialog', { name: 'Round over' })
+  for (const size of [{ width: 375, height: 667 }, { width: 320, height: 480 }]) {
+    await page.setViewportSize(size)
+    await expect(results.getByRole('button', { name: 'Play again', exact: true })).toBeInViewport({ ratio: 1 })
+    await expect(results.getByRole('button', { name: 'Close', exact: true })).toBeInViewport({ ratio: 1 })
+    await noOverflow(page)
+  }
+  await page.mouse.click(4, 476)
+  await expect(results).toBeHidden()
+  await expect(page.getByRole('button', { name: 'Play again', exact: true })).toBeInViewport()
 })
 
 test('leaderboard requests are single, cancellable, and distinguish failure from empty data', async ({ page }) => {

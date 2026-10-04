@@ -155,40 +155,45 @@ test('the daily is one shared deal: ranked once, clocked from first paint, share
   expect(body.daily).toMatchObject({ number, rank: expect.any(Number), total: expect.any(Number), streak: 1 })
   expect(named(events, 'game_complete')).toEqual([{ mode: 'daily', seconds: expect.any(Number), misses: 1, sets: expect.any(Number), ranked: true }])
 
-  await expect(page.getByText(`Set Daily #${number}`, { exact: true })).toBeVisible()
-  await expect(page.getByText(new RegExp(`^1 miss · ${body.daily.rank}(st|nd|rd|th) of ${body.daily.total}$`))).toBeVisible()
-  await expect(page.getByText('1-day streak', { exact: true })).toBeVisible()
-  const panel = page.getByRole('complementary', { name: 'Leaderboard' })
-  await expect(panel.getByText('1 day', { exact: true })).toBeVisible()
-  await expect(panel.locator('[aria-current="true"]')).toBeVisible()
+  // The result opens in the end-of-game dialog, not in the side panel.
+  const results = page.getByRole('dialog', { name: `Set Daily #${number}` })
+  await expect(results).toBeVisible()
+  await expect(page.getByRole('complementary', { name: 'Leaderboard' })).toHaveCount(0)
+  await expect(results.getByText(new RegExp(`^1 miss · ${body.daily.rank}(st|nd|rd|th) of ${body.daily.total}$`))).toBeVisible()
+  await expect(results.getByText('1-day streak', { exact: true })).toBeVisible()
+  await expect(results.locator('[aria-current="true"]')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Share', exact: true }).click()
-  await expect(page.getByText('Result copied — paste it anywhere')).toBeVisible()
+  await results.getByRole('button', { name: 'Share', exact: true }).click()
+  await expect(results.getByText('Result copied — paste it anywhere')).toBeVisible()
   const shared = await page.evaluate(() => navigator.clipboard.readText())
   expect(shared).toMatch(new RegExp(`^Set Daily #${number}\\n\\d+:\\d\\d · 1 miss\\n[🟩🟨🟧🟥]{8,9}\\nhttps://set\\.tido\\.site/daily$`, 'u'))
   expect(named(events, 'daily_share')).toEqual([{ outcome: 'copied' }])
 
+  // Coming back later shows the result on the board, with the full results a tap away.
   await page.reload()
-  await expect(page.getByRole('button', { name: 'Share', exact: true })).toBeVisible()
   await expect(page.getByText(new RegExp(`^1 miss · ${body.daily.rank}(st|nd|rd|th) of`))).toBeVisible()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Results', exact: true }).click()
+  await expect(results.getByRole('button', { name: 'Share', exact: true })).toBeVisible()
 
   // Practice replays the very same deal and never reaches the leaderboard.
   await page.unroute('**/api/daily/games')
   const scoreRequests: string[] = []
   page.on('request', request => { if (request.url().endsWith('/api/solo/scores')) scoreRequests.push(request.url()) })
-  await page.getByRole('button', { name: 'Practice', exact: true }).click()
+  await results.getByRole('button', { name: 'Practice', exact: true }).click()
   await ready(page)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
   expect(await cards(page)).toEqual(rankedBoard)
   await expect(page.getByText('Practice', { exact: true })).toBeVisible()
   await playOut(page)
-  await expect(page.getByText(`Practice · Daily #${number}`, { exact: true })).toBeVisible()
-  await expect(page.getByText('no misses · not ranked', { exact: true })).toBeVisible()
+  const practiceResults = page.getByRole('dialog', { name: `Practice · Daily #${number}` })
+  await expect(practiceResults).toBeVisible()
+  await expect(practiceResults.getByText('no misses · not ranked', { exact: true })).toBeVisible()
   expect(scoreRequests).toEqual([])
   expect(named(events, 'game_start')).toEqual([{ mode: 'daily', ranked: true }, { mode: 'daily', ranked: false }])
 
-  await page.getByRole('button', { name: 'Your result', exact: true }).click()
-  await expect(page.getByText(`Set Daily #${number}`, { exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Share', exact: true })).toBeVisible()
+  await practiceResults.getByRole('button', { name: 'Your result', exact: true }).click()
+  await expect(results.getByRole('button', { name: 'Share', exact: true })).toBeVisible()
   expect(errors).toEqual([])
 })
 
@@ -260,7 +265,17 @@ test('the daily fits every width from intro to result', async ({ page }) => {
   await page.reload()
   for (const width of widths) {
     await page.setViewportSize({ width, height: 900 })
-    await expect(page.getByRole('button', { name: 'Share', exact: true })).toBeInViewport()
+    await expect(page.getByRole('button', { name: 'Results', exact: true })).toBeInViewport()
+    await noOverflow(page)
+  }
+
+  await page.getByRole('button', { name: 'Results', exact: true }).click()
+  const sizes: [number, number][] = [...widths.map((width): [number, number] => [width, 900]), [320, 480]]
+  for (const [width, height] of sizes) {
+    await page.setViewportSize({ width, height })
+    // The dialog scrolls inside itself; its buttons stay on screen.
+    await expect(page.getByRole('button', { name: 'Share', exact: true })).toBeInViewport({ ratio: 1 })
+    await expect(page.getByRole('button', { name: 'Close', exact: true })).toBeInViewport({ ratio: 1 })
     await noOverflow(page)
   }
 })
@@ -268,7 +283,7 @@ test('the daily fits every width from intro to result', async ({ page }) => {
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
 
-  test('the result card fits the screen and Share opens the share sheet', async ({ page }) => {
+  test('the result fits the screen and Share opens the share sheet', async ({ page }) => {
     await page.addInitScript(() => {
       const shared: ShareData[] = []
       ;(window as unknown as { __shared: ShareData[] }).__shared = shared
@@ -285,14 +300,19 @@ test.describe('on a phone', () => {
     await expect(page.getByText('Set Daily #7', { exact: true })).toBeVisible()
     await expect(page.getByRole('timer')).toHaveText('2:12')
     await expect(page.getByText('2 misses', { exact: true })).toBeVisible()
-    await expect(page.getByRole('img', { name: /Pace/ })).toHaveText('🟩🟨🟧🟥')
     await noOverflow(page)
-    const share = page.getByRole('button', { name: 'Share', exact: true })
-    await expect(share).toBeInViewport()
-    // The card grows the board instead of spilling over the page footer.
-    const cardBottom = await share.evaluate(node => node.closest('.rounded-2xl')!.getBoundingClientRect().bottom)
+    // The board's result card grows the board instead of spilling over the page footer.
+    const openResults = page.getByRole('button', { name: 'Results', exact: true })
+    const cardBottom = await openResults.evaluate(node => node.closest('.rounded-2xl')!.getBoundingClientRect().bottom)
     const footerTop = await page.locator('footer').evaluate(node => node.getBoundingClientRect().top)
     expect(cardBottom).toBeLessThanOrEqual(footerTop)
+
+    await openResults.click()
+    const results = page.getByRole('dialog', { name: 'Set Daily #7' })
+    await expect(results.getByRole('img', { name: /Pace/ })).toHaveText('🟩🟨🟧🟥')
+    const share = results.getByRole('button', { name: 'Share', exact: true })
+    await expect(share).toBeInViewport({ ratio: 1 })
+    await noOverflow(page)
 
     await share.click()
     await expect.poll(() => page.evaluate(() => (window as unknown as { __shared: ShareData[] }).__shared)).toEqual([

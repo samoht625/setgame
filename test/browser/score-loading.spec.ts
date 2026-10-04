@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Locator, type Page } from '@playwright/test'
 import type { LeaderboardEntry } from '../../app/javascript/lib/solo_api'
 
 const SAVE_KEY = 'setgame_solo_state_v2'
@@ -17,8 +17,8 @@ function deferred() {
   return { promise, resolve }
 }
 
-async function expectBest(page: Page, time: string) {
-  await expect(page.getByText('Your best', { exact: true }).locator('..')).toContainText(time)
+async function expectBest(scope: Page | Locator, time: string) {
+  await expect(scope.getByText('Your best', { exact: true }).locator('..')).toContainText(time)
 }
 
 // Scores are only fetched while the leaderboard panel is open. The open state
@@ -161,17 +161,19 @@ test('successful submission refreshes cached personal bests and the selected lea
   let personalRequests = 0
   let leaderboardRequests = 0
   let submissions = 0
+  const submitted = entry('submitted leader', 31000)
   await page.route('**/api/solo/personal_bests', route => {
     personalRequests++
     return route.fulfill({ json: submissions ? { daily: entry('submitted best', 31000) } : personalBests() })
   })
   await page.route('**/api/solo/leaderboard?*', route => {
     leaderboardRequests++
-    return route.fulfill({ json: { entries: [entry(submissions ? 'submitted leader' : 'daily leader')] } })
+    const faster = Array.from({ length: 7 }, (_, index) => entry(`leader ${index + 1}`, 20000 + index * 1000))
+    return route.fulfill({ json: { entries: submissions ? [...faster, submitted] : [entry('daily leader')] } })
   })
   await page.route('**/api/solo/scores', route => {
     submissions++
-    return route.fulfill({ json: { ok: true, is_personal_best: { daily: true } } })
+    return route.fulfill({ json: { ok: true, score: submitted } })
   })
 
   await openLeaderboard(page)
@@ -188,8 +190,14 @@ test('successful submission refreshes cached personal bests and the selected lea
   const previousPersonalRequests = personalRequests
   const previousLeaderboardRequests = leaderboardRequests
   for (const id of [1, 2, 3]) await page.locator(`[data-card-id="${id}"]`).click()
-  await expect(page.getByText('submitted leader', { exact: true })).toBeVisible()
-  await expectBest(page, '0:31')
+  const results = page.getByRole('dialog', { name: 'Round over' })
+  await expect(results.getByText('submitted leader', { exact: true })).toBeVisible()
+  await expectBest(results, '0:31')
+  // The results show the top five, then where this game landed.
+  await expect(results.getByText('leader 5', { exact: true })).toBeVisible()
+  await expect(results.getByText('leader 6', { exact: true })).toHaveCount(0)
+  await expect(results.locator('[aria-current="true"]')).toHaveText(/^8submitted leader0:31/)
+  await expect(page.getByRole('complementary', { name: 'Leaderboard' }).getByText('leader 7', { exact: true })).toBeVisible()
   expect(submissions).toBe(1)
   expect(personalRequests).toBe(previousPersonalRequests + 1)
   expect(leaderboardRequests).toBe(previousLeaderboardRequests + 1)
