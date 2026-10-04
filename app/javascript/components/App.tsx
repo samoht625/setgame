@@ -17,6 +17,12 @@ function pathForMode(mode: GameMode): string {
   return mode === 'multiplayer' ? '/m' : '/'
 }
 
+// Must match the <title> each route renders in app/views/home.
+const TITLES: Record<GameMode, string> = {
+  solo: 'Set — Play the card game online, free',
+  multiplayer: 'Set Multiplayer — Race friends to find sets'
+}
+
 const App: React.FC = () => {
   const [mode, setMode] = useState<GameMode>(() => modeFromPath(window.location.pathname))
   // Only polled while in solo mode; multiplayer already shows the live roster.
@@ -29,7 +35,7 @@ const App: React.FC = () => {
   }, [])
 
   useEffect(() => {
-    document.title = mode === 'solo' ? 'Set — Solo' : 'Set — Multiplayer'
+    document.title = TITLES[mode]
   }, [mode])
 
   const switchMode = (next: GameMode) => {
