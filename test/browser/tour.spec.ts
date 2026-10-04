@@ -101,13 +101,13 @@ test('players from before the tour don’t see it', async ({ page }) => {
 test('How to play opens from the header menu, leads with the example set and keeps the full rules in the page', async ({ page, request }) => {
   const html = await (await request.get('/')).text()
   expect(html).toContain('Three cards are a set when each feature is either the same on all three cards or different on all three.')
-  expect(html).toContain('Fan site, not affiliated with Set Enterprises.')
+  expect(html).not.toContain('not affiliated with Set Enterprises')
+  expect(html).not.toContain('<footer')
 
   await page.addInitScript(() => localStorage.setItem('setgame_tour_v1', 'done'))
   await page.goto('/')
   // The rules aren't spelled out on the page itself any more.
   await expect(page.getByText('Three cards are a set when each feature', { exact: false })).toBeHidden()
-  await expect(page.getByText('Fan site, not affiliated with Set Enterprises.')).toBeVisible()
 
   await page.getByRole('button', { name: 'Menu', exact: true }).click()
   await page.getByRole('menuitem', { name: 'How to play', exact: true }).click()

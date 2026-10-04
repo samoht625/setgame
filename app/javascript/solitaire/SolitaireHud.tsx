@@ -1,6 +1,6 @@
 import React from 'react'
 import type { SoloStatus } from './SolitaireGame'
-import { Hud, HudChip, HudDivider, HudStat } from '../components/Hud'
+import { Hud, HudChip, HudDivider, HudIconButton, HudStat, RestartIcon } from '../components/Hud'
 import { useGameMenu } from '../components/GameMenu'
 import ScoreValue from '../components/ScoreValue'
 import { formatTime } from './time'
@@ -46,7 +46,7 @@ export const SoloTimer: React.FC<{ startedAtMs: number; elapsedMs: number; runni
   )
 }
 
-/** Timer and the two numbers that matter; the controls live in the header menu. */
+/** Timer, the two numbers that matter and a New game button; the other controls live in the header menu. */
 const SolitaireHud: React.FC<SolitaireHudProps> = ({
   elapsedMs,
   startedAtMs,
@@ -79,7 +79,13 @@ const SolitaireHud: React.FC<SolitaireHudProps> = ({
   ])
 
   return (
-    <Hud>
+    <Hud
+      actions={
+        <HudIconButton label="New game" onClick={onRestart} disabled={isStarting}>
+          <RestartIcon />
+        </HudIconButton>
+      }
+    >
       <SoloTimer startedAtMs={startedAtMs} elapsedMs={elapsedMs} running={!isStarting && status === 'playing'} loading={isStarting} />
       {statusChip && <HudChip tone={statusChip.tone}>{statusChip.label}</HudChip>}
       <HudDivider />

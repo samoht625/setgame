@@ -209,6 +209,31 @@ test('the results dialog fits a phone screen and closes with a tap outside', asy
   await expect(page.getByRole('button', { name: 'Play again', exact: true })).toBeInViewport()
 })
 
+test('New game is a visible button on the solo board row, and the header and board row stay on one line on phones', async ({ page }) => {
+  await page.goto('/')
+  await ready(page)
+  const before = (await saved(page)).gameId
+  for (const width of [320, 375]) {
+    await page.setViewportSize({ width, height: 700 })
+    const newGame = page.getByRole('button', { name: 'New game', exact: true })
+    await expect(newGame).toBeInViewport({ ratio: 1 })
+    const timer = await page.getByRole('timer', { name: 'Elapsed time' }).boundingBox()
+    const button = await newGame.boundingBox()
+    // Same row as the timer and stats.
+    expect(Math.abs((button!.y + button!.height / 2) - (timer!.y + timer!.height / 2))).toBeLessThan(8)
+    const header = await page.locator('header').first().boundingBox()
+    expect(header!.height).toBeLessThanOrEqual(64)
+    await noOverflow(page)
+  }
+  await page.screenshot({ path: 'tmp/newgame-mobile.png', clip: { x: 0, y: 0, width: 375, height: 260 } })
+  await page.getByRole('button', { name: 'New game', exact: true }).click()
+  await expect.poll(async () => (await saved(page)).gameId).not.toBe(before)
+  await ready(page)
+  // Still in the menu too.
+  await page.getByRole('button', { name: 'Menu', exact: true }).click()
+  await expect(page.getByRole('menuitem', { name: 'New game', exact: true })).toBeEnabled()
+})
+
 test('leaderboard requests are single, cancellable, and distinguish failure from empty data', async ({ page }) => {
   const requests: string[] = []
   let fail = false
