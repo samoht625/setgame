@@ -10,6 +10,7 @@ import { useHeartbeat } from '../hooks/useHeartbeat'
 import { useMultiplayerFunnel } from '../hooks/useMultiplayerFunnel'
 import { useSidePanel } from '../hooks/useSidePanel'
 import { useSound } from './SoundProvider'
+import { onNameChange } from '../lib/player_name'
 
 interface Placement {
   player_id: string
@@ -232,6 +233,11 @@ const MultiplayerGame: React.FC = () => {
       // ignore storage failures
     }
   }, [playerId, gameState.names])
+
+  // A name set from the header menu shows up at the table right away.
+  useEffect(() => onNameChange(name => {
+    subscriptionRef.current?.perform('update_name', { name })
+  }), [])
 
   const updatePlayerName = useCallback((name: string) => {
     if (!subscriptionRef.current) return

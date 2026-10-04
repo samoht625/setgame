@@ -16,6 +16,7 @@ Rails.application.routes.draw do
     get "solo/personal_bests", to: "solo_scores#personal_bests"
     get "daily", to: "daily#show"
     post "daily/games", to: "daily#create"
+    patch "daily/name", to: "daily#name"
   end
 
   # Multiplayer game ("m" for "meet me at the table")

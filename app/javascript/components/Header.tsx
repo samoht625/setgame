@@ -3,6 +3,7 @@ import type { GameMode } from './App'
 import CardFace from './CardFace'
 import { useSound } from './SoundProvider'
 import { openHowToPlay } from '../rules/HowToPlay'
+import { openNameDialog } from './NameDialog'
 import { MenuButton } from './GameMenu'
 
 interface HeaderProps {
@@ -94,6 +95,7 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
           <MenuButton
             appItems={[
               { label: 'How to play', onSelect: openHowToPlay },
+              { label: 'Your name', onSelect: openNameDialog },
               { label: 'Sound', onSelect: sound.toggle, checked: sound.enabled }
             ]}
           />

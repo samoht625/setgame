@@ -8,6 +8,7 @@ import { CardSymbols } from './CardFace'
 import { SoundProvider } from './SoundProvider'
 import { GameMenuProvider } from './GameMenu'
 import HowToPlay from '../rules/HowToPlay'
+import NameDialog from './NameDialog'
 import Tour, { shouldShowTour } from '../rules/Tour'
 
 export type GameMode = 'multiplayer' | 'daily' | 'solo'
@@ -65,6 +66,7 @@ const App: React.FC = () => {
         {mode === 'solo' ? <SolitaireGame holdDeal={touring} /> : mode === 'daily' ? <DailyGame /> : <MultiplayerGame />}
         {touring && <Tour onDone={() => setTouring(false)} />}
         <HowToPlay />
+        <NameDialog />
       </div>
       </GameMenuProvider>
     </SoundProvider>

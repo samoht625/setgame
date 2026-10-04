@@ -1,9 +1,11 @@
-import React from 'react'
+import React, { useState } from 'react'
+import NameEditor from '../components/NameEditor'
+import { getSavedName } from '../lib/player_name'
 import LeaderboardList from '../components/LeaderboardList'
 import { SectionLabel } from '../solitaire/SolitairePanel'
 import { formatTime } from '../solitaire/time'
 import { formatCountdown } from '../lib/daily'
-import type { DailyStatus } from '../lib/solo_api'
+import type { DailyEntry, DailyStatus } from '../lib/solo_api'
 
 interface DailyStandingsProps {
   status: DailyStatus | null
@@ -14,10 +16,43 @@ interface DailyStandingsProps {
   limit?: number
   /** Heading over the list; defaults to the deal's number. */
   label?: string
+  /** Set when the player can put a name on their own (Anonymous) score. */
+  onNameScore?: (name: string) => Promise<boolean>
+}
+
+/** The player's own Anonymous row: an obvious way to add a name, edited in place. */
+const AddYourName: React.FC<{ onSave: (name: string) => Promise<boolean>; label?: string }> = ({ onSave, label = 'Anonymous' }) => {
+  const [editing, setEditing] = useState(false)
+  if (editing) {
+    return (
+      <NameEditor
+        compact
+        initial={getSavedName() ?? ''}
+        onSave={async name => {
+          const ok = await onSave(name)
+          if (ok) setEditing(false)
+          return ok
+        }}
+        onCancel={() => setEditing(false)}
+      />
+    )
+  }
+  return (
+    <span className="flex min-w-0 flex-1 items-center gap-2">
+      <span className="truncate text-sm font-medium text-neutral-500 dark:text-neutral-400">{label}</span>
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        className="min-h-8 shrink-0 rounded-full bg-amber-200 px-2.5 text-xs font-semibold text-amber-950 transition-colors hover:bg-amber-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 dark:bg-amber-800 dark:text-amber-50 dark:hover:bg-amber-700"
+      >
+        Add your name
+      </button>
+    </span>
+  )
 }
 
 /** Today's leaderboard, with the player's row even when they are below the cut. */
-export const DailyStandings: React.FC<DailyStandingsProps> = ({ status, error, onRetry, playerId, limit, label }) => {
+export const DailyStandings: React.FC<DailyStandingsProps> = ({ status, error, onRetry, playerId, limit, label, onNameScore }) => {
   if (!status) {
     return error ? (
       <div className="mt-2 rounded-xl border border-dashed border-neutral-200 px-3 py-4 text-center dark:border-neutral-700">
@@ -50,13 +85,16 @@ export const DailyStandings: React.FC<DailyStandingsProps> = ({ status, error, o
           entries={status.leaderboard}
           highlight={entry => entry.player_id === playerId}
           limit={limit}
+          renderName={onNameScore ? (entry: DailyEntry, isMine) => (isMine && !entry.display_name ? <AddYourName onSave={onNameScore} /> : null) : undefined}
         />
       )}
 
       {rankedBelowList && (
         <div aria-current="true" className="mt-1 flex items-center gap-2.5 rounded-lg bg-amber-50 px-2 py-1.5 dark:bg-amber-950/40">
           <span className="w-5 shrink-0 text-center text-[10px] font-semibold tabular-nums text-neutral-600 dark:text-neutral-300">{result.rank}</span>
-          <span className="min-w-0 flex-1 text-sm font-medium text-neutral-900 dark:text-neutral-100">You</span>
+          {onNameScore ? <AddYourName onSave={onNameScore} label="You" /> : (
+            <span className="min-w-0 flex-1 text-sm font-medium text-neutral-900 dark:text-neutral-100">You</span>
+          )}
           <span className="text-sm font-semibold tabular-nums text-neutral-900 dark:text-neutral-100">{formatTime(result.elapsed_ms)}</span>
         </div>
       )}
