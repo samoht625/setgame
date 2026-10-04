@@ -33,6 +33,10 @@
 
     <%= yield :head %>
 
+    <% if Rails.env.production? %>
+      <script defer src="https://analytics.tido.site/script.js" data-website-id="b4235c8a-975d-4920-85d3-0a87a4af920c"></script>
+    <% end %>
+
     <link rel="icon" href="/icon.png" type="image/png">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
