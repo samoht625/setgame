@@ -24,11 +24,13 @@ interface DailyCardProps {
   onShare?: () => void
   shareNote: string | null
   onNextDeal: () => void
+  /** The result shown is from an earlier day (a run finished after midnight), so today's deal is already open. */
+  stale?: boolean
 }
 
 /** What /daily shows once today's try is used: the result, today's leaderboard and what's next. */
 const DailyCard: React.FC<DailyCardProps> = ({
-  number, result, streak, note, status, statusError, onRetryStatus, playerId, nowMs, onShare, shareNote, onNextDeal
+  number, result, streak, note, status, statusError, onRetryStatus, playerId, nowMs, onShare, shareNote, onNextDeal, stale = false
 }) => {
   const titleId = useId()
   const msLeft = status ? Date.parse(status.next_at) - nowMs : null
@@ -80,7 +82,7 @@ const DailyCard: React.FC<DailyCardProps> = ({
 
         {msLeft !== null && (
           <div className="border-t border-neutral-100 px-5 py-3 text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
-            {msLeft > 0 ? (
+            {!stale && msLeft > 0 ? (
               <>Next deal in {formatCountdown(msLeft)}</>
             ) : (
               <button type="button" onClick={onNextDeal} className="min-h-9 font-medium text-neutral-900 underline underline-offset-4 dark:text-neutral-100">
