@@ -33,7 +33,9 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
       assert_select "meta[name='twitter:card'][content='summary_large_image']"
       assert_select "link[rel=manifest][href='/manifest.json']"
       assert_select "link[rel=apple-touch-icon][href='/apple-touch-icon.png']"
-      assert_select "footer", text: /Three cards are a set when each feature/
+      # The rules live in the How to play dialog, still in the page for search engines.
+      assert_select "dialog#how-to-play", text: /Three cards are a set when each feature/
+      assert_select "footer", text: /not affiliated with Set Enterprises/
     end
   end
 

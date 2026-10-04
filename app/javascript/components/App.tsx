@@ -6,6 +6,9 @@ import DailyGame from '../daily/DailyGame'
 import { usePresence } from '../hooks/usePresence'
 import { CardSymbols } from './CardFace'
 import { SoundProvider } from './SoundProvider'
+import { GameMenuProvider } from './GameMenu'
+import HowToPlay from '../rules/HowToPlay'
+import Tour, { shouldShowTour } from '../rules/Tour'
 
 export type GameMode = 'multiplayer' | 'daily' | 'solo'
 
@@ -31,6 +34,8 @@ const TITLES: Record<GameMode, string> = {
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<GameMode>(() => modeFromPath(window.location.pathname))
+  // First visit only; see shouldShowTour.
+  const [touring, setTouring] = useState(shouldShowTour)
   // Not polled in multiplayer, which already shows the live roster.
   const othersOnline = usePresence(mode !== 'multiplayer')
 
@@ -52,11 +57,16 @@ const App: React.FC = () => {
 
   return (
     <SoundProvider>
+      <GameMenuProvider>
       <div className="min-h-dvh bg-neutral-100 text-neutral-900 antialiased dark:bg-[#111214] dark:text-neutral-100">
         <CardSymbols />
         <Header mode={mode} onSwitchMode={switchMode} othersOnline={othersOnline} />
-        {mode === 'solo' ? <SolitaireGame /> : mode === 'daily' ? <DailyGame /> : <MultiplayerGame />}
+        {/* A solo deal (and its clock) waits for the tour; the daily's clock only starts on Start. */}
+        {mode === 'solo' ? <SolitaireGame holdDeal={touring} /> : mode === 'daily' ? <DailyGame /> : <MultiplayerGame />}
+        {touring && <Tour onDone={() => setTouring(false)} />}
+        <HowToPlay />
       </div>
+      </GameMenuProvider>
     </SoundProvider>
   )
 }
