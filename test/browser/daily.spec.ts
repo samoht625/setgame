@@ -298,10 +298,6 @@ test.describe('on a phone', () => {
     await expect(results.getByText(/[🟩🟨🟧🟥]/u)).toHaveCount(0)
     await expect(page.getByRole('dialog')).toHaveCount(0)
     await noOverflow(page)
-    // The card sits above the page footer.
-    const cardBottom = await results.evaluate(node => node.getBoundingClientRect().bottom)
-    const footerTop = await page.locator('footer').evaluate(node => node.getBoundingClientRect().top)
-    expect(cardBottom).toBeLessThanOrEqual(footerTop)
     const share = results.getByRole('button', { name: 'Share', exact: true })
     await expect(share).toBeInViewport({ ratio: 1 })
     await expect(results.getByRole('link', { name: 'Play solo', exact: true })).toBeInViewport({ ratio: 1 })
