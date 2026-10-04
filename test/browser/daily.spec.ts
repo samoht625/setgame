@@ -133,8 +133,10 @@ test('the daily is one shared deal: played once, clocked from first paint, then 
   expect(started.startedAtMs).toBeGreaterThanOrEqual(cardsShownAt)
   await expect.poll(() => named(events, 'game_start')).toEqual([{ mode: 'daily', ranked: true }])
   // A ranked daily can't be paused or restarted.
-  await expect(page.getByRole('button', { name: 'Pause' })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'New game' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Menu', exact: true }).click()
+  await expect(page.getByRole('menuitem', { name: 'Pause' })).toHaveCount(0)
+  await expect(page.getByRole('menuitem', { name: 'New game' })).toHaveCount(0)
+  await page.keyboard.press('Escape')
   const rankedBoard = await cards(page)
 
   await claim(page, findTriple(rankedBoard, false))

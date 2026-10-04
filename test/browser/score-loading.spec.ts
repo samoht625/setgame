@@ -1,6 +1,12 @@
 import { test, expect, type Locator, type Page } from '@playwright/test'
 import type { LeaderboardEntry } from '../../app/javascript/lib/solo_api'
 
+/** Picks an action from the header's overflow menu. */
+async function menu(page: Page, name: string) {
+  await page.getByRole('button', { name: 'Menu', exact: true }).click()
+  await page.getByRole('menuitem', { name, exact: true }).click()
+}
+
 const SAVE_KEY = 'setgame_solo_state_v2'
 
 function entry(name: string, elapsedMs = 120000): LeaderboardEntry {
@@ -25,7 +31,7 @@ async function expectBest(scope: Page | Locator, time: string) {
 // persists on desktop, so this only needs to happen once per test.
 async function openLeaderboard(page: Page) {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Leaderboard', exact: true }).click()
+  await menu(page, 'Leaderboard')
   await expect(page.getByRole('complementary', { name: 'Leaderboard' })).toBeVisible()
 }
 

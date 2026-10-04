@@ -1,6 +1,12 @@
 import { test, expect, type Page } from '@playwright/test'
 import { isSet } from '../../app/javascript/lib/rules'
 
+/** Picks an action from the header's overflow menu. */
+async function menu(page: Page, name: string) {
+  await page.getByRole('button', { name: 'Menu', exact: true }).click()
+  await page.getByRole('menuitem', { name, exact: true }).click()
+}
+
 const SAVE_KEY = 'setgame_solo_state_v2'
 type Event = [string, Record<string, unknown> | undefined]
 
@@ -65,7 +71,7 @@ test('solo funnel events fire once each and abandoned progress is saved on the s
   expect((await saved(page)).misses).toBe(1)
 
   const progress = page.waitForRequest(request => request.url().endsWith(`/api/solo/games/${gameId}/progress`))
-  await page.getByRole('button', { name: 'New game', exact: true }).click()
+  await menu(page, 'New game')
   const request = await progress
   expect(request.postDataJSON()).toEqual({ sets_found: 1 })
   expect((await request.response())?.status()).toBe(204)
@@ -82,7 +88,7 @@ test('starting over mid-game and leaving the page are reported as quits', async 
   await ready(page)
   await claim(page, findTriple(await cards(page)))
   await expect(page.getByText('1 set found', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'New game', exact: true }).click()
+  await menu(page, 'New game')
   await ready(page)
   expect(named(events, 'game_quit')).toEqual([{ mode: 'solo', reason: 'new_game', sets: 1, seconds: expect.any(Number) }])
 
@@ -122,7 +128,7 @@ test('a broken or blocked tracker never affects play', async ({ page }) => {
   await ready(page)
   await claim(page, findTriple(await cards(page)))
   await expect(page.getByText('1 set found', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'New game', exact: true }).click()
+  await menu(page, 'New game')
   await ready(page)
   await expect(page.getByText('0 sets found', { exact: true })).toBeVisible()
   expect(errors).toEqual([])

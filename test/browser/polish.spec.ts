@@ -1,6 +1,23 @@
 import { test, expect, type Page } from '@playwright/test'
 import { isSet, cardAttributes } from '../../app/javascript/lib/rules'
 
+/** Picks an action from the header's overflow menu. */
+async function menu(page: Page, name: string) {
+  await page.getByRole('button', { name: 'Menu', exact: true }).click()
+  await page.getByRole('menuitem', { name, exact: true }).click()
+}
+
+async function toggleSound(page: Page) {
+  await page.getByRole('button', { name: 'Menu', exact: true }).click()
+  await page.getByRole('menuitemcheckbox', { name: 'Sound' }).click()
+}
+
+async function expectSound(page: Page, on: boolean) {
+  await page.getByRole('button', { name: 'Menu', exact: true }).click()
+  await expect(page.getByRole('menuitemcheckbox', { name: 'Sound' })).toHaveAttribute('aria-checked', String(on))
+  await page.keyboard.press('Escape')
+}
+
 const SAVE_KEY = 'setgame_solo_state_v2'
 
 async function ready(page: Page) {
@@ -48,11 +65,11 @@ test('both modes use crisp SVG cards and load no raster card images', async ({ p
   }
   await claim(page, await validTriple(page))
   await expect(page.getByText('1 set found', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Leaderboard', exact: true }).click()
+  await menu(page, 'Leaderboard')
   await expect(page.getByRole('complementary', { name: 'Leaderboard' }).getByText('Last sets found')).toBeVisible()
   await expect(page.locator('aside img')).toHaveCount(0)
   await expect(page.locator('aside svg[viewBox="0 0 258 167"]')).toHaveCount(3)
-  await page.getByRole('button', { name: 'Leaderboard', exact: true }).click()
+  await menu(page, 'Leaderboard')
   await page.getByRole('button', { name: 'Multiplayer', exact: true }).click()
   await expect(page.getByText('Live', { exact: true })).toBeVisible()
   await ready(page)
@@ -126,24 +143,24 @@ test('optional sound stays off by default, plays only when enabled, and persists
   const soundState = () => page.evaluate(() => (window as unknown as { soundTest: { contexts: number; notes: number; closes: number } }).soundTest)
   await page.goto('/')
   await ready(page)
-  await expect(page.getByRole('button', { name: 'Enable sound' })).toHaveAttribute('aria-pressed', 'false')
+  await expectSound(page, false)
   await claim(page, await validTriple(page))
   expect((await soundState()).contexts).toBe(0)
-  await page.getByRole('button', { name: 'Enable sound' }).click()
+  await toggleSound(page)
   await expect.poll(async () => (await soundState()).notes).toBe(1)
   const before = (await soundState()).notes
   await claim(page, await validTriple(page))
   await expect.poll(async () => (await soundState()).notes - before).toBe(5)
   await page.getByRole('button', { name: 'Multiplayer', exact: true }).click()
   await ready(page)
-  await expect(page.getByRole('button', { name: 'Mute sound' })).toHaveAttribute('aria-pressed', 'true')
+  await expectSound(page, true)
   const beforeMulti = (await soundState()).notes
   await claim(page, await validTriple(page))
   await expect.poll(async () => (await soundState()).notes - beforeMulti).toBe(5)
-  await page.getByRole('button', { name: 'Mute sound' }).click()
+  await toggleSound(page)
   expect((await soundState()).closes).toBe(1)
   await page.reload()
-  await expect(page.getByRole('button', { name: 'Enable sound' })).toBeVisible()
+  await expectSound(page, false)
   expect((await soundState()).contexts).toBe(0)
 })
 
@@ -162,9 +179,9 @@ test('enabled sound survives a reload without starting audio automatically', asy
   })
   await page.goto('/m')
   await ready(page)
-  await page.getByRole('button', { name: 'Enable sound' }).click()
+  await toggleSound(page)
   await page.reload()
-  await expect(page.getByRole('button', { name: 'Mute sound' })).toBeVisible()
+  await expectSound(page, true)
   expect(await page.evaluate(() => (window as unknown as { audioContextsCreated: number }).audioContextsCreated)).toBe(0)
 })
 
@@ -181,11 +198,11 @@ test('sound preferences synchronize between open tabs and native audio starts af
   const second = await context.newPage()
   await second.goto('/')
   await ready(second)
-  await page.getByRole('button', { name: 'Enable sound' }).click()
-  await expect(second.getByRole('button', { name: 'Mute sound' })).toBeVisible()
+  await toggleSound(page)
+  await expectSound(second, true)
   await expect.poll(() => page.evaluate(() => (window as unknown as { lastGameAudio?: AudioContext }).lastGameAudio?.state)).toBe('running')
-  await second.getByRole('button', { name: 'Mute sound' }).click()
-  await expect(page.getByRole('button', { name: 'Enable sound' })).toBeVisible()
+  await toggleSound(second)
+  await expectSound(page, false)
   await expect.poll(() => page.evaluate(() => (window as unknown as { lastGameAudio?: AudioContext }).lastGameAudio?.state)).toBe('closed')
   await second.close()
 })
@@ -200,12 +217,12 @@ test('sound failure and blocked storage leave gameplay usable', async ({ page })
   })
   await page.goto('/')
   await ready(page)
-  await page.getByRole('button', { name: 'Enable sound' }).click()
+  await toggleSound(page)
   await claim(page, await validTriple(page))
   await expect(page.getByText('1 set found', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Multiplayer', exact: true }).click()
   await ready(page)
-  await page.getByRole('button', { name: 'Mute sound' }).click()
+  await toggleSound(page)
   expect(errors).toEqual([])
 })
 
@@ -255,15 +272,17 @@ for (const colorScheme of ['light', 'dark'] as const) {
     for (const width of [320, 375, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       const timer = await page.getByRole('timer').boundingBox()
-      const pause = await page.getByRole('button', { name: 'Pause', exact: true }).boundingBox()
+      const more = await page.getByRole('button', { name: 'Menu', exact: true }).boundingBox()
+      const modes = await page.getByRole('navigation', { name: 'Game mode' }).boundingBox()
       const card = await page.locator('[data-card-id]').first().boundingBox()
       expect(timer).not.toBeNull()
-      expect(pause).not.toBeNull()
       expect(card).not.toBeNull()
       expect(timer!.y + timer!.height).toBeLessThanOrEqual(card!.y)
-      expect(Math.abs(pause!.y + pause!.height / 2 - (timer!.y + timer!.height / 2))).toBeLessThan(8)
+      // The header is one row: the mode switch and the menu, above the HUD.
+      expect(Math.abs(more!.y + more!.height / 2 - (modes!.y + modes!.height / 2))).toBeLessThan(4)
+      expect(more!.y + more!.height).toBeLessThanOrEqual(timer!.y)
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-      await page.getByRole('button', { name: 'Pause', exact: true }).click()
+      await menu(page, 'Pause')
       await expect(page.getByRole('button', { name: 'Resume game' })).toBeVisible()
       await page.getByRole('button', { name: 'Resume game' }).click()
       await ready(page)

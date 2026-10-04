@@ -1,4 +1,11 @@
 let cachedPlayerId: string | undefined
+let createdThisVisit = false
+
+/** True when this page load made up the player's id, i.e. this browser hasn't been here before. */
+export function isNewPlayer(): boolean {
+  getPlayerId()
+  return createdThisVisit
+}
 
 export function getPlayerId(): string {
   if (cachedPlayerId) return cachedPlayerId
@@ -11,6 +18,7 @@ export function getPlayerId(): string {
 
   if (!cachedPlayerId) {
     cachedPlayerId = crypto.randomUUID()
+    createdThisVisit = true
     try {
       localStorage.setItem('setgame_player_id', cachedPlayerId)
     } catch {
