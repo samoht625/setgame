@@ -14,10 +14,15 @@ Rails.application.routes.draw do
     post "solo/scores", to: "solo_scores#create"
     get "solo/leaderboard", to: "solo_scores#leaderboard"
     get "solo/personal_bests", to: "solo_scores#personal_bests"
+    get "daily", to: "daily#show"
+    post "daily/games", to: "daily#create"
   end
 
   # Multiplayer game ("m" for "meet me at the table")
   get '/m' => 'home#multiplayer', as: :multiplayer
+
+  # Today's shared solo deal
+  get '/daily' => 'home#daily', as: :daily
 
   # Tiny JSON endpoint: who is at the multiplayer table right now
   get '/presence' => 'presence#show', defaults: { format: :json }

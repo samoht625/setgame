@@ -25,9 +25,26 @@ module Api
         display_name: display_name,
         elapsed_ms: params[:elapsed_ms].to_i,
         completed_at: Time.current,
-        events: events
+        events: events,
+        daily_on: game.daily_on,
+        misses: params[:misses].presence&.to_i&.clamp(0, 9_999)
       )
       game.mark_completed!(sets_found: events.length)
+
+      if game.daily_on
+        puzzle = DailyPuzzle.new(game.daily_on)
+        return render json: {
+          ok: true,
+          score: serialize_score(score),
+          daily: {
+            date: puzzle.date.iso8601,
+            number: puzzle.number,
+            rank: puzzle.rank_of(score),
+            total: puzzle.total,
+            streak: puzzle.streak_for(current_player_id)
+          }
+        }
+      end
 
       personal = SoloScore.personal_bests(player_id: current_player_id)
       render json: {

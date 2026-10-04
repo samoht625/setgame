@@ -6,4 +6,7 @@ class HomeController < ApplicationController
 
   def multiplayer
   end
+
+  def daily
+  end
 end

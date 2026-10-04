@@ -15,6 +15,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
   test "each page has its own title, description, canonical URL and share preview" do
     {
       "/" => ["Set — Play the card game online, free", "https://set.tido.site/"],
+      "/daily" => ["Set Daily — Today’s deal, same for everyone", "https://set.tido.site/daily"],
       "/m" => ["Set Multiplayer — Race friends to find sets", "https://set.tido.site/m"]
     }.each do |path, (title, url)|
       get path
@@ -49,7 +50,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
 
     sitemap = Nokogiri::XML(Rails.root.join("public/sitemap.xml").read)
     locations = sitemap.remove_namespaces!.xpath("//url/loc").map(&:text)
-    assert_equal %w[https://set.tido.site/ https://set.tido.site/m], locations
+    assert_equal %w[https://set.tido.site/ https://set.tido.site/daily https://set.tido.site/m], locations
 
     manifest = JSON.parse(Rails.root.join("public/manifest.json").read)
     assert_equal "/", manifest.fetch("start_url")

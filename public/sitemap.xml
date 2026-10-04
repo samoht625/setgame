@@ -4,6 +4,9 @@
     <loc>https://set.tido.site/</loc>
   </url>
   <url>
+    <loc>https://set.tido.site/daily</loc>
+  </url>
+  <url>
     <loc>https://set.tido.site/m</loc>
   </url>
 </urlset>

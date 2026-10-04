@@ -27,9 +27,11 @@ class SoloGame < ApplicationRecord
   # Starting a new game abandons the player's oldest open games so the open
   # count stays under MAX_OPEN_PER_PLAYER. Abandoned games (restarts, idle
   # resets, rejected submits) must never lock a player out of the leaderboard.
+  # Ranked daily games are left alone: each is the player's only ranked
+  # attempt that day and has its own one-per-day limit.
   def self.abandon_excess_open!(player_id:, keep:)
     excess_ids = open_games
-      .where(player_id: player_id)
+      .where(player_id: player_id, daily_on: nil)
       .order(started_at: :desc)
       .offset(keep)
       .pluck(:id)

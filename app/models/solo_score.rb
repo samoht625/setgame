@@ -25,15 +25,27 @@ class SoloScore < ApplicationRecord
     end
   end
 
+  # Daily-deal times have their own board: everyone played the same deal.
+  scope :regular, -> { where(daily_on: nil) }
+
   def self.leaderboard(period:, limit: 20)
-    select(*SUMMARY_COLUMNS)
+    regular
+      .select(*SUMMARY_COLUMNS)
       .where(completed_at: period_range(period))
       .order(:elapsed_ms, :completed_at)
       .limit(limit)
   end
 
+  def self.daily_leaderboard(date:, limit:)
+    select(*SUMMARY_COLUMNS, :misses)
+      .where(daily_on: date)
+      .order(:elapsed_ms, :completed_at)
+      .limit(limit)
+  end
+
   def self.personal_best(player_id:, period:)
-    select(*SUMMARY_COLUMNS)
+    regular
+      .select(*SUMMARY_COLUMNS)
       .where(player_id: player_id, completed_at: period_range(period))
       .order(:elapsed_ms, :completed_at)
       .first
@@ -44,7 +56,7 @@ class SoloScore < ApplicationRecord
       daily: personal_best(player_id: player_id, period: "daily"),
       weekly: personal_best(player_id: player_id, period: "weekly"),
       monthly: personal_best(player_id: player_id, period: "monthly"),
-      all_time: select(*SUMMARY_COLUMNS).where(player_id: player_id).order(:elapsed_ms, :created_at).first
+      all_time: regular.select(*SUMMARY_COLUMNS).where(player_id: player_id).order(:elapsed_ms, :created_at).first
     }
   end
 end
