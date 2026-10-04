@@ -69,7 +69,6 @@ Daily / weekly / monthly solo leaderboards use `America/New_York` (`config.time_
 - [x] Rails app created with ActionCable support
 - [x] React + TypeScript frontend implemented
 - [x] Game engine and rules engine implemented
-- [x] Card images copied to public/cards/
 - [x] Local testing completed
 - [x] render.yaml configuration created
 - [x] SQLite persistence for multiplayer + solo leaderboards
