@@ -25,6 +25,7 @@ import {
   type ClaimEvent
 } from '../lib/solo_api'
 import { seconds, track, type GameModeEvent } from '../lib/analytics'
+import { afterNextPaint } from '../lib/after_paint'
 
 const MODE: GameModeEvent = 'solo'
 const LOCAL_STORAGE_KEY = 'setgame_solo_state_v2'
@@ -130,6 +131,8 @@ const SolitaireGame: React.FC = () => {
   const [submissionError, setSubmissionError] = useState<string | null>(null)
   const submissionStatusRef = useRef<SavedSoloState['submissionStatus']>(undefined)
   const [isStarting, setIsStarting] = useState(true)
+  // A fresh deal's clock waits until its cards are on screen.
+  const [clockPending, setClockPending] = useState(false)
   const panel = useSidePanel()
   const scores = useSoloScores(period, panel.open)
   const startRequestRef = useRef<AbortController | null>(null)
@@ -266,6 +269,7 @@ const SolitaireGame: React.FC = () => {
     const st = opts.status || 'playing'
     setStatus(st)
     setIsStarting(false)
+    setClockPending(opts.startedAtMs === undefined && st === 'playing')
     setSelectedCards([])
     setRejectedCards([])
     submittedRef.current = st === 'round_over'
@@ -494,7 +498,7 @@ const SolitaireGame: React.FC = () => {
   }
 
   const handleCardClick = (cardId: number) => {
-    if (isStarting || status !== 'playing') return
+    if (isStarting || clockPending || status !== 'playing') return
     if (Date.now() - lastActivityAtRef.current >= IDLE_RESET_MS) {
       startFreshAfterIdle()
       return
@@ -563,7 +567,28 @@ const SolitaireGame: React.FC = () => {
   }
 
   useEffect(() => {
-    if (isStarting || status !== 'playing') return
+    if (!clockPending) return
+    return afterNextPaint(() => {
+      const now = Date.now()
+      setStartedAtMs(now)
+      setClockPending(false)
+      if (dealStateRef.current && eventsRef.current.length === 0) {
+        writeSave(dealStateRef.current, {
+          status: 'playing',
+          recentClaims: recentClaimsRef.current,
+          startedAtMs: now,
+          elapsedMs: 0,
+          gameId: gameIdRef.current,
+          seed: seedRef.current,
+          events: eventsRef.current,
+          eligible: eligibleRef.current
+        })
+      }
+    })
+  }, [clockPending])
+
+  useEffect(() => {
+    if (isStarting || clockPending || status !== 'playing') return
 
     const saveActivity = () => {
       if (document.visibilityState !== 'visible' || startRequestRef.current) return
@@ -595,7 +620,7 @@ const SolitaireGame: React.FC = () => {
       clearInterval(timer)
       document.removeEventListener('visibilitychange', saveActivity)
     }
-  }, [isStarting, status, startedAtMs])
+  }, [isStarting, clockPending, status, startedAtMs])
 
   useEffect(() => {
     if (isStarting || (status !== 'playing' && status !== 'paused')) return
@@ -726,7 +751,7 @@ const SolitaireGame: React.FC = () => {
             selectedCards={selectedCards}
             rejectedCards={rejectedCards}
             onCardClick={handleCardClick}
-            claiming={isStarting}
+            claiming={isStarting || clockPending}
             loading={isStarting}
             gameOver={isFinished}
             gameOverContent={finishCard}

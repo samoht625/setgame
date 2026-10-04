@@ -199,6 +199,30 @@ test('a delayed abandoned new game cannot overwrite a more recent solo game', as
   expect(requests).toBe(2)
 })
 
+test('a new solo game starts its clock once its cards are on screen, not when they were requested', async ({ page }) => {
+  await page.addInitScript(() => {
+    new MutationObserver((_, observer) => {
+      if (!document.querySelector('[data-card-id]')) return
+      ;(window as unknown as { __cardsShownAt: number }).__cardsShownAt = Date.now()
+      observer.disconnect()
+    }).observe(document, { childList: true, subtree: true })
+  })
+  let requestedAt = 0
+  await page.route('**/api/solo/games', async route => {
+    requestedAt = Date.now()
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    await route.continue()
+  })
+  await page.goto('/')
+  await expect(page.getByText('Dealing cards…', { exact: true })).toBeVisible()
+  await ready(page)
+  const { startedAtMs } = await saved(page)
+  const cardsShownAt = await page.evaluate(() => (window as unknown as { __cardsShownAt: number }).__cardsShownAt)
+  expect(startedAtMs).toBeGreaterThanOrEqual(requestedAt + 1500)
+  expect(startedAtMs).toBeGreaterThanOrEqual(cardsShownAt)
+  await expect(page.getByRole('timer')).toHaveText(/^0:0[0-2]$/)
+})
+
 test('offline play and unavailable browser storage do not crash either mode', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
