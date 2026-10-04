@@ -5,13 +5,16 @@ interface NameEditorProps {
   initial: string
   /** Resolves false when the name couldn't be saved (e.g. offline). */
   onSave: (name: string) => Promise<boolean> | boolean
-  onCancel: () => void
+  /** Escape calls this; without it Escape does nothing. */
+  onCancel?: () => void
   /** Keeps the field and button in one tight row (leaderboard rows). */
   compact?: boolean
+  /** Off where focusing would pop up a phone keyboard over the page uninvited. */
+  autoFocus?: boolean
 }
 
 /** A name field with Save: Enter saves, Escape cancels. */
-const NameEditor: React.FC<NameEditorProps> = ({ initial, onSave, onCancel, compact = false }) => {
+const NameEditor: React.FC<NameEditorProps> = ({ initial, onSave, onCancel, compact = false, autoFocus = true }) => {
   const [value, setValue] = useState(initial)
   const [saving, setSaving] = useState(false)
   const [failed, setFailed] = useState(false)
@@ -22,6 +25,7 @@ const NameEditor: React.FC<NameEditorProps> = ({ initial, onSave, onCancel, comp
   const canSave = !saving && Boolean(cleaned)
 
   useEffect(() => {
+    if (!autoFocus) return
     inputRef.current?.focus()
     inputRef.current?.select()
   }, [])
@@ -45,7 +49,7 @@ const NameEditor: React.FC<NameEditorProps> = ({ initial, onSave, onCancel, comp
           ref={inputRef}
           value={value}
           onChange={event => { setValue(event.target.value); setFailed(false) }}
-          onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onCancel() } }}
+          onKeyDown={event => { if (event.key === 'Escape' && onCancel) { event.preventDefault(); event.stopPropagation(); onCancel() } }}
           aria-label="Your name"
           aria-invalid={invalid || undefined}
           aria-describedby={message ? hintId : undefined}
