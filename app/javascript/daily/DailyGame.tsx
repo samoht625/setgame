@@ -20,10 +20,12 @@ import {
   type DailyShare
 } from '../lib/daily'
 import { getPlayerId } from '../lib/player_id'
+import { NAME_HINT, NAME_MAX_LENGTH, cleanName, getSavedName, onNameChange, saveName } from '../lib/player_name'
 import { applySoloClaim, isRoundOver, restoreSoloDeal, startSoloDeal } from '../lib/solo_deal'
 import {
   fetchDailyStatus,
   getPlayerDisplayName,
+  nameDailyScore,
   reportSoloProgress,
   startDailyGame,
   submitSoloScore,
@@ -128,6 +130,10 @@ const DailyGame: React.FC = () => {
   const rejectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const shareNoteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const progressSentRef = useRef<{ gameId: string; sets: number } | null>(null)
+  // Asked once, before Start, only of players who haven't given a name yet.
+  const [askName] = useState(() => !getSavedName())
+  const [introName, setIntroName] = useState(() => getSavedName() ?? '')
+  const namedScoreRef = useRef<string | null>(null)
   const showingTimes = panel.open
   const showedTimesRef = useRef(showingTimes)
 
@@ -242,6 +248,9 @@ const DailyGame: React.FC = () => {
 
   const begin = async () => {
     if (starting) return
+    // The name is optional and never blocks starting; one the leaderboard won't take is just not saved.
+    const name = askName ? cleanName(introName) : null
+    if (name) saveName(name)
     setStarting(true)
     setSelectedCards([])
     setRejectedCards([])
@@ -400,6 +409,35 @@ const DailyGame: React.FC = () => {
       : null
   const streak = status && (!run || run.date === status.date) ? status.me.streak : 0
   const number = run?.number ?? status?.number
+  // The player's own score for today exists on the server, so a name can still be put on it.
+  const namedRun = finishedRun && statusMatchesRun && finishedRun.submission === 'submitted' ? finishedRun : null
+  const myEntry = status?.leaderboard.find(entry => entry.player_id === playerId)
+  const myScoreName = myEntry ? myEntry.display_name : status?.me.result?.display_name
+
+  const nameScore = async (name: string): Promise<boolean> => {
+    if (!namedRun) return false
+    const ok = await nameDailyScore(namedRun.gameId, name)
+    if (!ok) return false
+    namedScoreRef.current = name
+    saveName(name)
+    setStatus(current => current && {
+      ...current,
+      leaderboard: current.leaderboard.map(entry => (entry.player_id === playerId ? { ...entry, display_name: name } : entry)),
+      me: { ...current.me, result: current.me.result && { ...current.me.result, display_name: name } }
+    })
+    track('daily_name', { from: 'card' })
+    refreshStatus()
+    return true
+  }
+
+  // A name changed elsewhere (the menu) also goes on today's score.
+  const nameScoreRef = useRef(nameScore)
+  nameScoreRef.current = nameScore
+  useEffect(() => onNameChange(name => {
+    if (namedScoreRef.current === name) return
+    void nameScoreRef.current(name)
+  }), [])
+
   const toastNode = toast && <Toast message={toast} onClose={() => setToast(null)} />
   const playing = starting || run?.status === 'playing'
 
@@ -440,6 +478,7 @@ const DailyGame: React.FC = () => {
           shareNote={shareNote}
           onNextDeal={goToToday}
           stale={staleRun}
+          onNameScore={namedRun && status?.me.result && !myScoreName ? nameScore : undefined}
         />
       </>
     )
@@ -457,7 +496,28 @@ const DailyGame: React.FC = () => {
           <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
             One try. The clock starts when the cards appear and runs until you clear the deck.
           </p>
-          <button type="button" onClick={() => void begin()} disabled={starting} className={`${primaryButton} mt-4 w-full`}>
+          {askName && (
+            <label className="mt-4 block text-left">
+              <span className="text-xs font-medium text-neutral-700 dark:text-neutral-200">
+                Name for the leaderboard <span className="font-normal text-neutral-500 dark:text-neutral-400">(optional)</span>
+              </span>
+              <input
+                value={introName}
+                onChange={event => setIntroName(event.target.value)}
+                onKeyDown={event => { if (event.key === 'Enter') void begin() }}
+                placeholder="Anonymous"
+                maxLength={NAME_MAX_LENGTH}
+                autoComplete="nickname"
+                enterKeyHint="go"
+                aria-invalid={cleanName(introName) === null || undefined}
+                className={`mt-1 h-10 w-full rounded-md border bg-white px-2.5 text-base text-neutral-900 focus:outline-none dark:bg-neutral-800 dark:text-neutral-100 ${
+                  cleanName(introName) === null ? 'border-rose-400 focus:border-rose-500' : 'border-neutral-300 focus:border-neutral-500 dark:border-neutral-600 dark:focus:border-neutral-400'
+                }`}
+              />
+              {cleanName(introName) === null && <span role="status" className="mt-1 block text-[11px] text-rose-700 dark:text-rose-300">{NAME_HINT}</span>}
+            </label>
+          )}
+          <button type="button" onClick={() => void begin()} disabled={starting} className={`${primaryButton} ${askName ? 'mt-3' : 'mt-4'} w-full`}>
             Start
           </button>
           {streak > 0 && (

@@ -103,13 +103,7 @@ module Api
     end
 
     def sanitize_name(name)
-      return nil if name.blank?
-
-      name = name.to_s.strip
-      return nil if name.length < 1 || name.length > 20
-      return nil unless name.match?(/\A[\p{L}\p{Nd} _\-]+\z/u)
-
-      name
+      PlayerName.sanitize(name)
     end
 
     def normalize_events(raw)

@@ -26,11 +26,13 @@ interface DailyCardProps {
   onNextDeal: () => void
   /** The result shown is from an earlier day (a run finished after midnight), so today's deal is already open. */
   stale?: boolean
+  /** Set when the player's score is Anonymous and they can put a name on it. */
+  onNameScore?: (name: string) => Promise<boolean>
 }
 
 /** What /daily shows once today's try is used: the result, today's leaderboard and what's next. */
 const DailyCard: React.FC<DailyCardProps> = ({
-  number, result, streak, note, status, statusError, onRetryStatus, playerId, nowMs, onShare, shareNote, onNextDeal, stale = false
+  number, result, streak, note, status, statusError, onRetryStatus, playerId, nowMs, onShare, shareNote, onNextDeal, stale = false, onNameScore
 }) => {
   const titleId = useId()
   const msLeft = status ? Date.parse(status.next_at) - nowMs : null
@@ -77,7 +79,7 @@ const DailyCard: React.FC<DailyCardProps> = ({
         </div>
 
         <div className="border-t border-neutral-100 px-5 py-4 text-left dark:border-neutral-800">
-          <DailyStandings status={status} error={statusError} onRetry={onRetryStatus} playerId={playerId} limit={LEADERBOARD_SIZE} label="Today’s leaderboard" />
+          <DailyStandings status={status} error={statusError} onRetry={onRetryStatus} playerId={playerId} limit={LEADERBOARD_SIZE} label="Today’s leaderboard" onNameScore={onNameScore} />
         </div>
 
         {msLeft !== null && (

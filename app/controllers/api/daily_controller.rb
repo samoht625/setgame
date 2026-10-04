@@ -31,6 +31,26 @@ module Api
       ), status: :created
     end
 
+    # Puts a name on the player's own score for today, e.g. after finishing as
+    # Anonymous. Player ids are public on the leaderboard, so the id alone isn't
+    # proof of ownership: the request must also name the game the score came
+    # from, which only the browser that played it was ever told.
+    def name
+      display_name = PlayerName.sanitize(params[:display_name])
+      return render json: { error: "invalid_name" }, status: :unprocessable_entity unless display_name
+
+      puzzle = DailyPuzzle.today
+      score = SoloScore.find_by(
+        solo_game_id: params[:game_id].to_s,
+        player_id: current_player_id,
+        daily_on: puzzle.date
+      )
+      return render json: { error: "not_found" }, status: :not_found unless score
+
+      score.update!(display_name: display_name)
+      render json: { ok: true, display_name: display_name }
+    end
+
     private
 
     def summary(puzzle)
@@ -49,6 +69,7 @@ module Api
 
     def serialize_result(puzzle, score)
       {
+        display_name: score.display_name,
         elapsed_ms: score.elapsed_ms,
         misses: score.misses,
         rank: puzzle.rank_of(score),

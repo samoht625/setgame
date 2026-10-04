@@ -1,4 +1,5 @@
 import { getPlayerId } from './player_id'
+import { getSavedName } from './player_name'
 
 function headers(json = true): HeadersInit {
   const h: Record<string, string> = {
@@ -40,6 +41,7 @@ export type DailyStatus = {
     attempted: boolean
     streak: number
     result: {
+      display_name?: string | null
       elapsed_ms: number
       misses: number | null
       rank: number
@@ -166,14 +168,21 @@ export async function startDailyGame(): Promise<DailyStart | 'already_played' | 
 }
 
 export function getPlayerDisplayName(): string | null {
+  return getSavedName()
+}
+
+/** Puts a name on the player's own score for today; the game id proves it's theirs. */
+export async function nameDailyScore(gameId: string, displayName: string): Promise<boolean> {
   try {
-    const id = getPlayerId()
-    return (
-      localStorage.getItem(`setgame_player_name:${id}`) ||
-      localStorage.getItem('setgame_name') ||
-      null
-    )
+    const res = await fetch('/api/daily/name', {
+      method: 'PATCH',
+      headers: headers(),
+      credentials: 'same-origin',
+      body: JSON.stringify({ game_id: gameId, display_name: displayName }),
+      signal: AbortSignal.timeout(8000)
+    })
+    return res.ok
   } catch {
-    return null
+    return false
   }
 }
