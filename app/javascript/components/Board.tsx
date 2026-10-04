@@ -11,6 +11,8 @@ interface BoardProps {
   gameOver?: boolean
   /** Shown centered over the dimmed board when the round is over. */
   gameOverContent?: React.ReactNode
+  /** Small heading on that card. */
+  gameOverLabel?: string
   paused?: boolean
   loading?: boolean
   onResume?: () => void
@@ -25,22 +27,26 @@ const Board: React.FC<BoardProps> = ({
   claiming,
   gameOver = false,
   gameOverContent,
+  gameOverLabel = 'Round over',
   paused = false,
   loading = false,
   onResume
 }) => {
   const isRevealingSet = foundCards.length === 3
   const interactionLocked = claiming || gameOver || paused || loading || isRevealingSet
+  // Empty slots keep the board's footprint when there are no cards to show.
+  const placeholders = loading || (gameOver && cards.length === 0)
 
   return (
     // Grid geometry stays constant regardless of how many cards are dealt:
     // extra cards simply add rows below, so existing cards never move or resize.
-    <div className={`relative w-full ${gameOver && cards.length === 0 ? 'min-h-64' : ''}`} aria-busy={loading}>
-      {/* Round over overlay */}
+    // The round-over card shares the board's grid cell, so a card taller than
+    // the remaining rows grows the board instead of spilling over the page.
+    <div className="relative grid w-full" aria-busy={loading}>
       {gameOver && (
-        <div className="pointer-events-none absolute inset-0 z-10 flex items-start justify-center pt-6 sm:items-center sm:pt-0">
+        <div className="pointer-events-none z-10 col-start-1 row-start-1 flex items-start justify-center py-6 sm:items-center">
           <div className="pointer-events-auto w-full max-w-xs rounded-2xl border border-neutral-200 bg-white/95 p-5 text-center shadow-lg backdrop-blur dark:border-neutral-700 dark:bg-neutral-900/95">
-            <div className="text-xs font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-500">Round over</div>
+            <div className="text-xs font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-500">{gameOverLabel}</div>
             {gameOverContent}
           </div>
         </div>
@@ -58,9 +64,9 @@ const Board: React.FC<BoardProps> = ({
 
       {loading && <div role="status" className="absolute inset-0 z-10 flex items-center justify-center text-sm font-medium text-neutral-500 dark:text-neutral-400">Dealing cards…</div>}
       <div
-        className={`grid grid-cols-3 gap-2 sm:gap-3 lg:grid-cols-4 ${gameOver || paused ? 'opacity-40 saturate-50' : ''}`}
+        className={`col-start-1 row-start-1 grid grid-cols-3 content-start gap-2 sm:gap-3 lg:grid-cols-4 ${gameOver || paused ? 'opacity-40 saturate-50' : ''}`}
       >
-        {loading ? Array.from({ length: 12 }, (_, index) => (
+        {placeholders ? Array.from({ length: 12 }, (_, index) => (
           <div key={index} aria-hidden="true" className="aspect-[258/167] rounded-xl border border-neutral-200 bg-white/60 dark:border-neutral-800 dark:bg-neutral-900" />
         )) : cards.map((cardId) => {
           const isSelected = selectedCards.includes(cardId)

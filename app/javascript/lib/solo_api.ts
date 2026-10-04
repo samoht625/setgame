@@ -28,6 +28,38 @@ export type ClaimEvent = {
   t_ms: number
 }
 
+export type DailyEntry = LeaderboardEntry & { misses: number | null }
+
+export type DailyStatus = {
+  date: string
+  number: number
+  next_at: string
+  total: number
+  leaderboard: DailyEntry[]
+  me: {
+    attempted: boolean
+    streak: number
+    result: {
+      elapsed_ms: number
+      misses: number | null
+      claim_ms: number[]
+      rank: number
+      total: number
+    } | null
+  }
+}
+
+export type DailyStart = {
+  date: string
+  number: number
+  next_at: string
+  seed: number
+  rules_version: number
+  /** False once today's ranked try is used: the same deal, as practice. */
+  ranked: boolean
+  game_id: string | null
+}
+
 export async function startSoloGame(signal?: AbortSignal): Promise<SoloGameStart | null> {
   try {
     const res = await fetch('/api/solo/games', {
@@ -47,6 +79,7 @@ export async function submitSoloScore(body: {
   game_id: string
   elapsed_ms: number
   events: ClaimEvent[]
+  misses?: number
   display_name?: string | null
 }): Promise<{ ok: true; is_personal_best?: Record<string, boolean> } | { ok: false; error: string; retryable: boolean }> {
   try {
@@ -105,6 +138,31 @@ export async function fetchPersonalBests(signal?: AbortSignal): Promise<Record<s
   })
   if (!res.ok) throw new Error('Could not load personal bests')
   return await res.json()
+}
+
+export async function fetchDailyStatus(signal?: AbortSignal): Promise<DailyStatus> {
+  const res = await fetch('/api/daily', {
+    headers: headers(false),
+    credentials: 'same-origin',
+    signal
+  })
+  if (!res.ok) throw new Error('Could not load the daily')
+  return await res.json()
+}
+
+export async function startDailyGame(): Promise<DailyStart | null> {
+  try {
+    const res = await fetch('/api/daily/games', {
+      method: 'POST',
+      headers: headers(),
+      credentials: 'same-origin',
+      signal: AbortSignal.timeout(8000)
+    })
+    if (!res.ok) return null
+    return (await res.json()) as DailyStart
+  } catch {
+    return null
+  }
 }
 
 export function getPlayerDisplayName(): string | null {
