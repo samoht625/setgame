@@ -7,6 +7,7 @@ import PlayersPanel from './PlayersPanel'
 import SidePanel from './SidePanel'
 import Toast, { ToastMessage } from './Toast'
 import { useHeartbeat } from '../hooks/useHeartbeat'
+import { useMultiplayerFunnel } from '../hooks/useMultiplayerFunnel'
 import { useSidePanel } from '../hooks/useSidePanel'
 import { useSound } from './SoundProvider'
 
@@ -76,6 +77,12 @@ const MultiplayerGame: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false)
   const [scoreAnimationKeys, setScoreAnimationKeys] = useState<Record<string, string>>({})
   const panel = useSidePanel()
+  const { noteAttempt, noteMiss } = useMultiplayerFunnel(
+    playerId,
+    gameState.status,
+    (playerId && gameState.scores[playerId]) || 0,
+    gameState.placements.find(placement => placement.player_id === playerId)?.place ?? null
+  )
 
   const subscriptionRef = useRef<any>(null)
   const claimTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -132,6 +139,7 @@ const MultiplayerGame: React.FC = () => {
           showToast(data.error, 'error')
           if (data.action !== 'reset') {
             // Response to one of our own claims failed
+            if (data.error === 'Not a valid set') noteMiss()
             clearClaimTimeout()
             flashRejection(selectedCardsRef.current)
             setSelectedCards([])
@@ -182,7 +190,7 @@ const MultiplayerGame: React.FC = () => {
       // Close the socket so we don't appear online while playing solo
       consumer.disconnect()
     }
-  }, [playSet])
+  }, [playSet, noteMiss])
 
   useEffect(() => {
     const onOffline = () => {
@@ -261,6 +269,7 @@ const MultiplayerGame: React.FC = () => {
     }
 
     setClaiming(true)
+    noteAttempt()
 
     // Reset claiming if the server never answers our claim
     clearClaimTimeout()

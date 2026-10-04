@@ -30,5 +30,10 @@ module Api
         rules_version: game.rules_version
       }, status: :created
     end
+
+    def progress
+      SoloGame.record_progress!(id: params[:id], player_id: current_player_id, sets_found: params[:sets_found])
+      head :no_content
+    end
   end
 end

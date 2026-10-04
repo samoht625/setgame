@@ -67,6 +67,21 @@ export async function submitSoloScore(body: {
   }
 }
 
+/** Fire-and-forget: records how far an unfinished game got. Safe to call while the page is unloading. */
+export function reportSoloProgress(gameId: string, setsFound: number): void {
+  try {
+    fetch(`/api/solo/games/${encodeURIComponent(gameId)}/progress`, {
+      method: 'POST',
+      headers: headers(),
+      credentials: 'same-origin',
+      body: JSON.stringify({ sets_found: setsFound }),
+      keepalive: true
+    }).catch(() => {})
+  } catch {
+    // Progress is best-effort analytics.
+  }
+}
+
 export async function fetchLeaderboard(
   period: 'daily' | 'weekly' | 'monthly',
   limit = 20,

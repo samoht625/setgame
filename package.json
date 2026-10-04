@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "test:browser": "playwright test",
     "test:rules": "node script/test_solo_rules.cjs",
-    "test:cards": "node script/test_card_artwork.cjs"
+    "test:cards": "node script/test_card_artwork.cjs",
+    "assets:brand": "node script/generate_brand_assets.cjs"
   },
   "dependencies": {
     "@rails/actioncable": "^8.0.300",

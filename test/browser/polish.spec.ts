@@ -32,9 +32,12 @@ async function lastSet(page: Page, previousBest: number | null) {
   await ready(page)
 }
 
-test('both modes use crisp SVG cards and load no PNG card assets', async ({ page }) => {
+test('both modes use crisp SVG cards and load no raster card images', async ({ page }) => {
   const requests: string[] = []
-  page.on('request', request => { if (/\/cards\/.*\.png/.test(request.url())) requests.push(request.url()) })
+  page.on('request', request => {
+    const path = new URL(request.url()).pathname
+    if (request.resourceType() === 'image' && !/^\/(icon|apple-touch-icon)[\w-]*\.(png|svg)$/.test(path)) requests.push(request.url())
+  })
   await page.goto('/')
   await ready(page)
   for (const card of await page.locator('[data-card-id]').all()) {

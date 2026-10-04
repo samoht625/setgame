@@ -1,3 +1,1 @@
-<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="256" cy="256" r="256" fill="red"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><defs><path id="set-card-squiggle" d="M-10-54 C7-54 22.5-41 22.5-19 C22.5-4.5 15 2.5 15 11.5 C15 23.5 25.5 32.5 25.5 39.5 C25.5 46.5 15 50.5 6 50.5 C-13 50.5-23.5 39.5-23.5 22.5 C-23.5 6.5-13.5-6.5-13.5-18 C-13.5-30.5-24.5-40-24.5-45.5 C-24.5-51-17-54-10-54 Z"></path><path id="set-card-diamond" d="M0-59 28 0 0 59-28 0Z"></path><rect id="set-card-oval" x="-26.5" y="-55" width="53" height="110" rx="26.5"></rect></defs><rect width="512" height="512" rx="112" fill="#fff"/><use href="#set-card-squiggle" fill="#ea1c2d" transform="translate(114 256) scale(1.9)"/><use href="#set-card-diamond" fill="#613394" transform="translate(256 256) scale(1.9)"/><use href="#set-card-oval" fill="#009b4d" transform="translate(398 256) scale(1.9)"/></svg>

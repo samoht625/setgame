@@ -32,6 +32,7 @@ module Api
       assert_equal({ "daily" => true, "weekly" => true, "monthly" => true }, result.fetch("is_personal_best"))
       assert_equal({ "daily" => elapsed_ms, "weekly" => elapsed_ms, "monthly" => elapsed_ms, "all_time" => elapsed_ms }, result.fetch("personal_bests"))
       assert_equal "completed", game.reload.status
+      assert_equal events.length, game.sets_found
 
       get "/api/solo/leaderboard", params: { period: "daily" }, headers: @headers
       assert_response :success

@@ -6,6 +6,8 @@ class SoloGame < ApplicationRecord
   RULES_VERSION = 1
   MAX_OPEN_PER_PLAYER = 5
   EXPIRES_AFTER = 7.days
+  # 81 cards make at most 27 disjoint sets.
+  MAX_SETS = 27
 
   has_one :solo_score, dependent: :destroy
 
@@ -44,7 +46,19 @@ class SoloGame < ApplicationRecord
     status == "expired" || (open? && started_at < EXPIRES_AFTER.ago)
   end
 
-  def mark_completed!
-    update!(status: "completed", completed_at: Time.current)
+  # Client-reported progress of an unfinished game, kept for funnel analysis.
+  # It only ever grows, and finished games keep their verified count.
+  def self.record_progress!(id:, player_id:, sets_found:)
+    sets = sets_found.to_i.clamp(0, MAX_SETS)
+    now = Time.current
+    where(id: id, player_id: player_id)
+      .where.not(status: "completed")
+      .where("sets_found < ?", sets)
+      .update_all(sets_found: sets, progress_at: now, updated_at: now)
+  end
+
+  def mark_completed!(sets_found:)
+    now = Time.current
+    update!(status: "completed", completed_at: now, sets_found: sets_found, progress_at: now)
   end
 end

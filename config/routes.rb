@@ -10,6 +10,7 @@ Rails.application.routes.draw do
 
   namespace :api do
     post "solo/games", to: "solo_games#create"
+    post "solo/games/:id/progress", to: "solo_games#progress"
     post "solo/scores", to: "solo_scores#create"
     get "solo/leaderboard", to: "solo_scores#leaderboard"
     get "solo/personal_bests", to: "solo_scores#personal_bests"

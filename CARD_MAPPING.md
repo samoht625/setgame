@@ -1,7 +1,7 @@
 # Card Mapping Reference
 
-This document explains how card IDs (1-81) map to Set game attributes and to the
-images in `public/cards/`.
+This document explains how card IDs (1-81) map to Set game attributes. Cards are
+drawn as SVG by `app/javascript/components/CardFace.tsx`.
 
 ## Mapping Algorithm
 
