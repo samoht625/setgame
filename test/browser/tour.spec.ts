@@ -64,15 +64,31 @@ test('the first visit shows a two-step rules tour before the deal, then never ag
   expect(errors).toEqual([])
 })
 
-test('skipping the tour is remembered too', async ({ page }) => {
+test('the tour is modal, and skipping it is remembered too', async ({ page }) => {
   const events = await recordEvents(page)
   await page.goto('/daily')
-  await page.getByRole('button', { name: 'Skip', exact: true }).click()
-  await expect(page.getByText('Same deal for everyone today.')).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Every card has 4 features' })).toBeVisible()
+  // The page behind is inert: the daily's Start can't even take focus from under the tour.
+  const start = page.getByRole('button', { name: 'Start', exact: true })
+  expect(await start.evaluate(node => { (node as HTMLElement).focus(); return document.activeElement === node })).toBe(false)
+  // Tabbing never lands on the page behind (it may step out to the browser's own UI, as native modals do).
+  for (let i = 0; i < 4; i++) {
+    await page.keyboard.press('Tab')
+    expect(await page.evaluate(() => document.activeElement === document.body || Boolean(document.activeElement?.closest('dialog')))).toBe(true)
+  }
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeVisible()
   expect(events.filter(([name]) => name.startsWith('tour_'))).toEqual([['tour_start', undefined], ['tour_skip', { step: 1 }]])
   await page.reload()
   await expect(page.getByText('Same deal for everyone today.')).toBeVisible()
   await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+test('Skip closes the tour and deals', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Skip', exact: true }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.locator('[data-card-id]').first()).toBeVisible()
 })
 
 test('players from before the tour don’t see it', async ({ page }) => {
