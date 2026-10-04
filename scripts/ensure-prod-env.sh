@@ -26,6 +26,10 @@ DEFAULT_DB="$HOME/www/setgame-data/production.sqlite3"
 append_if_missing "DATABASE_PATH" "$DEFAULT_DB"
 append_if_missing "WEB_CONCURRENCY" "1"
 append_if_missing "RAILS_MAX_THREADS" "3"
+# Puma runs under systemd, whose PATH may not include node (nvm, etc.).
+if command -v node >/dev/null 2>&1; then
+  append_if_missing "NODE_BINARY" "$(command -v node)"
+fi
 
 # Export KEY=value lines for the rest of the deploy script.
 set -a

@@ -406,7 +406,8 @@ const DailyGame: React.FC = () => {
         elapsedMs: rankedRun.elapsedMs,
         claimMs: rankedRun.events.map(event => event.t_ms),
         rank: statusMatchesRanked ? serverResult?.rank : undefined,
-        total: statusMatchesRanked ? serverResult?.total : undefined
+        total: statusMatchesRanked ? serverResult?.total : undefined,
+        token: statusMatchesRanked ? serverResult?.share_token : undefined
       }
     : status && serverResult
       ? {
@@ -414,7 +415,8 @@ const DailyGame: React.FC = () => {
           elapsedMs: serverResult.elapsed_ms,
           claimMs: serverResult.claim_ms,
           rank: serverResult.rank,
-          total: serverResult.total
+          total: serverResult.total,
+          token: serverResult.share_token
         }
       : null
   const streak = status && (!run || run.date === status.date) ? status.me.streak : 0

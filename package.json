@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@rails/actioncable": "^8.0.300",
+    "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/cli": "^4.1.14",
     "@types/node": "^24.8.1",
     "@types/react": "^19.2.2",

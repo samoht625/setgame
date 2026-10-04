@@ -53,7 +53,8 @@ module Api
         misses: score.misses,
         claim_ms: Array(score.events).map { |event| event["t_ms"].to_i },
         rank: puzzle.rank_of(score),
-        total: puzzle.total
+        total: puzzle.total,
+        share_token: DailyShare.token(number: puzzle.number, elapsed_ms: score.elapsed_ms)
       }
     end
   end

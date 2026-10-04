@@ -15,18 +15,18 @@
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Set">
     <meta property="og:locale" content="en_US">
-    <%= tag.meta property: "og:title", content: page_title %>
-    <%= tag.meta property: "og:description", content: page_description %>
-    <%= tag.meta property: "og:url", content: canonical_url %>
+    <%= tag.meta property: "og:title", content: social_title %>
+    <%= tag.meta property: "og:description", content: social_description %>
+    <%= tag.meta property: "og:url", content: social_url %>
     <%= tag.meta property: "og:image", content: social_image_url %>
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="Set: find the set, beat the clock. Six cards with three of them highlighted as a set.">
+    <%= tag.meta property: "og:image:alt", content: social_image_alt %>
     <meta name="twitter:card" content="summary_large_image">
-    <%= tag.meta name: "twitter:title", content: page_title %>
-    <%= tag.meta name: "twitter:description", content: page_description %>
+    <%= tag.meta name: "twitter:title", content: social_title %>
+    <%= tag.meta name: "twitter:description", content: social_description %>
     <%= tag.meta name: "twitter:image", content: social_image_url %>
-    <meta name="twitter:image:alt" content="Set: find the set, beat the clock. Six cards with three of them highlighted as a set.">
+    <%= tag.meta name: "twitter:image:alt", content: social_image_alt %>
 
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
@@ -37,7 +37,8 @@
       <script defer src="https://analytics.tido.site/script.js" data-website-id="b4235c8a-975d-4920-85d3-0a87a4af920c"></script>
     <% end %>
 
-    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon-32.png" sizes="32x32" type="image/png">
+    <link rel="icon" href="/icon-16.png" sizes="16x16" type="image/png">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/manifest.json">

@@ -167,8 +167,18 @@ test('the daily is one shared deal: ranked once, clocked from first paint, share
   await results.getByRole('button', { name: 'Share', exact: true }).click()
   await expect(results.getByText('Result copied — paste it anywhere')).toBeVisible()
   const shared = await page.evaluate(() => navigator.clipboard.readText())
-  expect(shared).toMatch(new RegExp(`^Set Daily #${number} · \\d+:\\d\\d\\n[🟩🟨🟧🟥]{8,9}\\nhttps://set\\.tido\\.site/daily$`, 'u'))
+  expect(shared).toMatch(new RegExp(`^Set Daily #${number} · \\d+:\\d\\d\\n[🟩🟨🟧🟥]{8,9}\\nhttps://set\\.tido\\.site/daily\\?r=[\\w-]+$`, 'u'))
   expect(named(events, 'daily_share')).toEqual([{ outcome: 'copied' }])
+
+  // The shared link previews this result: crawlers get a personalized title and image.
+  const link = new URL(shared.split('\n').at(-1)!)
+  const preview = await (await page.request.get(link.pathname + link.search, { headers: { 'User-Agent': 'Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)' } })).text()
+  const time = shared.match(/· (\d+:\d\d)/)![1]
+  expect(preview).toContain(`<meta property="og:title" content="I completed Set Daily #${number} in ${time}">`)
+  const image = preview.match(/<meta property="og:image" content="https:\/\/set\.tido\.site(\/og\/daily\/[\w-]+\.png)">/)![1]
+  const png = await page.request.get(image)
+  expect(png.status()).toBe(200)
+  expect(png.headers()['content-type']).toBe('image/png')
 
   // Coming back later shows the result on the board, with the full results a tap away.
   await page.reload()

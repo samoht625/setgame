@@ -51,6 +51,8 @@ try {
     const text = dailyShareText({ number: 12, elapsedMs: 161_400, claimMs: [4000, 8000, 12000, 20000] })
     assert.equal(text, 'Set Daily #12 · 2:41\n🟩🟨\nhttps://set.tido.site/daily')
     assert.equal(dailyShareText({ number: 1, elapsedMs: 59_999, claimMs: [] }), 'Set Daily #1 · 0:59\nhttps://set.tido.site/daily')
+    assert.equal(dailyShareText({ number: 12, elapsedMs: 161_400, claimMs: [], token: 'c-3gk0-abcdefghijkl' }),
+      'Set Daily #12 · 2:41\nhttps://set.tido.site/daily?r=c-3gk0-abcdefghijkl')
   })
 
   check('ranks read as ordinals', () => {

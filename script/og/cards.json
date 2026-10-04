@@ -1,0 +1,13 @@
+{
+  "cards": [
+    13,
+    53,
+    57
+  ],
+  "defs": "<path id=\"set-card-squiggle\" d=\"M-10-54 C7-54 22.5-41 22.5-19 C22.5-4.5 15 2.5 15 11.5 C15 23.5 25.5 32.5 25.5 39.5 C25.5 46.5 15 50.5 6 50.5 C-13 50.5-23.5 39.5-23.5 22.5 C-23.5 6.5-13.5-6.5-13.5-18 C-13.5-30.5-24.5-40-24.5-45.5 C-24.5-51-17-54-10-54 Z\"></path><path id=\"set-card-diamond\" d=\"M0-59 28 0 0 59-28 0Z\"></path><rect id=\"set-card-oval\" x=\"-26.5\" y=\"-55\" width=\"53\" height=\"110\" rx=\"26.5\"></rect><pattern id=\"set-card-stripes-red\" width=\"12\" height=\"12\" patternUnits=\"userSpaceOnUse\"><path d=\"M0 3H12\" fill=\"none\" stroke=\"#ea1c2d\" stroke-width=\"3.5\"></path></pattern><pattern id=\"set-card-stripes-purple\" width=\"12\" height=\"12\" patternUnits=\"userSpaceOnUse\"><path d=\"M0 3H12\" fill=\"none\" stroke=\"#613394\" stroke-width=\"3.5\"></path></pattern><pattern id=\"set-card-stripes-green\" width=\"12\" height=\"12\" patternUnits=\"userSpaceOnUse\"><path d=\"M0 3H12\" fill=\"none\" stroke=\"#009b4d\" stroke-width=\"3.5\"></path></pattern>",
+  "faces": [
+    "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 258 167\" fill=\"#613394\" stroke=\"#613394\" stroke-width=\"0\" stroke-linejoin=\"round\"><use href=\"#set-card-diamond\" transform=\"translate(129 83.5)\"></use></svg>",
+    "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 258 167\" fill=\"url(#set-card-stripes-green)\" stroke=\"#009b4d\" stroke-width=\"4.5\" stroke-linejoin=\"round\"><use href=\"#set-card-oval\" transform=\"translate(93 83.5)\"></use><use href=\"#set-card-oval\" transform=\"translate(165 83.5)\"></use></svg>",
+    "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 258 167\" fill=\"none\" stroke=\"#ea1c2d\" stroke-width=\"6\" stroke-linejoin=\"round\"><use href=\"#set-card-squiggle\" transform=\"translate(63 83.5)\"></use><use href=\"#set-card-squiggle\" transform=\"translate(129 83.5)\"></use><use href=\"#set-card-squiggle\" transform=\"translate(195 83.5)\"></use></svg>"
+  ]
+}

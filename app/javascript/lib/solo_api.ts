@@ -45,6 +45,7 @@ export type DailyStatus = {
       claim_ms: number[]
       rank: number
       total: number
+      share_token: string
     } | null
   }
 }

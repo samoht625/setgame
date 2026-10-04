@@ -44,13 +44,15 @@ export type DailyShare = {
   number: number
   elapsedMs: number
   claimMs: number[]
+  // Signed by the server; lets link previews show this result.
+  token?: string
 }
 
-export function dailyShareText({ number, elapsedMs, claimMs }: DailyShare): string {
+export function dailyShareText({ number, elapsedMs, claimMs, token }: DailyShare): string {
   return [
     `Set Daily #${number} · ${formatTime(elapsedMs)}`,
     paceRow(claimMs),
-    DAILY_URL
+    token ? `${DAILY_URL}?r=${encodeURIComponent(token)}` : DAILY_URL
   ].filter(Boolean).join('\n')
 }
 

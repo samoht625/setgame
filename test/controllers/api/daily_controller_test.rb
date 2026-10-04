@@ -74,7 +74,8 @@ module Api
         assert_equal [elapsed_ms - 1_000, elapsed_ms], status.fetch("leaderboard").map { |entry| entry.fetch("elapsed_ms") }
         assert_equal({ "player_id" => @player_id, "display_name" => "Daily", "misses" => 3 }, status.fetch("leaderboard").last.slice("player_id", "display_name", "misses"))
         assert_equal(
-          { "attempted" => true, "streak" => 2, "result" => { "elapsed_ms" => elapsed_ms, "misses" => 3, "claim_ms" => events.map { |e| e[:t_ms] }, "rank" => 2, "total" => 2 } },
+          { "attempted" => true, "streak" => 2, "result" => { "elapsed_ms" => elapsed_ms, "misses" => 3, "claim_ms" => events.map { |e| e[:t_ms] }, "rank" => 2, "total" => 2,
+                                                         "share_token" => DailyShare.token(number: 2, elapsed_ms: elapsed_ms) } },
           status.fetch("me")
         )
 
