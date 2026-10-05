@@ -250,8 +250,88 @@ test('the replay plays itself when motion is welcome', async ({ page }) => {
   await page.getByRole('button', { name: 'Compare with Priya' }).click()
   const dialog = page.getByRole('dialog', { name: 'You vs Priya' })
   await expect(dialog.getByRole('button', { name: 'Pause replay' })).toBeVisible()
-  await expect(dialog.getByText('Same deal, replayed at 6× speed')).toBeVisible()
+  await expect(dialog.getByRole('radio', { name: '5×' })).toBeChecked()
   await expect.poll(() => dialog.getByTestId('replay-score').innerText()).not.toBe('0–0')
+})
+
+/** Seconds on the replay clock after `realMs` of (fake) wall-clock playback from 0:00. */
+async function clockAfter(page: Page, realMs: number) {
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('button', { name: 'Pause replay' }).click()
+  await page.getByRole('slider', { name: 'Replay time' }).press('Home')
+  await expect(dialog.getByTestId('replay-clock')).toHaveText('0:00')
+  await dialog.getByRole('button', { name: 'Play replay' }).click()
+  await page.clock.runFor(realMs)
+  const [minutes, seconds] = (await dialog.getByTestId('replay-clock').innerText()).split(':').map(Number)
+  return minutes! * 60 + seconds!
+}
+
+for (const [label, viewport] of [['desktop', { width: 1280, height: 900 }], ['mobile', { width: 375, height: 812 }]] as const) {
+  test(`the replay plays at 1×, 5× or 10×, 5× by default, and remembers the choice (${label})`, async ({ page }) => {
+    await page.setViewportSize(viewport)
+    await page.clock.install()
+    await finished(page)
+    await page.goto('/daily')
+    await page.getByRole('button', { name: 'Compare with Priya' }).click()
+    const dialog = page.getByRole('dialog', { name: 'You vs Priya' })
+    const speeds = dialog.getByRole('radiogroup', { name: 'Replay speed' }).getByRole('radio')
+    await expect(speeds).toHaveCount(3)
+    expect(await speeds.evaluateAll(inputs => inputs.map(input => input.parentElement!.textContent))).toEqual(['1×', '5×', '10×'])
+    await expect(dialog.getByRole('radio', { name: '5×' })).toBeChecked()
+    await expect(dialog.getByRole('button', { name: 'Pause replay' })).toBeVisible()
+
+    // Two seconds of playback covers 10 seconds of the game at 5×, 20 at 10× and 2 at 1×.
+    expect(await clockAfter(page, 2_000)).toBeGreaterThanOrEqual(9)
+    expect(await clockAfter(page, 2_000)).toBeLessThanOrEqual(10)
+    await dialog.getByText('10×').click()
+    await expect(dialog.getByRole('radio', { name: '10×' })).toBeChecked()
+    const fast = await clockAfter(page, 2_000)
+    expect(fast).toBeGreaterThanOrEqual(19)
+    expect(fast).toBeLessThanOrEqual(20)
+
+    // Tap targets stay in the row, and the row fits a phone.
+    const controls = dialog.getByTestId('replay-controls')
+    const row = (await controls.boundingBox())!
+    for (const box of await speeds.evaluateAll(inputs => inputs.map(input => input.parentElement!.getBoundingClientRect().toJSON()))) {
+      expect(box.height).toBeGreaterThanOrEqual(32)
+      expect(box.right).toBeLessThanOrEqual(row.x + row.width + 0.5)
+    }
+    await noOverflow(page)
+    await dialog.getByRole('button', { name: 'Pause replay' }).click()
+    // A moment where neither board is still showing the set it just took at 10×.
+    const settled = (t: number) => [mine, runs.p4!.claims].every(claims => claims.every(claim => claim.t_ms > t || t - claim.t_ms >= 4_500))
+    const still = Array.from({ length: 400 }, (_, i) => 40_000 + i * 100).find(settled)!
+    await page.getByRole('slider', { name: 'Replay time' }).fill(String(still))
+    await page.getByRole('slider', { name: 'Replay time' }).blur()
+    await page.mouse.move(0, 0)
+    await page.screenshot({ path: `tmp/compare-speed-${label}.png`, animations: 'disabled' })
+    await controls.screenshot({ path: `tmp/compare-speed-control-${label}.png`, animations: 'disabled' })
+
+    // The choice outlives the dialog and a reload.
+    await page.keyboard.press('Escape')
+    await page.reload()
+    await page.getByRole('button', { name: 'Compare with Maya' }).click()
+    await expect(page.getByRole('dialog', { name: 'You vs Maya' }).getByRole('radio', { name: '10×' })).toBeChecked()
+    expect(await page.evaluate(() => localStorage.getItem('setgame_replay_speed'))).toBe('10')
+
+    // By keyboard: arrows move through the speeds like any radio group.
+    const maya = page.getByRole('dialog', { name: 'You vs Maya' })
+    await maya.getByRole('radio', { name: '10×' }).focus()
+    await page.keyboard.press('ArrowLeft')
+    await page.keyboard.press('ArrowLeft')
+    await expect(maya.getByRole('radio', { name: '1×' })).toBeChecked()
+    const slow = await clockAfter(page, 2_000)
+    expect(slow).toBeGreaterThanOrEqual(1)
+    expect(slow).toBeLessThanOrEqual(2)
+  })
+}
+
+test('a saved speed that isn’t on offer falls back to 5×', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('setgame_replay_speed', '6'))
+  await finished(page)
+  await page.goto('/daily')
+  await page.getByRole('button', { name: 'Compare with Maya' }).click()
+  await expect(page.getByRole('dialog').getByRole('radio', { name: '5×' })).toBeChecked()
 })
 
 test('a replay that fails to load can be retried', async ({ page }) => {
