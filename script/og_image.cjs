@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Social preview images (1200×630) and app icons, drawn as SVG and rasterized
 // with resvg. Rails runs this as a CLI to render per-result daily images:
-//   node script/og_image.cjs daily '{"number":12,"time":"2:41"}' > out.png
+//   node script/og_image.cjs daily '{"time":"2:41"}' > out.png
 // The card art comes from script/og/cards.json, which `yarn assets:brand`
 // generates from the app's CardFace component.
 
@@ -85,13 +85,11 @@ function staticSvg() {
   `)
 }
 
-function dailySvg({ number, time }) {
+function dailySvg({ time }) {
   return frame(`
     ${wordmark(88, 132, 46)}
-    <text x="88" y="252" font-size="40" font-weight="600" letter-spacing="-0.8" fill="${TEXT.body}">I completed Set Daily #${escapeXml(number)} in</text>
-    <text x="78" y="440" font-size="200" font-weight="700" letter-spacing="-8" fill="${TEXT.strong}">${escapeXml(time)}</text>
-    <text x="88" y="514" font-size="30" font-weight="600" letter-spacing="-0.4" fill="${TEXT.strong}">Can you beat it? Play today’s deal →</text>
-    <text x="88" y="560" font-size="24" font-weight="500" fill="${TEXT.muted}">set.tido.site/daily</text>
+    <text x="88" y="318" font-size="44" font-weight="600" letter-spacing="-0.9" fill="${TEXT.body}">I completed in</text>
+    <text x="78" y="512" font-size="200" font-weight="700" letter-spacing="-8" fill="${TEXT.strong}">${escapeXml(time)}</text>
     ${cardFan(975, 322, 1.0)}
   `)
 }

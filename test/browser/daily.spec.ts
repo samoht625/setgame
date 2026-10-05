@@ -169,14 +169,14 @@ test('the daily is one shared deal: played once, clocked from first paint, then 
   await results.getByRole('button', { name: 'Share', exact: true }).click()
   await expect(results.getByText('Result copied — paste it anywhere')).toBeVisible()
   const shared = await page.evaluate(() => navigator.clipboard.readText())
-  expect(shared).toMatch(new RegExp(`^Set Daily #${number} · \\d+:\\d\\d\\nhttps://set\\.tido\\.site/daily\\?r=[\\w-]+$`, 'u'))
+  expect(shared).toMatch(new RegExp(`^I completed in \\d+:\\d\\d\\nhttps://set\\.tido\\.site/daily\\?r=[\\w-]+$`, 'u'))
   expect(named(events, 'daily_share')).toEqual([{ outcome: 'copied' }])
 
   // The shared link previews this result: crawlers get a personalized title and image.
   const link = new URL(shared.split('\n').at(-1)!)
   const preview = await (await page.request.get(link.pathname + link.search, { headers: { 'User-Agent': 'Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)' } })).text()
-  const time = shared.match(/· (\d+:\d\d)/)![1]
-  expect(preview).toContain(`<meta property="og:title" content="I completed Set Daily #${number} in ${time}">`)
+  const time = shared.match(/^I completed in (\d+:\d\d)/)![1]
+  expect(preview).toContain(`<meta property="og:title" content="I completed in ${time}">`)
   const image = preview.match(/<meta property="og:image" content="https:\/\/set\.tido\.site(\/og\/daily\/[\w-]+\.png)">/)![1]
   const png = await page.request.get(image)
   expect(png.status()).toBe(200)
@@ -304,7 +304,7 @@ test.describe('on a phone', () => {
 
     await share.click()
     await expect.poll(() => page.evaluate(() => (window as unknown as { __shared: ShareData[] }).__shared)).toEqual([
-      { title: 'Set Daily #7', text: 'Set Daily #7 · 2:12', url: 'https://set.tido.site/daily' }
+      { title: 'Set Daily #7', text: 'I completed in 2:12', url: 'https://set.tido.site/daily' }
     ])
     await expect(page.getByText('Result copied — paste it anywhere')).toHaveCount(0)
   })
@@ -336,7 +336,7 @@ test.describe('on a phone', () => {
     await expect(results.getByText('1st of 1')).toBeVisible()
     await results.getByRole('button', { name: 'Share', exact: true }).click()
     await expect.poll(() => page.evaluate(() => (window as unknown as { __shared: ShareData[] }).__shared)).toEqual([
-      { title: 'Set Daily #7', text: 'Set Daily #7 · 2:12', url: `https://set.tido.site/daily?r=${token}` }
+      { title: 'Set Daily #7', text: 'I completed in 2:12', url: `https://set.tido.site/daily?r=${token}` }
     ])
   })
 })

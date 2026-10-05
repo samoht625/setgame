@@ -65,7 +65,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
 
     get "/daily", params: { r: token }, headers: { "User-Agent" => messages }
     assert_response :success
-    assert_select "meta[property='og:title'][content=?]", "I completed Set Daily #12 in 2:41"
+    assert_select "meta[property='og:title'][content=?]", "I completed in 2:41"
     assert_select "meta[property='og:image'][content=?]", "https://set.tido.site/og/daily/#{token}.png"
 
     # The same old Safari without a preview bot's name is still turned away.
@@ -81,8 +81,8 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
       assert_response :success
       assert_select "title", text: "Set Daily — Today’s deal, same for everyone"
       assert_select "link[rel=canonical][href=?]", "https://set.tido.site/daily"
-      assert_select "meta[property='og:title'][content=?]", "I completed Set Daily #12 in 2:41"
-      assert_select "meta[name='twitter:title'][content=?]", "I completed Set Daily #12 in 2:41"
+      assert_select "meta[property='og:title'][content=?]", "I completed in 2:41"
+      assert_select "meta[name='twitter:title'][content=?]", "I completed in 2:41"
       assert_select "meta[property='og:url'][content=?]", "https://set.tido.site/daily?r=#{token}"
       assert_select "meta[property='og:image'][content=?]", "https://set.tido.site/og/daily/#{token}.png"
       assert_select "meta[name='twitter:image'][content=?]", "https://set.tido.site/og/daily/#{token}.png"
