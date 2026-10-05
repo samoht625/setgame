@@ -23,11 +23,15 @@ export type DailyShare = {
   token?: string
 }
 
-export function dailyShareText({ number, elapsedMs, token }: DailyShare): string {
-  return [
-    `Set Daily #${number} · ${formatTime(elapsedMs)}`,
-    token ? `${DAILY_URL}?r=${encodeURIComponent(token)}` : DAILY_URL
-  ].join('\n')
+export type ShareLink = { title: string; text: string; url: string }
+
+/** What the share sheet gets. The link is its own field so Messages can unfurl it into a preview. */
+export function dailyShareLink({ number, elapsedMs, token }: DailyShare): ShareLink {
+  return {
+    title: `Set Daily #${number}`,
+    text: `Set Daily #${number} · ${formatTime(elapsedMs)}`,
+    url: token ? `${DAILY_URL}?r=${encodeURIComponent(token)}` : DAILY_URL
+  }
 }
 
 const ORDINAL_SUFFIXES: Partial<Record<Intl.LDMLPluralRule, string>> = { one: 'st', two: 'nd', few: 'rd' }
@@ -46,18 +50,18 @@ export function formatCountdown(ms: number): string {
 
 export type ShareOutcome = 'shared' | 'copied' | 'cancelled' | 'failed'
 
-/** The native share sheet on touch devices, the clipboard everywhere else. */
-export async function shareText(text: string): Promise<ShareOutcome> {
+/** The native share sheet on touch devices; elsewhere the text and link go to the clipboard together. */
+export async function shareLink(link: ShareLink): Promise<ShareOutcome> {
   const touch = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
   if (touch && typeof navigator.share === 'function') {
     try {
-      await navigator.share({ text })
+      await navigator.share(link)
       return 'shared'
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return 'cancelled'
     }
   }
-  return (await copyText(text)) ? 'copied' : 'failed'
+  return (await copyText(`${link.text}\n${link.url}`)) ? 'copied' : 'failed'
 }
 
 async function copyText(text: string): Promise<boolean> {
