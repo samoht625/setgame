@@ -37,7 +37,7 @@ class SoloScore < ApplicationRecord
   end
 
   def self.daily_leaderboard(date:, limit:)
-    select(*SUMMARY_COLUMNS, :misses)
+    select(*SUMMARY_COLUMNS, :misses, :events)
       .where(daily_on: date)
       .order(:elapsed_ms, :completed_at)
       .limit(limit)
@@ -58,5 +58,18 @@ class SoloScore < ApplicationRecord
       monthly: personal_best(player_id: player_id, period: "monthly"),
       all_time: regular.select(*SUMMARY_COLUMNS).where(player_id: player_id).order(:elapsed_ms, :created_at).first
     }
+  end
+
+  # The run's claims as the server verified them: each set's cards and when it
+  # was found on the run's clock. Nil when the row has no usable timeline.
+  def claims
+    list = Array(events).map do |event|
+      cards = event["cards"]
+      t_ms = event["t_ms"]
+      return nil unless event["type"] == "claim" && cards.is_a?(Array) && cards.length == 3 && t_ms.is_a?(Integer)
+
+      { cards: cards, t_ms: t_ms }
+    end
+    list.presence
   end
 end
