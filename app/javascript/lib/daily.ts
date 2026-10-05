@@ -29,7 +29,7 @@ export type ShareLink = { title: string; text: string; url: string }
 export function dailyShareLink({ number, elapsedMs, token }: DailyShare): ShareLink {
   return {
     title: `Set Daily #${number}`,
-    text: `I completed in ${formatTime(elapsedMs)}`,
+    text: `Set Daily Puzzle #${number}: ${formatTime(elapsedMs)}`,
     url: token ? `${DAILY_URL}?r=${encodeURIComponent(token)}` : DAILY_URL
   }
 }

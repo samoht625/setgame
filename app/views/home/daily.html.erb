@@ -1,10 +1,10 @@
 <% content_for :title, "Set Daily — Today’s deal, same for everyone" %>
 <% content_for :description, "One shared Set deal a day: one ranked try, a daily leaderboard and a streak to keep. New deal every midnight Pacific. Free, no signup." %>
 <% if @shared_result %>
-  <% content_for :social_title, "I completed in #{@shared_result.time}" %>
+  <% content_for :social_title, "Set Daily Puzzle ##{@shared_result.number}: #{@shared_result.time}" %>
   <% content_for :social_description, "Same deal for everyone today. Can you beat my time? Play free, no signup." %>
   <% content_for :social_url, "#{ApplicationHelper::SITE_URL}/daily?r=#{@shared_result.token}" %>
   <% content_for :social_image, "#{ApplicationHelper::SITE_URL}#{daily_og_image_path(@shared_result.token)}" %>
-  <% content_for :social_image_alt, "Set: I completed in #{@shared_result.time}" %>
+  <% content_for :social_image_alt, "Set Daily Puzzle ##{@shared_result.number}: #{@shared_result.time}" %>
 <% end %>
 <div id="root" data-online-ids="<%= GAME_ENGINE.online_player_ids_snapshot.to_json %>"></div>
