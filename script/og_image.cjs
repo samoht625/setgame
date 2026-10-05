@@ -85,22 +85,10 @@ function staticSvg() {
   `)
 }
 
-// The headline must end before the card fan, whatever the puzzle number and time.
-const HEADLINE_MAX_WIDTH = 690
-
-function dailyHeadline(number, time, scale) {
-  return `<text x="88" y="364">` +
-    `<tspan font-size="${50 * scale}" font-weight="600" letter-spacing="${-1 * scale}" fill="${TEXT.body}">Set Daily Puzzle #${escapeXml(number)}:</tspan>` +
-    `<tspan dx="${20 * scale}" font-size="${112 * scale}" font-weight="700" letter-spacing="${-4 * scale}" fill="${TEXT.strong}">${escapeXml(time)}</tspan>` +
-    `</text>`
-}
-
 function dailySvg({ number, time }) {
-  const width = textWidth(dailyHeadline(number, time, 1))
-  const scale = Math.min(1, HEADLINE_MAX_WIDTH / width)
   return frame(`
-    ${wordmark(88, 132, 46)}
-    ${dailyHeadline(number, time, scale)}
+    <text x="88" y="244" font-size="44" font-weight="600" letter-spacing="-0.9" fill="${TEXT.body}">Set Daily Puzzle #${escapeXml(number)}</text>
+    <text x="78" y="438" font-size="200" font-weight="700" letter-spacing="-8" fill="${TEXT.strong}">${escapeXml(time)}</text>
     ${cardFan(975, 322, 1.0)}
   `)
 }
@@ -127,16 +115,9 @@ function iconSvg({ rounded = true, inset = 1, variant = 'trio', background = INK
   return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">${plate}<g fill="${ink}">${motif}</g></svg>`
 }
 
-const FONT_OPTIONS = { fontFiles: FONT_FILES, loadSystemFonts: false, defaultFontFamily: 'Inter' }
-
-function textWidth(text) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH * 3}" height="${HEIGHT}" font-family="Inter">${text}</svg>`
-  return new Resvg(svg, { font: FONT_OPTIONS }).getBBox()?.width ?? 0
-}
-
 function renderPng(svg, width) {
   const resvg = new Resvg(svg, {
-    font: FONT_OPTIONS,
+    font: { fontFiles: FONT_FILES, loadSystemFonts: false, defaultFontFamily: 'Inter' },
     fitTo: width ? { mode: 'width', value: width } : { mode: 'original' }
   })
   return resvg.render().asPng()
