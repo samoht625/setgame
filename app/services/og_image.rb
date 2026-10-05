@@ -3,10 +3,11 @@
 require "open3"
 
 # Renders per-result daily share images with script/og_image.cjs (SVG → PNG via
-# resvg) and caches them on disk. Each image depends only on the time, so a
-# rendered file never goes stale; bump VERSION when the layout changes.
+# resvg) and caches them on disk. Each image depends only on the deal number
+# and the time, so a rendered file never goes stale; bump VERSION when the
+# layout changes.
 class OgImage
-  VERSION = 2
+  VERSION = 3
   CACHE_DIR = Rails.root.join("tmp/cache/og")
   RENDERER = Rails.root.join("script/og_image.cjs")
   TIMEOUT_SECONDS = 10
@@ -17,7 +18,7 @@ class OgImage
       path = CACHE_DIR.join("daily-v#{VERSION}-#{result.number}-#{result.elapsed_ms}.png")
       return path if path.file?
 
-      png = render("daily", time: result.time)
+      png = render("daily", number: result.number, time: result.time)
       return unless png
 
       FileUtils.mkdir_p(CACHE_DIR)

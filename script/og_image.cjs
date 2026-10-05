@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Social preview images (1200×630) and app icons, drawn as SVG and rasterized
 // with resvg. Rails runs this as a CLI to render per-result daily images:
-//   node script/og_image.cjs daily '{"time":"2:41"}' > out.png
+//   node script/og_image.cjs daily '{"number":12,"time":"2:41"}' > out.png
 // The card art comes from script/og/cards.json, which `yarn assets:brand`
 // generates from the app's CardFace component.
 
@@ -85,11 +85,22 @@ function staticSvg() {
   `)
 }
 
-function dailySvg({ time }) {
+// The headline must end before the card fan, whatever the puzzle number and time.
+const HEADLINE_MAX_WIDTH = 690
+
+function dailyHeadline(number, time, scale) {
+  return `<text x="88" y="364">` +
+    `<tspan font-size="${50 * scale}" font-weight="600" letter-spacing="${-1 * scale}" fill="${TEXT.body}">Set Daily Puzzle #${escapeXml(number)}:</tspan>` +
+    `<tspan dx="${20 * scale}" font-size="${112 * scale}" font-weight="700" letter-spacing="${-4 * scale}" fill="${TEXT.strong}">${escapeXml(time)}</tspan>` +
+    `</text>`
+}
+
+function dailySvg({ number, time }) {
+  const width = textWidth(dailyHeadline(number, time, 1))
+  const scale = Math.min(1, HEADLINE_MAX_WIDTH / width)
   return frame(`
     ${wordmark(88, 132, 46)}
-    <text x="88" y="318" font-size="44" font-weight="600" letter-spacing="-0.9" fill="${TEXT.body}">I completed in</text>
-    <text x="78" y="512" font-size="200" font-weight="700" letter-spacing="-8" fill="${TEXT.strong}">${escapeXml(time)}</text>
+    ${dailyHeadline(number, time, scale)}
     ${cardFan(975, 322, 1.0)}
   `)
 }
@@ -116,9 +127,16 @@ function iconSvg({ rounded = true, inset = 1, variant = 'trio', background = INK
   return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">${plate}<g fill="${ink}">${motif}</g></svg>`
 }
 
+const FONT_OPTIONS = { fontFiles: FONT_FILES, loadSystemFonts: false, defaultFontFamily: 'Inter' }
+
+function textWidth(text) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH * 3}" height="${HEIGHT}" font-family="Inter">${text}</svg>`
+  return new Resvg(svg, { font: FONT_OPTIONS }).getBBox()?.width ?? 0
+}
+
 function renderPng(svg, width) {
   const resvg = new Resvg(svg, {
-    font: { fontFiles: FONT_FILES, loadSystemFonts: false, defaultFontFamily: 'Inter' },
+    font: FONT_OPTIONS,
     fitTo: width ? { mode: 'width', value: width } : { mode: 'original' }
   })
   return resvg.render().asPng()
