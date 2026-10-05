@@ -7,7 +7,7 @@ require "open3"
 # and the time, so a rendered file never goes stale; bump VERSION when the
 # layout changes.
 class OgImage
-  VERSION = 3
+  VERSION = 4
   CACHE_DIR = Rails.root.join("tmp/cache/og")
   RENDERER = Rails.root.join("script/og_image.cjs")
   TIMEOUT_SECONDS = 10
