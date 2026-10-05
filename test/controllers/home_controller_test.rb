@@ -7,6 +7,9 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
   PREVIEW_BOTS = {
     "Slack" => "Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)",
     "iMessage / Facebook" => "facebookexternalhit/1.1 Facebot Twitterbot/1.0",
+    "iMessage (with Safari 9)" => "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_1) AppleWebKit/601.2.4 (KHTML, like Gecko) " \
+                                  "Version/9.0.1 Safari/601.2.4 facebookexternalhit/1.1 Facebot Twitterbot/1.0",
+    "Applebot" => "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Safari/605.1.15 (Applebot/0.1; +http://www.apple.com/go/applebot)",
     "X" => "Twitterbot/1.0",
     "Discord" => "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)",
     "WhatsApp" => "WhatsApp/2.23.20.0",
@@ -46,6 +49,28 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
       assert_response :success, "#{name} should be served the page"
       assert_select "meta[property='og:image']"
     end
+  end
+
+  test "Apple Messages link previews get the page even though they claim Safari 9" do
+    messages = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_1) AppleWebKit/601.2.4 (KHTML, like Gecko) " \
+               "Version/9.0.1 Safari/601.2.4 facebookexternalhit/1.1 Facebot Twitterbot/1.0"
+    token = DailyShare.token(number: 12, elapsed_ms: 161_400)
+
+    %w[/ /daily].each do |path|
+      get path, headers: { "User-Agent" => messages }
+      assert_response :success, "#{path} should be served to Messages"
+      assert_select "meta[property='og:title'][content]"
+      assert_select "meta[property='og:image'][content=?]", "https://set.tido.site/og-image.png"
+    end
+
+    get "/daily", params: { r: token }, headers: { "User-Agent" => messages }
+    assert_response :success
+    assert_select "meta[property='og:title'][content=?]", "I completed Set Daily #12 in 2:41"
+    assert_select "meta[property='og:image'][content=?]", "https://set.tido.site/og/daily/#{token}.png"
+
+    # The same old Safari without a preview bot's name is still turned away.
+    get "/", headers: { "User-Agent" => messages.delete_suffix(" facebookexternalhit/1.1 Facebot Twitterbot/1.0") }
+    assert_response :not_acceptable
   end
 
   test "a shared daily link previews the result but still opens today's deal" do

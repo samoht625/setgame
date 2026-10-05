@@ -304,8 +304,39 @@ test.describe('on a phone', () => {
 
     await share.click()
     await expect.poll(() => page.evaluate(() => (window as unknown as { __shared: ShareData[] }).__shared)).toEqual([
-      { text: 'Set Daily #7 · 2:12\nhttps://set.tido.site/daily' }
+      { title: 'Set Daily #7', text: 'Set Daily #7 · 2:12', url: 'https://set.tido.site/daily' }
     ])
     await expect(page.getByText('Result copied — paste it anywhere')).toHaveCount(0)
+  })
+
+  test('Share hands the share sheet the signed result link on its own, so Messages can preview it', async ({ page }) => {
+    await page.addInitScript(() => {
+      const shared: ShareData[] = []
+      ;(window as unknown as { __shared: ShareData[] }).__shared = shared
+      Object.defineProperty(navigator, 'share', { configurable: true, value: async (data: ShareData) => { shared.push(data) } })
+    })
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date())
+    const part = (type: string) => parts.find(p => p.type === type)!.value
+    const token = 'c-3gk0-abcdefghijkl'
+    await page.route('**/api/daily', route => route.fulfill({
+      json: {
+        date: `${part('year')}-${part('month')}-${part('day')}`,
+        number: 7,
+        next_at: new Date(Date.now() + 3600_000).toISOString(),
+        total: 1,
+        leaderboard: [],
+        me: { attempted: true, streak: 1, result: { display_name: null, elapsed_ms: 132_000, misses: 2, rank: 1, total: 1, share_token: token, replay: true } }
+      }
+    }))
+    await page.goto('/daily')
+    await seedFinishedRun(page, [4, 8, 12, 20, 28, 36, 48, 60, 72, 92, 112, 132].map(s => s * 1000), 2)
+    await page.reload()
+
+    const results = page.getByRole('region', { name: 'Set Daily #7' })
+    await expect(results.getByText('1st of 1')).toBeVisible()
+    await results.getByRole('button', { name: 'Share', exact: true }).click()
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __shared: ShareData[] }).__shared)).toEqual([
+      { title: 'Set Daily #7', text: 'Set Daily #7 · 2:12', url: `https://set.tido.site/daily?r=${token}` }
+    ])
   })
 })

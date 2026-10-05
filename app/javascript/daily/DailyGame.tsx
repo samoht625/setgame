@@ -15,8 +15,8 @@ import { afterNextPaint } from '../lib/after_paint'
 import { seconds, track } from '../lib/analytics'
 import {
   dailyDate,
-  dailyShareText,
-  shareText,
+  dailyShareLink,
+  shareLink,
   type DailyShare
 } from '../lib/daily'
 import { getPlayerId } from '../lib/player_id'
@@ -365,7 +365,7 @@ const DailyGame: React.FC = () => {
   }
 
   const share = async (result: DailyShare) => {
-    const outcome = await shareText(dailyShareText(result))
+    const outcome = await shareLink(dailyShareLink(result))
     track('daily_share', { outcome })
     if (outcome === 'shared' || outcome === 'cancelled') return
     if (shareNoteTimeoutRef.current) clearTimeout(shareNoteTimeoutRef.current)

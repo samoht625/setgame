@@ -25,7 +25,7 @@ try {
     outfile: bundle,
     logLevel: 'silent'
   })
-  const { dailyDate, dailyShareText, ordinal, formatCountdown } = require(bundle)
+  const { dailyDate, dailyShareLink, ordinal, formatCountdown } = require(bundle)
 
   const replayBundle = path.join(temporary, 'daily_replay.cjs')
   buildSync({
@@ -66,11 +66,13 @@ try {
     assert.equal(dailyDate(new Date('2026-12-01T08:00:00Z')), '2026-12-01')
   })
 
-  check('share text has the number, time and link, and nothing else', () => {
-    assert.equal(dailyShareText({ number: 12, elapsedMs: 161_400 }), 'Set Daily #12 · 2:41\nhttps://set.tido.site/daily')
-    assert.equal(dailyShareText({ number: 1, elapsedMs: 59_999 }), 'Set Daily #1 · 0:59\nhttps://set.tido.site/daily')
-    assert.equal(dailyShareText({ number: 12, elapsedMs: 161_400, token: 'c-3gk0-abcdefghijkl' }),
-      'Set Daily #12 · 2:41\nhttps://set.tido.site/daily?r=c-3gk0-abcdefghijkl')
+  check('a share has the number and time as text, and the link on its own', () => {
+    assert.deepEqual(dailyShareLink({ number: 12, elapsedMs: 161_400 }),
+      { title: 'Set Daily #12', text: 'Set Daily #12 · 2:41', url: 'https://set.tido.site/daily' })
+    assert.deepEqual(dailyShareLink({ number: 1, elapsedMs: 59_999 }),
+      { title: 'Set Daily #1', text: 'Set Daily #1 · 0:59', url: 'https://set.tido.site/daily' })
+    assert.deepEqual(dailyShareLink({ number: 12, elapsedMs: 161_400, token: 'c-3gk0-abcdefghijkl' }),
+      { title: 'Set Daily #12', text: 'Set Daily #12 · 2:41', url: 'https://set.tido.site/daily?r=c-3gk0-abcdefghijkl' })
   })
 
   check('ranks read as ordinals', () => {
