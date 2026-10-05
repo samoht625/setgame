@@ -29,7 +29,23 @@ export type ClaimEvent = {
   t_ms: number
 }
 
-export type DailyEntry = LeaderboardEntry & { misses: number | null }
+/** `replay`: the run's claim timing is on record, so it can be compared. */
+export type DailyEntry = LeaderboardEntry & { misses: number | null; replay?: boolean }
+
+export type DailyReplayRun = {
+  display_name: string | null
+  elapsed_ms: number
+  rank: number
+  claims: Array<{ cards: number[]; t_ms: number }>
+}
+
+export type DailyComparison = {
+  date: string
+  number: number
+  seed: number
+  me: DailyReplayRun
+  them: DailyReplayRun
+}
 
 export type DailyStatus = {
   date: string
@@ -47,6 +63,7 @@ export type DailyStatus = {
       rank: number
       total: number
       share_token: string
+      replay?: boolean
     } | null
   }
 }
@@ -147,6 +164,18 @@ export async function fetchDailyStatus(signal?: AbortSignal): Promise<DailyStatu
     signal
   })
   if (!res.ok) throw new Error('Could not load the daily')
+  return await res.json()
+}
+
+/** The player's finished run and another finisher's from the same day, claim by claim. */
+export async function fetchDailyComparison(date: string, playerId: string, signal?: AbortSignal): Promise<DailyComparison> {
+  const query = new URLSearchParams({ date, player_id: playerId })
+  const res = await fetch(`/api/daily/compare?${query}`, {
+    headers: headers(false),
+    credentials: 'same-origin',
+    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(10000)]) : AbortSignal.timeout(10000)
+  })
+  if (!res.ok) throw new Error('Could not load the replay')
   return await res.json()
 }
 
