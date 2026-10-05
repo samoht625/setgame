@@ -93,24 +93,24 @@ function dailySvg({ number, time }) {
   `)
 }
 
-// Shape outlines from CardFace, in its local units, with their half-widths.
-const SHAPES = {
-  squiggle: { d: 'M-10-54 C7-54 22.5-41 22.5-19 C22.5-4.5 15 2.5 15 11.5 C15 23.5 25.5 32.5 25.5 39.5 C25.5 46.5 15 50.5 6 50.5 C-13 50.5-23.5 39.5-23.5 22.5 C-23.5 6.5-13.5-6.5-13.5-18 C-13.5-30.5-24.5-40-24.5-45.5 C-24.5-51-17-54-10-54 Z' },
-  diamond: { d: 'M0-59 28 0 0 59-28 0Z' },
-  oval: { d: 'M-26.5-28.5 A26.5 26.5 0 0 1 26.5-28.5 V28.5 A26.5 26.5 0 0 1-26.5 28.5 Z' }
+// The squiggle outline from CardFace, in its local units. It spans y -54 to
+// 50.5, so its center sits 1.75 units above the origin.
+const SQUIGGLE = 'M-10-54 C7-54 22.5-41 22.5-19 C22.5-4.5 15 2.5 15 11.5 C15 23.5 25.5 32.5 25.5 39.5 C25.5 46.5 15 50.5 6 50.5 C-13 50.5-23.5 39.5-23.5 22.5 C-23.5 6.5-13.5-6.5-13.5-18 C-13.5-30.5-24.5-40-24.5-45.5 C-24.5-51-17-54-10-54 Z'
+
+function squiggle(x, scale) {
+  return `<path d="${SQUIGGLE}" transform="translate(${x} ${256 + 1.75 * scale}) scale(${scale})"/>`
 }
 
 /**
- * The app icon: three bold white shapes (squiggle, diamond, oval) on a purple
- * rounded square. `inset` shrinks the motif for maskable and touch icons,
- * whose corners the platform crops.
+ * The app icon: three bold white squiggles on a purple rounded square, like a
+ * three-squiggle card. The 'single' variant is one larger squiggle for tab
+ * icons, where three shapes blur together. `inset` shrinks the motif for
+ * maskable and touch icons, whose corners the platform crops.
  */
 function iconSvg({ rounded = true, inset = 1, variant = 'trio', background = INK.purple, ink = '#fff' } = {}) {
   const motif = variant === 'single'
-    ? `<path d="${SHAPES.diamond.d}" transform="translate(256 256) scale(${3.1 * inset})"/>`
-    : ['squiggle', 'diamond', 'oval']
-      .map((shape, index) => `<path d="${SHAPES[shape].d}" transform="translate(${256 + (index - 1) * 138 * inset} 256) scale(${2.35 * inset})"/>`)
-      .join('')
+    ? squiggle(256, 3.4 * inset)
+    : [-1, 0, 1].map(offset => squiggle(256 + offset * 144 * inset, 2.35 * inset)).join('')
   const plate = rounded ? `<rect width="512" height="512" rx="116" fill="${background}"/>` : `<rect width="512" height="512" fill="${background}"/>`
   return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">${plate}<g fill="${ink}">${motif}</g></svg>`
 }

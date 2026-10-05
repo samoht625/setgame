@@ -46,7 +46,7 @@ writeCardArt()
 const { staticSvg, iconSvg, renderPng } = require('./og_image.cjs')
 
 writeFileSync(path.join(publicDir, 'og-image.png'), renderPng(staticSvg()))
-// Tab icons get one bold diamond: three shapes blur together at 16px. The
+// Tab icons get one bold squiggle: three shapes blur together at 16px. The
 // installed app icons are shown large enough for all three.
 const favicon = { variant: 'single' }
 writeFileSync(path.join(publicDir, 'icon.svg'), `${iconSvg(favicon)}\n`)
