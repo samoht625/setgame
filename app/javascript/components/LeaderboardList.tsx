@@ -19,9 +19,11 @@ interface LeaderboardListProps<T extends LeaderboardEntry> {
   limit?: number
   /** Extra content on its own line under a row (e.g. a prompt under the player's own row). */
   renderAfter?: (entry: T, isMine: boolean) => React.ReactNode
+  /** A small control at the end of a row, after the time. */
+  renderAction?: (entry: T, isMine: boolean) => React.ReactNode
 }
 
-function LeaderboardList<T extends LeaderboardEntry>({ entries, detail, highlight, limit, renderAfter }: LeaderboardListProps<T>) {
+function LeaderboardList<T extends LeaderboardEntry>({ entries, detail, highlight, limit, renderAfter, renderAction }: LeaderboardListProps<T>) {
   const rows = entries.map((entry, index) => ({ entry, rank: index + 1, isMine: highlight?.(entry) ?? false }))
   let shown = rows
   if (limit !== undefined && rows.length > limit) {
@@ -56,6 +58,7 @@ function LeaderboardList<T extends LeaderboardEntry>({ entries, detail, highligh
               </span>
               {detail && <span className="text-[10px] text-neutral-600 dark:text-neutral-300">{detail(entry)}</span>}
             </span>
+            {renderAction?.(entry, isMine)}
           </li>
           {renderAfter?.(entry, isMine)}
         </React.Fragment>

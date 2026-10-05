@@ -17,6 +17,7 @@ Rails.application.routes.draw do
     get "daily", to: "daily#show"
     post "daily/games", to: "daily#create"
     patch "daily/name", to: "daily#name"
+    get "daily/compare", to: "daily#compare"
   end
 
   # Multiplayer game ("m" for "meet me at the table")
