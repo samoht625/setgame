@@ -93,24 +93,42 @@ function dailySvg({ number, time }) {
   `)
 }
 
-// The squiggle outline from CardFace, in its local units. It spans y -54 to
-// 50.5, so its center sits 1.75 units above the origin.
-const SQUIGGLE = 'M-10-54 C7-54 22.5-41 22.5-19 C22.5-4.5 15 2.5 15 11.5 C15 23.5 25.5 32.5 25.5 39.5 C25.5 46.5 15 50.5 6 50.5 C-13 50.5-23.5 39.5-23.5 22.5 C-23.5 6.5-13.5-6.5-13.5-18 C-13.5-30.5-24.5-40-24.5-45.5 C-24.5-51-17-54-10-54 Z'
+// Shape outlines from CardFace, in its local units, with how far each reaches
+// left and right of its origin and how far its center sits below it.
+const SHAPES = {
+  squiggle: { d: 'M-10-54 C7-54 22.5-41 22.5-19 C22.5-4.5 15 2.5 15 11.5 C15 23.5 25.5 32.5 25.5 39.5 C25.5 46.5 15 50.5 6 50.5 C-13 50.5-23.5 39.5-23.5 22.5 C-23.5 6.5-13.5-6.5-13.5-18 C-13.5-30.5-24.5-40-24.5-45.5 C-24.5-51-17-54-10-54 Z', left: 24.5, right: 25.5, middle: -1.75 },
+  diamond: { d: 'M0-59 28 0 0 59-28 0Z', left: 28, right: 28, middle: 0 },
+  oval: { d: 'M-26.5-28.5 A26.5 26.5 0 0 1 26.5-28.5 V28.5 A26.5 26.5 0 0 1-26.5 28.5 Z', left: 26.5, right: 26.5, middle: 0 }
+}
 
-function squiggle(x, scale) {
-  return `<path d="${SQUIGGLE}" transform="translate(${x} ${256 + 1.75 * scale}) scale(${scale})"/>`
+function shape(name, x, scale) {
+  const { d, middle } = SHAPES[name]
+  return `<path d="${d}" transform="translate(${x} ${256 - middle * scale}) scale(${scale})"/>`
+}
+
+// Shapes side by side, `gap` units apart, centered on the plate.
+function row(names, scale, gap) {
+  const width = names.reduce((sum, name) => sum + SHAPES[name].left + SHAPES[name].right, 0) + gap * (names.length - 1)
+  let x = -width / 2
+  return names.map(name => {
+    x += SHAPES[name].left
+    const path = shape(name, 256 + x * scale, scale)
+    x += SHAPES[name].right + gap
+    return path
+  }).join('')
 }
 
 /**
- * The app icon: three bold white squiggles on a purple rounded square, like a
- * three-squiggle card. The 'single' variant is one larger squiggle for tab
- * icons, where three shapes blur together. `inset` shrinks the motif for
- * maskable and touch icons, whose corners the platform crops.
+ * The app icon: three bold white shapes (squiggle, diamond, oval) on a purple
+ * rounded square. The 'single' variant is one larger squiggle for tab icons,
+ * where three shapes blur together. `inset` shrinks the motif for maskable and
+ * touch icons, whose corners the platform crops; at 0.78 the maskable motif
+ * stays inside the safe-zone circle.
  */
 function iconSvg({ rounded = true, inset = 1, variant = 'trio', background = INK.purple, ink = '#fff' } = {}) {
   const motif = variant === 'single'
-    ? squiggle(256, 3.4 * inset)
-    : [-1, 0, 1].map(offset => squiggle(256 + offset * 144 * inset, 2.35 * inset)).join('')
+    ? shape('squiggle', 256, 3.4 * inset)
+    : row(['squiggle', 'diamond', 'oval'], 2.65 * inset, 4.5)
   const plate = rounded ? `<rect width="512" height="512" rx="116" fill="${background}"/>` : `<rect width="512" height="512" fill="${background}"/>`
   return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">${plate}<g fill="${ink}">${motif}</g></svg>`
 }
