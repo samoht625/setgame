@@ -6,8 +6,9 @@ export type Side = 'me' | 'them'
 /** A finished run as the timeline needs it: when each set was found, and the final time. */
 export type RunTiming = { times: number[]; finishMs: number }
 
-/** A replay takes about this long to play through, whatever the runs' length. */
-const TARGET_PLAYBACK_MS = 20_000
+export const REPLAY_SPEEDS = [1, 5, 10] as const
+export type ReplaySpeed = (typeof REPLAY_SPEEDS)[number]
+export const DEFAULT_REPLAY_SPEED: ReplaySpeed = 5
 
 /**
  * The board before any claim, then after each one, re-dealt from the day's seed.
@@ -61,9 +62,10 @@ export function leadSegments(me: RunTiming, them: RunTiming): LeadSegment[] {
   return segments
 }
 
-/** A whole-number speed-up so the replay plays in about TARGET_PLAYBACK_MS; never slower than real time. */
-export function playbackSpeed(durationMs: number): number {
-  return Math.max(1, Math.round(durationMs / TARGET_PLAYBACK_MS))
+/** A saved speed if it's still one on offer, else the default. */
+export function toReplaySpeed(value: unknown): ReplaySpeed {
+  const speed = Number(value)
+  return REPLAY_SPEEDS.find(option => option === speed) ?? DEFAULT_REPLAY_SPEED
 }
 
 export type ReplayFrame = {

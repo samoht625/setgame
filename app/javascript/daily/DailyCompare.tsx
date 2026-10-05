@@ -1,12 +1,15 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react'
 import CardFace from '../components/CardFace'
 import { ordinal } from '../lib/daily'
 import {
+  DEFAULT_REPLAY_SPEED,
   frameAt,
   leadSegments,
-  playbackSpeed,
   replayBoards,
+  REPLAY_SPEEDS,
+  toReplaySpeed,
   type ReplayFrame,
+  type ReplaySpeed,
   type RunTiming,
   type Side
 } from '../lib/daily_replay'
@@ -21,6 +24,16 @@ const TONES: Record<Side, { dot: string; ring: string; bar: string }> = {
 
 // In real time, however fast the replay runs: long enough to see which set was taken.
 const FOUND_SET_MS = 450
+
+const SPEED_KEY = 'setgame_replay_speed'
+
+function loadSpeed(): ReplaySpeed {
+  try { return toReplaySpeed(localStorage.getItem(SPEED_KEY)) } catch { return DEFAULT_REPLAY_SPEED }
+}
+
+function saveSpeed(speed: ReplaySpeed) {
+  try { localStorage.setItem(SPEED_KEY, String(speed)) } catch { /* Keep the speed for this replay. */ }
+}
 
 type Replay = {
   data: DailyComparison
@@ -151,10 +164,34 @@ const PlayIcon: React.FC<{ playing: boolean }> = ({ playing }) => (
   </svg>
 )
 
+const SpeedPicker: React.FC<{ speed: ReplaySpeed; onChange: (speed: ReplaySpeed) => void }> = ({ speed, onChange }) => {
+  const name = useId()
+  return (
+    <div role="radiogroup" aria-label="Replay speed" className="flex rounded-full bg-neutral-100 p-0.5 dark:bg-neutral-800">
+      {REPLAY_SPEEDS.map(option => (
+        <label
+          key={option}
+          className="flex h-8 min-w-10 cursor-pointer items-center justify-center rounded-full px-2 text-xs font-medium tabular-nums text-neutral-500 transition-colors hover:text-neutral-900 has-[:checked]:bg-white has-[:checked]:text-neutral-900 has-[:checked]:shadow-sm has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 dark:has-[:checked]:bg-neutral-600 dark:has-[:checked]:text-neutral-100 dark:has-[:focus-visible]:outline-neutral-100"
+        >
+          <input
+            type="radio"
+            name={name}
+            value={option}
+            checked={option === speed}
+            onChange={() => onChange(option)}
+            className="sr-only"
+          />
+          {option}×
+        </label>
+      ))}
+    </div>
+  )
+}
+
 const ReplayView: React.FC<{ replay: Replay; name: string }> = ({ replay, name }) => {
   const { data, boards, timing } = replay
   const end = Math.max(timing.me.finishMs, timing.them.finishMs, 1)
-  const speed = playbackSpeed(end)
+  const [speed, setSpeed] = useState(loadSpeed)
   const [t, setT] = useState(0)
   const [playing, setPlaying] = useState(() => !prefersReducedMotion())
   const tRef = useRef(0)
@@ -264,7 +301,7 @@ const ReplayView: React.FC<{ replay: Replay; name: string }> = ({ replay, name }
         </div>
       </div>
 
-      <div className="mt-3 flex items-center gap-3">
+      <div className="mt-3 flex items-center gap-3" data-testid="replay-controls">
         <button
           type="button"
           onClick={toggle}
@@ -273,7 +310,14 @@ const ReplayView: React.FC<{ replay: Replay; name: string }> = ({ replay, name }
         >
           <PlayIcon playing={playing} />
         </button>
-        <span className="text-[11px] text-neutral-500 dark:text-neutral-400">Same deal, replayed at {speed}× speed</span>
+        <span className="min-w-0 flex-1 text-left text-[11px] text-neutral-500 dark:text-neutral-400">Same deal, replayed</span>
+        <SpeedPicker
+          speed={speed}
+          onChange={next => {
+            setSpeed(next)
+            saveSpeed(next)
+          }}
+        />
       </div>
     </>
   )

@@ -140,10 +140,13 @@ try {
     ])
   })
 
-  check('replays play in about 20 seconds, never slower than real time', () => {
-    assert.equal(replay.playbackSpeed(10_000), 1)
-    assert.equal(replay.playbackSpeed(90_000), 5)
-    assert.equal(replay.playbackSpeed(180_000), 9)
+  check('replays offer 1×, 5× and 10×, at 5× unless a speed on offer was saved', () => {
+    assert.deepEqual([...replay.REPLAY_SPEEDS], [1, 5, 10])
+    assert.equal(replay.toReplaySpeed('10'), 10)
+    assert.equal(replay.toReplaySpeed('1'), 1)
+    assert.equal(replay.toReplaySpeed(null), 5)
+    assert.equal(replay.toReplaySpeed('6'), 5)
+    assert.equal(replay.toReplaySpeed('fast'), 5)
   })
 
   console.log('\nAll checks passed.')
