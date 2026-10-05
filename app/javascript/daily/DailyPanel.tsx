@@ -18,7 +18,24 @@ interface DailyStandingsProps {
   label?: string
   /** Set when the player can put a name on their own (Anonymous) score. */
   onNameScore?: (name: string) => Promise<boolean>
+  /** Set when the player has a finished run to compare against other finishers'. */
+  onCompare?: (entry: DailyEntry) => void
 }
+
+// Rows without a compare control keep its width, so the times stay in one column.
+const compareSlot = 'flex h-8 w-8 shrink-0 -my-1.5 -mr-1'
+
+const CompareButton: React.FC<{ entry: DailyEntry; onCompare: (entry: DailyEntry) => void }> = ({ entry, onCompare }) => (
+  <button
+    type="button"
+    onClick={() => onCompare(entry)}
+    aria-label={`Compare with ${entry.display_name || 'Anonymous'}`}
+    title="Compare"
+    className={`${compareSlot} items-center justify-center rounded-full text-[11px] font-semibold text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100`}
+  >
+    vs
+  </button>
+)
 
 /**
  * Under the player's own Anonymous row, right after they finish: an open name
@@ -39,7 +56,7 @@ const NamePrompt: React.FC<{ onSave: (name: string) => Promise<boolean>; as?: 'l
 }
 
 /** Today's leaderboard, with the player's row even when they are below the cut. */
-export const DailyStandings: React.FC<DailyStandingsProps> = ({ status, error, onRetry, playerId, limit, label, onNameScore }) => {
+export const DailyStandings: React.FC<DailyStandingsProps> = ({ status, error, onRetry, playerId, limit, label, onNameScore, onCompare }) => {
   if (!status) {
     return error ? (
       <div className="mt-2 rounded-xl border border-dashed border-neutral-200 px-3 py-4 text-center dark:border-neutral-700">
@@ -73,6 +90,9 @@ export const DailyStandings: React.FC<DailyStandingsProps> = ({ status, error, o
           highlight={entry => entry.player_id === playerId}
           limit={limit}
           renderAfter={onNameScore ? (entry: DailyEntry, isMine) => (isMine && !entry.display_name ? <NamePrompt onSave={onNameScore} /> : null) : undefined}
+          renderAction={onCompare ? (entry: DailyEntry, isMine) => (
+            !isMine && entry.replay ? <CompareButton entry={entry} onCompare={onCompare} /> : <span aria-hidden="true" className={compareSlot} />
+          ) : undefined}
         />
       )}
 
@@ -81,6 +101,7 @@ export const DailyStandings: React.FC<DailyStandingsProps> = ({ status, error, o
           <span className="w-5 shrink-0 text-center text-[10px] font-semibold tabular-nums text-neutral-600 dark:text-neutral-300">{result.rank}</span>
           <span className="min-w-0 flex-1 text-sm font-medium text-neutral-900 dark:text-neutral-100">You</span>
           <span className="text-sm font-semibold tabular-nums text-neutral-900 dark:text-neutral-100">{formatTime(result.elapsed_ms)}</span>
+          {onCompare && <span aria-hidden="true" className={compareSlot} />}
         </div>
       )}
       {rankedBelowList && onNameScore && <NamePrompt as="div" onSave={onNameScore} />}

@@ -28,6 +28,25 @@ input:focus-visible {
   }
 }
 
+/* An invisible range input over a drawn timeline. A hairline thumb keeps the
+   value under the pointer where the drawn playhead is, right up to the ends. */
+.scrubber {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  touch-action: pan-y;
+}
+.scrubber::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 1px;
+  height: 2rem;
+}
+.scrubber::-moz-range-thumb {
+  width: 1px;
+  height: 2rem;
+  border: 0;
+}
+
 /* Padding helpers that respect safe areas */
 .pb-safe {
   /* Fallback for older iOS */

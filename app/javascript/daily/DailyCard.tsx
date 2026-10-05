@@ -1,7 +1,9 @@
-import React, { useId } from 'react'
+import React, { useId, useState } from 'react'
 import { formatTime } from '../solitaire/time'
+import { track } from '../lib/analytics'
 import { formatCountdown, ordinal, type DailyShare } from '../lib/daily'
-import type { DailyStatus } from '../lib/solo_api'
+import type { DailyEntry, DailyStatus } from '../lib/solo_api'
+import DailyCompare from './DailyCompare'
 import { DailyStandings } from './DailyPanel'
 
 const LEADERBOARD_SIZE = 10
@@ -35,7 +37,14 @@ const DailyCard: React.FC<DailyCardProps> = ({
   number, result, streak, note, status, statusError, onRetryStatus, playerId, nowMs, onShare, shareNote, onNextDeal, stale = false, onNameScore
 }) => {
   const titleId = useId()
+  const [comparing, setComparing] = useState<DailyEntry | null>(null)
   const msLeft = status ? Date.parse(status.next_at) - nowMs : null
+  // Other finishers' runs are only for a player who has finished this deal too.
+  const canCompare = !stale && Boolean(status?.me.result?.replay)
+  const compare = (entry: DailyEntry) => {
+    setComparing(entry)
+    track('daily_compare', { rank: status!.leaderboard.indexOf(entry) + 1 })
+  }
   const rank = result?.rank !== undefined && result.total !== undefined ? `${ordinal(result.rank)} of ${result.total}` : ''
 
   return (
@@ -79,8 +88,20 @@ const DailyCard: React.FC<DailyCardProps> = ({
         </div>
 
         <div className="border-t border-neutral-100 px-5 py-4 text-left dark:border-neutral-800">
-          <DailyStandings status={status} error={statusError} onRetry={onRetryStatus} playerId={playerId} limit={LEADERBOARD_SIZE} label="Today’s leaderboard" onNameScore={onNameScore} />
+          <DailyStandings
+            status={status}
+            error={statusError}
+            onRetry={onRetryStatus}
+            playerId={playerId}
+            limit={LEADERBOARD_SIZE}
+            label="Today’s leaderboard"
+            onNameScore={onNameScore}
+            onCompare={canCompare ? compare : undefined}
+          />
         </div>
+        {comparing && status && (
+          <DailyCompare date={status.date} number={status.number} opponent={comparing} onClose={() => setComparing(null)} />
+        )}
 
         {msLeft !== null && (
           <div className="border-t border-neutral-100 px-5 py-3 text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
