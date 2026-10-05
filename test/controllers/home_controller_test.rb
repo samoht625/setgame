@@ -129,6 +129,8 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_equal %w[https://set.tido.site/ https://set.tido.site/daily https://set.tido.site/m], locations
 
     manifest = JSON.parse(Rails.root.join("public/manifest.json").read)
+    assert_equal "Set", manifest.fetch("name")
+    assert_equal "Set", manifest.fetch("short_name")
     assert_equal "/", manifest.fetch("start_url")
     assert_equal "standalone", manifest.fetch("display")
     sizes = manifest.fetch("icons").map { |icon| icon.fetch("sizes") }
