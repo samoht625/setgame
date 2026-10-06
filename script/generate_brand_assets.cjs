@@ -5,7 +5,6 @@
 const { mkdtempSync, rmSync, writeFileSync } = require('node:fs')
 const { tmpdir } = require('node:os')
 const path = require('node:path')
-const { Resvg } = require('@resvg/resvg-js')
 const { buildSync } = require('esbuild')
 const React = require('react')
 const { renderToStaticMarkup } = require('react-dom/server')
@@ -51,22 +50,14 @@ writeFileSync(path.join(publicDir, 'og-image.png'), renderPng(staticSvg()))
 // installed app icons are shown large enough for all three.
 const favicon = { variant: 'single' }
 writeFileSync(path.join(publicDir, 'icon.svg'), `${iconSvg(favicon)}\n`)
-// Chrome on macOS puts the whole maskable icon in the Dock, so its motif should
-// be as large as possible, but Android may crop it to the safe-zone circle
-// (radius 40% of the icon), which it must stay inside.
-const maskable = { rounded: false, width: 0.72 }
-const { pixels, width } = new Resvg(iconSvg(maskable)).render()
-for (let i = 0; i < pixels.length; i += 4) {
-  const x = (i / 4) % width + 0.5 - width / 2
-  const y = Math.floor(i / 4 / width) + 0.5 - width / 2
-  if (pixels[i + 1] > 0x80 && Math.hypot(x, y) > 0.4 * width) throw new Error('The maskable icon motif leaves the safe zone.')
-}
+// The manifest has no maskable icon on purpose: Chrome on macOS prefers one for
+// the Dock and its safe-zone padding shrinks the shapes, so it falls back to
+// icon-512 instead.
 const icons = [
   ['icon-16.png', 16, favicon],
   ['icon-32.png', 32, favicon],
   ['icon-192.png', 192, {}],
   ['icon-512.png', 512, {}],
-  ['icon-maskable-512.png', 512, maskable],
   ['apple-touch-icon.png', 180, { rounded: false, width: 0.8 }]
 ]
 for (const [file, size, options] of icons) {
