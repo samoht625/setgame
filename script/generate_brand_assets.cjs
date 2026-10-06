@@ -54,10 +54,10 @@ writeFileSync(path.join(publicDir, 'icon.svg'), `${iconSvg(favicon)}\n`)
 // Chrome on macOS puts the maskable icon in the Dock: macOS 26 scales the whole
 // square into its rounded tile, and earlier versions get Chrome's clip to
 // Apple's icon grid (a 412px rounded square, corner radius 92, inset 50px at
-// 512). The shapes fill 80% of the icon, so they must stay inside that clip.
-// The tips may then cross the 40%-radius safe-zone circle, so circular
-// Android launchers can trim them slightly.
-const maskable = { rounded: false, width: 0.8 }
+// 512). The shapes fill 74% of the icon and must stay inside that clip. The
+// tips may cross the 40%-radius safe-zone circle, so circular Android
+// launchers can trim them slightly.
+const maskable = { rounded: false, width: 0.74 }
 const { pixels, width } = new Resvg(iconSvg(maskable)).render()
 const clip = { inset: 50, radius: 92 }
 for (let i = 0; i < pixels.length; i += 4) {
@@ -73,7 +73,7 @@ const icons = [
   ['icon-192.png', 192, {}],
   ['icon-512.png', 512, {}],
   ['icon-maskable-512.png', 512, maskable],
-  ['apple-touch-icon.png', 180, { rounded: false, width: 0.8 }]
+  ['apple-touch-icon.png', 180, maskable]
 ]
 for (const [file, size, options] of icons) {
   writeFileSync(path.join(publicDir, file), renderPng(iconSvg(options), size))
