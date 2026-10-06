@@ -136,8 +136,8 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     sizes = manifest.fetch("icons").map { |icon| icon.fetch("sizes") }
     assert_includes sizes, "192x192"
     assert_includes sizes, "512x512"
-    assert manifest.fetch("icons").none? { |icon| icon["purpose"].to_s.include?("maskable") },
-      "Chrome on macOS would put a padded maskable icon in the Dock instead of icon-512"
+    purposes = manifest.fetch("icons").map { |icon| icon.fetch("purpose", "any") }
+    assert_equal %w[any any maskable], purposes, "the maskable icon must be its own file, not also used as an any icon"
     manifest.fetch("icons").each do |icon|
       assert Rails.root.join("public", icon.fetch("src").delete_prefix("/")).file?, "#{icon["src"]} should exist"
     end

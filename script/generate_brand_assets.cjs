@@ -5,6 +5,7 @@
 const { mkdtempSync, rmSync, writeFileSync } = require('node:fs')
 const { tmpdir } = require('node:os')
 const path = require('node:path')
+const { Resvg } = require('@resvg/resvg-js')
 const { buildSync } = require('esbuild')
 const React = require('react')
 const { renderToStaticMarkup } = require('react-dom/server')
@@ -50,14 +51,28 @@ writeFileSync(path.join(publicDir, 'og-image.png'), renderPng(staticSvg()))
 // installed app icons are shown large enough for all three.
 const favicon = { variant: 'single' }
 writeFileSync(path.join(publicDir, 'icon.svg'), `${iconSvg(favicon)}\n`)
-// The manifest has no maskable icon on purpose: Chrome on macOS prefers one for
-// the Dock and its safe-zone padding shrinks the shapes, so it falls back to
-// icon-512 instead.
+// Chrome on macOS puts the maskable icon in the Dock: macOS 26 scales the whole
+// square into its rounded tile, and earlier versions get Chrome's clip to
+// Apple's icon grid (a 412px rounded square, corner radius 92, inset 50px at
+// 512). The shapes fill 80% of the icon, so they must stay inside that clip.
+// The tips may then cross the 40%-radius safe-zone circle, so circular
+// Android launchers can trim them slightly.
+const maskable = { rounded: false, width: 0.8 }
+const { pixels, width } = new Resvg(iconSvg(maskable)).render()
+const clip = { inset: 50, radius: 92 }
+for (let i = 0; i < pixels.length; i += 4) {
+  const x = Math.abs((i / 4) % width + 0.5 - width / 2)
+  const y = Math.abs(Math.floor(i / 4 / width) + 0.5 - width / 2)
+  const corner = width / 2 - clip.inset - clip.radius
+  const outside = Math.hypot(Math.max(x - corner, 0), Math.max(y - corner, 0)) > clip.radius
+  if (pixels[i + 1] > 0x80 && outside) throw new Error("The maskable icon motif leaves Chrome's macOS Dock mask.")
+}
 const icons = [
   ['icon-16.png', 16, favicon],
   ['icon-32.png', 32, favicon],
   ['icon-192.png', 192, {}],
   ['icon-512.png', 512, {}],
+  ['icon-maskable-512.png', 512, maskable],
   ['apple-touch-icon.png', 180, { rounded: false, width: 0.8 }]
 ]
 for (const [file, size, options] of icons) {
