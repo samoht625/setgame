@@ -106,31 +106,35 @@ function shape(name, x, scale) {
   return `<path d="${d}" transform="translate(${x} ${256 - middle * scale}) scale(${scale})"/>`
 }
 
-// Shapes side by side, `gap` units apart, centered on the plate.
-function row(names, scale, gap) {
-  const width = names.reduce((sum, name) => sum + SHAPES[name].left + SHAPES[name].right, 0) + gap * (names.length - 1)
-  let x = -width / 2
-  return names.map(name => {
-    x += SHAPES[name].left
+// The three shapes side by side, centered, scaled to span `width` of the icon.
+// Each outline is thickened by `weight` units with a round-joined stroke, so
+// the squiggle's waist and the diamond's tips stay solid at Dock size, and
+// `gap` units apart so they don't run together there.
+function trio(width, ink, { weight = 16, gap = 7 } = {}) {
+  const names = ['squiggle', 'diamond', 'oval']
+  const span = names.reduce((sum, name) => sum + SHAPES[name].left + SHAPES[name].right + weight, 0) + gap * (names.length - 1)
+  const scale = width * 512 / span
+  let x = -span / 2
+  const paths = names.map(name => {
+    x += SHAPES[name].left + weight / 2
     const path = shape(name, 256 + x * scale, scale)
-    x += SHAPES[name].right + gap
+    x += SHAPES[name].right + weight / 2 + gap
     return path
   }).join('')
+  return `<g fill="${ink}" stroke="${ink}" stroke-width="${weight}" stroke-linejoin="round">${paths}</g>`
 }
 
 /**
  * The app icon: three bold white shapes (squiggle, diamond, oval) on a purple
- * rounded square. The 'single' variant is one larger squiggle for tab icons,
- * where three shapes blur together. `inset` shrinks the motif for maskable and
- * touch icons, whose corners the platform crops; at 0.78 the maskable motif
- * stays inside the safe-zone circle.
+ * rounded square, spanning `width` of it. The 'single' variant is one larger
+ * squiggle for tab icons, where three shapes blur together.
  */
-function iconSvg({ rounded = true, inset = 1, variant = 'trio', background = INK.purple, ink = '#fff' } = {}) {
+function iconSvg({ rounded = true, width = 0.86, variant = 'trio', background = INK.purple, ink = '#fff' } = {}) {
   const motif = variant === 'single'
-    ? shape('squiggle', 256, 3.4 * inset)
-    : row(['squiggle', 'diamond', 'oval'], 2.65 * inset, 4.5)
+    ? `<g fill="${ink}">${shape('squiggle', 256, 3.4)}</g>`
+    : trio(width, ink)
   const plate = rounded ? `<rect width="512" height="512" rx="116" fill="${background}"/>` : `<rect width="512" height="512" fill="${background}"/>`
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">${plate}<g fill="${ink}">${motif}</g></svg>`
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">${plate}${motif}</svg>`
 }
 
 function renderPng(svg, width) {
