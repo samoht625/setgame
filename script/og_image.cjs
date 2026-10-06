@@ -94,31 +94,39 @@ function dailySvg({ number, time }) {
 }
 
 // Shape outlines from CardFace, in its local units, with how far each reaches
-// left and right of its origin and how far its center sits below it.
+// left and right of its origin, its height, and how far its center sits below
+// its origin.
 const SHAPES = {
-  squiggle: { d: 'M-10-54 C7-54 22.5-41 22.5-19 C22.5-4.5 15 2.5 15 11.5 C15 23.5 25.5 32.5 25.5 39.5 C25.5 46.5 15 50.5 6 50.5 C-13 50.5-23.5 39.5-23.5 22.5 C-23.5 6.5-13.5-6.5-13.5-18 C-13.5-30.5-24.5-40-24.5-45.5 C-24.5-51-17-54-10-54 Z', left: 24.5, right: 25.5, middle: -1.75 },
-  diamond: { d: 'M0-59 28 0 0 59-28 0Z', left: 28, right: 28, middle: 0 },
-  oval: { d: 'M-26.5-28.5 A26.5 26.5 0 0 1 26.5-28.5 V28.5 A26.5 26.5 0 0 1-26.5 28.5 Z', left: 26.5, right: 26.5, middle: 0 }
+  squiggle: { d: 'M-10-54 C7-54 22.5-41 22.5-19 C22.5-4.5 15 2.5 15 11.5 C15 23.5 25.5 32.5 25.5 39.5 C25.5 46.5 15 50.5 6 50.5 C-13 50.5-23.5 39.5-23.5 22.5 C-23.5 6.5-13.5-6.5-13.5-18 C-13.5-30.5-24.5-40-24.5-45.5 C-24.5-51-17-54-10-54 Z', left: 24.5, right: 25.5, height: 104.5, middle: -1.75 },
+  diamond: { d: 'M0-59 28 0 0 59-28 0Z', left: 28, right: 28, height: 118, middle: 0 },
+  oval: { d: 'M-26.5-28.5 A26.5 26.5 0 0 1 26.5-28.5 V28.5 A26.5 26.5 0 0 1-26.5 28.5 Z', left: 26.5, right: 26.5, height: 110, middle: 0 }
 }
 
-function shape(name, x, scale) {
+function shape(name, x, scale, attributes = '') {
   const { d, middle } = SHAPES[name]
-  return `<path d="${d}" transform="translate(${x} ${256 - middle * scale}) scale(${scale})"/>`
+  return `<path d="${d}" transform="translate(${x} ${256 - middle * scale}) scale(${scale})"${attributes}/>`
 }
 
 // The three shapes side by side, centered, scaled to span `width` of the icon.
-// Each outline is thickened by `weight` units with a round-joined stroke, so
-// the squiggle's waist and the diamond's tips stay solid at Dock size, and
-// `gap` units apart so they don't run together there.
+// The squiggle and diamond outlines are thickened by `weight` units with a
+// round-joined stroke, so the squiggle's waist and the diamond's tips stay
+// solid at Dock size. A stroke would fatten the oval, so it keeps its card
+// proportions and is enlarged to the height a stroke would have given it.
+// The shapes sit `gap` units apart so they don't run together at Dock size.
 function trio(width, ink, { weight = 16, gap = 7 } = {}) {
-  const names = ['squiggle', 'diamond', 'oval']
-  const span = names.reduce((sum, name) => sum + SHAPES[name].left + SHAPES[name].right + weight, 0) + gap * (names.length - 1)
+  const parts = ['squiggle', 'diamond', 'oval'].map(name => {
+    const stroked = name !== 'oval'
+    const grow = stroked ? 1 : 1 + weight / SHAPES[name].height
+    const pad = stroked ? weight / 2 : 0
+    return { name, stroked, grow, left: SHAPES[name].left * grow + pad, right: SHAPES[name].right * grow + pad }
+  })
+  const span = parts.reduce((sum, { left, right }) => sum + left + right, 0) + gap * (parts.length - 1)
   const scale = width * 512 / span
   let x = -span / 2
-  const paths = names.map(name => {
-    x += SHAPES[name].left + weight / 2
-    const path = shape(name, 256 + x * scale, scale)
-    x += SHAPES[name].right + weight / 2 + gap
+  const paths = parts.map(({ name, stroked, grow, left, right }) => {
+    x += left
+    const path = shape(name, 256 + x * scale, scale * grow, stroked ? '' : ' stroke="none"')
+    x += right + gap
     return path
   }).join('')
   return `<g fill="${ink}" stroke="${ink}" stroke-width="${weight}" stroke-linejoin="round">${paths}</g>`
@@ -129,7 +137,7 @@ function trio(width, ink, { weight = 16, gap = 7 } = {}) {
  * rounded square, spanning `width` of it. The 'single' variant is one larger
  * squiggle for tab icons, where three shapes blur together.
  */
-function iconSvg({ rounded = true, width = 0.86, variant = 'trio', background = INK.purple, ink = '#fff' } = {}) {
+function iconSvg({ rounded = true, width = 0.8, variant = 'trio', background = INK.purple, ink = '#fff' } = {}) {
   const motif = variant === 'single'
     ? `<g fill="${ink}">${shape('squiggle', 256, 3.4)}</g>`
     : trio(width, ink)
