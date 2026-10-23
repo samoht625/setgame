@@ -117,14 +117,17 @@ export async function submitSoloScore(body: {
   }
 }
 
-/** Fire-and-forget: records how far an unfinished game got. Safe to call while the page is unloading. */
-export function reportSoloProgress(gameId: string, setsFound: number): void {
+/** Sync unfinished games every few sets as well as on quit, so a killed tab loses little. */
+export const PROGRESS_SYNC_EVERY = 3
+
+/** Fire-and-forget: records how far an unfinished game got, with its claims. Safe to call while the page is unloading. */
+export function reportSoloProgress(gameId: string, events: ClaimEvent[]): void {
   try {
     fetch(`/api/solo/games/${encodeURIComponent(gameId)}/progress`, {
       method: 'POST',
       headers: headers(),
       credentials: 'same-origin',
-      body: JSON.stringify({ sets_found: setsFound }),
+      body: JSON.stringify({ sets_found: events.length, events }),
       keepalive: true
     }).catch(() => {})
   } catch {

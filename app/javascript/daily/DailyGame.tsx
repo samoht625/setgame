@@ -27,6 +27,7 @@ import {
   getPlayerDisplayName,
   nameDailyScore,
   reportSoloProgress,
+  PROGRESS_SYNC_EVERY,
   startDailyGame,
   submitSoloScore,
   type ClaimEvent,
@@ -204,7 +205,7 @@ const DailyGame: React.FC = () => {
     const sent = progressSentRef.current
     if (sent?.gameId === current.gameId && sent.sets >= sets) return
     progressSentRef.current = { gameId: current.gameId, sets }
-    reportSoloProgress(current.gameId, sets)
+    reportSoloProgress(current.gameId, current.events)
   }
 
   const isPlaying = run?.status === 'playing' && !clockPending
@@ -332,6 +333,7 @@ const DailyGame: React.FC = () => {
       submission: finished ? 'pending' : current.submission
     }
     putRun(next)
+    if (!finished && events.length % PROGRESS_SYNC_EVERY === 0) syncProgress(next)
     setClaimAnimationKey(value => value + 1)
     playSet()
 

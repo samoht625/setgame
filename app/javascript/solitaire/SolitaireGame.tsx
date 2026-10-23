@@ -21,6 +21,7 @@ import {
 import {
   getPlayerDisplayName,
   reportSoloProgress,
+  PROGRESS_SYNC_EVERY,
   startSoloGame,
   submitSoloScore,
   type ClaimEvent,
@@ -221,7 +222,7 @@ const SolitaireGame: React.FC<SolitaireGameProps> = ({ holdDeal = false }) => {
     const sent = progressSentRef.current
     if (sent?.gameId === gameId && sent.sets >= sets) return
     progressSentRef.current = { gameId, sets }
-    reportSoloProgress(gameId, sets)
+    reportSoloProgress(gameId, eventsRef.current)
   }
 
   /** Reports the current game as abandoned if it is still being played. */
@@ -471,6 +472,8 @@ const SolitaireGame: React.FC<SolitaireGameProps> = ({ holdDeal = false }) => {
     setRecentClaims(updatedRecentClaims)
     recentClaimsRef.current = updatedRecentClaims
 
+    if (newEvents.length % PROGRESS_SYNC_EVERY === 0 && !isRoundOver(deal)) syncProgress()
+
     if (newEvents.length === 1) track('first_set', { mode: MODE, seconds: seconds(tMs) })
     if (newEvents.length === 10) track('set_10', { mode: MODE, seconds: seconds(tMs) })
 
@@ -663,7 +666,7 @@ const SolitaireGame: React.FC<SolitaireGameProps> = ({ holdDeal = false }) => {
     if (staleInProgress) {
       // The player was away 15+ minutes: discard the stale game, deal fresh.
       track('game_quit', { mode: MODE, reason: 'idle', sets: saved.events.length })
-      if (saved.gameId && saved.events.length > 0) reportSoloProgress(saved.gameId, saved.events.length)
+      if (saved.gameId && saved.events.length > 0) reportSoloProgress(saved.gameId, saved.events)
       startFreshAfterIdle()
     } else if (saved && (saved.board.length > 0 || saved.status === 'round_over')) {
       const deal = restoreSoloDeal(saved.board, saved.deck, saved.rngState)
