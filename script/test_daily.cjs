@@ -68,11 +68,11 @@ try {
 
   check('a share has the number and time as text, and the link on its own', () => {
     assert.deepEqual(dailyShareLink({ number: 12, elapsedMs: 161_400 }),
-      { title: 'Set Daily #12', text: 'Set Daily #12 · 2:41', url: 'https://set.tido.site/daily' })
+      { title: 'Set Daily #12', text: 'Set Daily Puzzle #12 · 2:41', url: 'https://set.tido.site/daily' })
     assert.deepEqual(dailyShareLink({ number: 1, elapsedMs: 59_999 }),
-      { title: 'Set Daily #1', text: 'Set Daily #1 · 0:59', url: 'https://set.tido.site/daily' })
+      { title: 'Set Daily #1', text: 'Set Daily Puzzle #1 · 0:59', url: 'https://set.tido.site/daily' })
     assert.deepEqual(dailyShareLink({ number: 12, elapsedMs: 161_400, token: 'c-3gk0-abcdefghijkl' }),
-      { title: 'Set Daily #12', text: 'Set Daily #12 · 2:41', url: 'https://set.tido.site/daily?r=c-3gk0-abcdefghijkl' })
+      { title: 'Set Daily #12', text: 'Set Daily Puzzle #12 · 2:41', url: 'https://set.tido.site/daily?r=c-3gk0-abcdefghijkl' })
   })
 
   check('ranks read as ordinals', () => {
