@@ -23,13 +23,13 @@ class SetStats
     runs = { "solo" => [], "daily" => [] }
     droughts = []
 
-    SoloScore.select(:events, :elapsed_ms, :daily_on).find_each do |s|
+    SoloScore.select(:id, :events, :elapsed_ms, :daily_on).find_each do |s|
       mode = s.daily_on ? "daily" : "solo"
       runs[mode] << s.elapsed_ms
       add_claims(s.events, mode, finds, droughts)
     end
     unfinished_counted = 0
-    SoloGame.where.not(status: "completed").select(:events, :sets_found, :daily_on).find_each do |g|
+    SoloGame.where.not(status: "completed").select(:id, :events, :sets_found, :daily_on).find_each do |g|
       claims = Array(g.events)
       if claims.any?
         add_claims(claims, g.daily_on ? "daily" : "solo", finds, droughts)
