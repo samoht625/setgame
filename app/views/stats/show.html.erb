@@ -15,6 +15,16 @@
     <div class="tile"><b><%= s[:distinct_found] %> / <%= SetStats::TOTAL_SETS %></b><span>possible sets found at least once</span></div>
   </div>
 
+  <% if s[:most_games].present? %>
+    <h2>Most games finished</h2>
+    <p class="muted">Named players, solo + daily.</p>
+    <div class="list">
+      <% s[:most_games].each_with_index do |p, i| %>
+        <div class="row"><span class="k"><%= i + 1 %></span><span><%= p[:name] %></span><span class="v"><%= p[:total] %><small><%= p[:solo] %> solo · <%= p[:daily] %> daily</small></span></div>
+      <% end %>
+    </div>
+  <% end %>
+
   <h2>How fast</h2>
   <p class="muted">Median time to find a set, from the previous find (or the deal).</p>
   <% max = [s[:median_by_diff].values.compact.max, s[:median_by_shared].values.compact.max, 1].compact.max %>
@@ -54,16 +64,6 @@
       <div class="row"><span class="k"><%= i + 1 %></span><%= set_cards(f[:cards]) %><span class="v"><%= f[:n] %>×</span></div>
     <% end %>
   </div>
-
-  <% if s[:most_games].present? %>
-    <h2>Most games finished</h2>
-    <p class="muted">Named players, solo + daily.</p>
-    <div class="list">
-      <% s[:most_games].each_with_index do |p, i| %>
-        <div class="row"><span class="k"><%= i + 1 %></span><span><%= p[:name] %></span><span class="v"><%= p[:total] %><small><%= p[:solo] %> solo · <%= p[:daily] %> daily</small></span></div>
-      <% end %>
-    </div>
-  <% end %>
 
   <h2>Fun facts</h2>
   <div class="facts">
