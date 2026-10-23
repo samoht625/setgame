@@ -150,6 +150,13 @@ export const MenuButton: React.FC<MenuButtonProps> = ({ appItems, hasBadge = fal
               )}
             </button>
           ))}
+          <a
+            href="/stats"
+            role="menuitem"
+            className="mt-1 block rounded-lg px-3 py-1.5 text-right text-xs text-neutral-400 hover:text-neutral-600 focus:text-neutral-600 focus:outline-none dark:text-neutral-500 dark:hover:text-neutral-300"
+          >
+            Stats
+          </a>
         </div>
       )}
     </div>

@@ -23,6 +23,9 @@ Rails.application.routes.draw do
   # Multiplayer game ("m" for "meet me at the table")
   get '/m' => 'home#multiplayer', as: :multiplayer
 
+  # Anonymous stats over every found set
+  get '/stats' => 'stats#show', as: :stats
+
   # Today's shared solo deal
   get '/daily' => 'home#daily', as: :daily
 
