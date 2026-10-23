@@ -10,7 +10,7 @@ class SetStats
   ZONE = "America/Chicago"
 
   def self.cached
-    Rails.cache.fetch("set_stats/v2", expires_in: 5.minutes) { new.compute }
+    Rails.cache.fetch("set_stats/v3", expires_in: 5.minutes) { new.compute }
   end
 
   def self.kind(cards)
@@ -79,11 +79,25 @@ class SetStats
       drought: drought,
       busiest_day: hours.group_by(&:to_date).max_by { |_, v| v.length }&.then { |d, v| [d, v.length] },
       busiest_hour: hours.group_by(&:hour).max_by { |_, v| v.length }&.first,
+      most_games: most_games,
       modes: runs.transform_values { |v| { runs: v.length, median_ms: median(v) } }
     }
   end
 
   private
+
+  # Players who put a name on the leaderboard, by finished runs (solo + daily).
+  def most_games(limit = 10)
+    rows = SoloScore.order(:completed_at).pluck(:player_id, :display_name, :daily_on)
+    names = {}
+    tally = Hash.new { |h, k| h[k] = { solo: 0, daily: 0 } }
+    rows.each do |pid, name, daily|
+      names[pid] = name.strip if name.present?
+      tally[pid][daily ? :daily : :solo] += 1
+    end
+    names.map { |pid, name| { name: name, solo: tally[pid][:solo], daily: tally[pid][:daily], total: tally[pid].values.sum } }
+      .sort_by { |h| [-h[:total], h[:name].downcase] }.first(limit)
+  end
 
   def add_claims(events, mode, finds, droughts)
     prev = 0

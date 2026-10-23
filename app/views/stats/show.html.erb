@@ -55,6 +55,16 @@
     <% end %>
   </div>
 
+  <% if s[:most_games].present? %>
+    <h2>Most games finished</h2>
+    <p class="muted">Named players, solo + daily.</p>
+    <div class="list">
+      <% s[:most_games].each_with_index do |p, i| %>
+        <div class="row"><span class="k"><%= i + 1 %></span><span><%= p[:name] %></span><span class="v"><%= p[:total] %><small><%= p[:solo] %> solo · <%= p[:daily] %> daily</small></span></div>
+      <% end %>
+    </div>
+  <% end %>
+
   <h2>Fun facts</h2>
   <div class="facts">
     <% if s[:fastest_find] %><div class="fact">Fastest find ever: <b><%= secs(s[:fastest_find][:ms]) %></b><br><%= set_cards(s[:fastest_find][:cards]) %></div><% end %>
