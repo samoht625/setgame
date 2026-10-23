@@ -61,5 +61,20 @@ module Api
       game.mark_completed!(sets_found: 24)
       assert_equal 24, progress.call(26).sets_found, "a verified finish is never overwritten"
     end
+
+    test "progress keeps an unfinished game's claims with their timing" do
+      post "/api/solo/games", headers: @headers
+      game_id = JSON.parse(response.body).fetch("game_id")
+      events = [
+        { type: "claim", cards: [3, 1, 2], t_ms: 4100 },
+        { type: "claim", cards: [4, 5, 6], t_ms: 9000 },
+        { type: "claim", cards: [99, 5, 6], t_ms: 9500 }
+      ]
+      post "/api/solo/games/#{game_id}/progress", params: { sets_found: 3, events: events }, headers: @headers, as: :json
+      assert_response :no_content
+      game = SoloGame.find(game_id)
+      assert_equal [{ "type" => "claim", "cards" => [1, 2, 3], "t_ms" => 4100 }, { "type" => "claim", "cards" => [4, 5, 6], "t_ms" => 9000 }], game.events
+      assert_equal 3, game.sets_found
+    end
   end
 end

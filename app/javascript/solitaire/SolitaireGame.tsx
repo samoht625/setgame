@@ -21,6 +21,7 @@ import {
 import {
   getPlayerDisplayName,
   reportSoloProgress,
+  PROGRESS_SYNC_EVERY,
   startSoloGame,
   submitSoloScore,
   type ClaimEvent,
@@ -221,7 +222,7 @@ const SolitaireGame: React.FC<SolitaireGameProps> = ({ holdDeal = false }) => {
     const sent = progressSentRef.current
     if (sent?.gameId === gameId && sent.sets >= sets) return
     progressSentRef.current = { gameId, sets }
-    reportSoloProgress(gameId, sets)
+    reportSoloProgress(gameId, eventsRef.current)
   }
 
   /** Reports the current game as abandoned if it is still being played. */
@@ -470,6 +471,8 @@ const SolitaireGame: React.FC<SolitaireGameProps> = ({ holdDeal = false }) => {
     const updatedRecentClaims = [{ cards: cardIds }, ...recentClaims].slice(0, 8)
     setRecentClaims(updatedRecentClaims)
     recentClaimsRef.current = updatedRecentClaims
+
+    if (newEvents.length % PROGRESS_SYNC_EVERY === 0 && !isRoundOver(deal)) syncProgress()
 
     if (newEvents.length === 1) track('first_set', { mode: MODE, seconds: seconds(tMs) })
     if (newEvents.length === 10) track('set_10', { mode: MODE, seconds: seconds(tMs) })

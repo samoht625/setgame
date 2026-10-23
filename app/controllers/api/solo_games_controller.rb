@@ -32,7 +32,7 @@ module Api
     end
 
     def progress
-      SoloGame.record_progress!(id: params[:id], player_id: current_player_id, sets_found: params[:sets_found])
+      SoloGame.record_progress!(id: params[:id], player_id: current_player_id, sets_found: params[:sets_found], events: params[:events])
       head :no_content
     end
   end

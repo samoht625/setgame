@@ -50,13 +50,31 @@ class SoloGame < ApplicationRecord
 
   # Client-reported progress of an unfinished game, kept for funnel analysis.
   # It only ever grows, and finished games keep their verified count.
-  def self.record_progress!(id:, player_id:, sets_found:)
-    sets = sets_found.to_i.clamp(0, MAX_SETS)
+  # Claims ({type, cards, t_ms since the deal}) ride along so unfinished games
+  # keep which sets were found and when; gaps between sets are t_ms deltas.
+  def self.record_progress!(id:, player_id:, sets_found:, events: nil)
+    claims = sanitize_claims(events)
+    sets = [sets_found.to_i, claims.length].max.clamp(0, MAX_SETS)
     now = Time.current
+    attrs = { sets_found: sets, progress_at: now, updated_at: now }
+    attrs[:events] = claims.to_json if claims.any?
     where(id: id, player_id: player_id)
       .where.not(status: "completed")
       .where("sets_found < ?", sets)
-      .update_all(sets_found: sets, progress_at: now, updated_at: now)
+      .update_all(attrs)
+  end
+
+  def self.sanitize_claims(events)
+    list = events.respond_to?(:to_unsafe_h) ? events.to_unsafe_h.values : events
+    Array(list).first(MAX_SETS).filter_map do |event|
+      event = event.to_unsafe_h if event.respond_to?(:to_unsafe_h)
+      next unless event.is_a?(Hash)
+      cards = Array(event["cards"] || event[:cards]).map { |c| Integer(c, exception: false) }
+      t_ms = Integer(event["t_ms"] || event[:t_ms], exception: false)
+      next unless cards.length == 3 && cards.all? { |c| c&.between?(1, 81) } && t_ms && t_ms >= 0
+
+      { "type" => "claim", "cards" => cards.sort, "t_ms" => t_ms }
+    end
   end
 
   def mark_completed!(sets_found:)
