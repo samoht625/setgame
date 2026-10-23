@@ -123,7 +123,7 @@ test('the daily is one shared deal: played once, clocked from first paint, then 
     await route.continue()
   })
   await page.getByRole('button', { name: 'Start', exact: true }).click()
-  await expect(page.getByText('Dealing cards…')).toBeVisible()
+  await expect(page.locator('[aria-busy="true"]')).toBeVisible()
   await expect(page.getByRole('timer')).toHaveText('—')
   await ready(page)
   const started = (await saved(page)).ranked

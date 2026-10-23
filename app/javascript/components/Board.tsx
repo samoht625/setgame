@@ -62,7 +62,6 @@ const Board: React.FC<BoardProps> = ({
         </div>
       )}
 
-      {loading && <div role="status" className="absolute inset-0 z-10 flex items-center justify-center text-sm font-medium text-neutral-500 dark:text-neutral-400">Dealing cards…</div>}
       <div
         className={`col-start-1 row-start-1 grid grid-cols-3 content-start gap-2 sm:gap-3 lg:grid-cols-4 ${gameOver || paused ? 'opacity-40 saturate-50' : ''}`}
       >

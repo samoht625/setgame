@@ -514,7 +514,7 @@ const DailyGame: React.FC = () => {
   }
 
   const chip = starting
-    ? { label: 'Dealing', tone: 'neutral' as const }
+    ? null
     : number !== undefined
       ? { label: `Daily #${number}`, tone: 'neutral' as const }
       : null

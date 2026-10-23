@@ -65,7 +65,7 @@ const SolitaireHud: React.FC<SolitaireHudProps> = ({
 
   // "In play" is the default, so only the exceptions get a chip.
   const statusChip = isStarting
-    ? { label: 'Dealing', tone: 'neutral' as const }
+    ? null
     : isFinished
       ? { label: 'Finished', tone: 'amber' as const }
       : isPaused
