@@ -10,7 +10,7 @@ class SetStats
   ZONE = "America/Chicago"
 
   def self.cached
-    Rails.cache.fetch("set_stats/v3", expires_in: 5.minutes) { new.compute }
+    Rails.cache.fetch("set_stats/v4", expires_in: 5.minutes) { new.compute }
   end
 
   def self.kind(cards)
@@ -86,16 +86,22 @@ class SetStats
 
   private
 
-  # Players who put a name on the leaderboard, by finished runs (solo + daily).
+  # Named players by finished runs (solo + daily), grouped by the public name
+  # (one person often plays on several devices). Unnamed runs of a device count
+  # toward the name that device used.
   def most_games(limit = 10)
     rows = SoloScore.order(:completed_at).pluck(:player_id, :display_name, :daily_on)
     names = {}
-    tally = Hash.new { |h, k| h[k] = { solo: 0, daily: 0 } }
-    rows.each do |pid, name, daily|
-      names[pid] = name.strip if name.present?
-      tally[pid][daily ? :daily : :solo] += 1
+    rows.each { |pid, name, _| names[pid] = name.strip if name.present? }
+    tally = Hash.new { |h, k| h[k] = { name: k, solo: 0, daily: 0 } }
+    rows.each do |pid, _, daily|
+      next unless (name = names[pid])
+
+      entry = tally[name.downcase]
+      entry[:name] = name
+      entry[daily ? :daily : :solo] += 1
     end
-    names.map { |pid, name| { name: name, solo: tally[pid][:solo], daily: tally[pid][:daily], total: tally[pid].values.sum } }
+    tally.values.map { |h| h.merge(total: h[:solo] + h[:daily]) }
       .sort_by { |h| [-h[:total], h[:name].downcase] }.first(limit)
   end
 
