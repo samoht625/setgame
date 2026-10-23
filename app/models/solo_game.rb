@@ -57,7 +57,7 @@ class SoloGame < ApplicationRecord
     sets = [sets_found.to_i, claims.length].max.clamp(0, MAX_SETS)
     now = Time.current
     attrs = { sets_found: sets, progress_at: now, updated_at: now }
-    attrs[:events] = claims.to_json if claims.any?
+    attrs[:events] = claims if claims.any?
     where(id: id, player_id: player_id)
       .where.not(status: "completed")
       .where("sets_found < ?", sets)
