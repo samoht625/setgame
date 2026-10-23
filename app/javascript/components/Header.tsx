@@ -95,6 +95,7 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
           <MenuButton
             appItems={[
               { label: 'How to play', onSelect: openHowToPlay },
+              { label: 'Stats', onSelect: () => window.location.assign('/stats') },
               { label: 'Your name', onSelect: openNameDialog },
               { label: 'Sound', onSelect: sound.toggle, checked: sound.enabled }
             ]}
