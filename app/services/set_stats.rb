@@ -58,13 +58,13 @@ class SetStats
     first_set = finds.min_by { |_, gap, _| gap }
     drought = droughts.max_by { |d| d[:ms] }
 
-    games = SoloGame.where("sets_found > 0")
+    games = SoloGame.where("sets_found > 0 OR status = 'completed'")
     hours = games.pluck(:started_at).map { |t| t.in_time_zone(ZONE) }
     {
       generated_at: Time.current,
       total_finds: finds.length,
       total_incl_unfinished: finds.length + unfinished_counted,
-      players: games.distinct.count(:player_id),
+      players: (games.distinct.pluck(:player_id) | SoloScore.distinct.pluck(:player_id)).length,
       runs: SoloScore.count,
       distinct_found: counts.length,
       type_counts: (1..4).to_h { |n| [n, type_counts[n]] },
