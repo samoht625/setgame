@@ -55,13 +55,20 @@ export async function shareLink(link: ShareLink): Promise<ShareOutcome> {
   const touch = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
   if (touch && typeof navigator.share === 'function') {
     try {
-      await navigator.share(link)
+      // Text and link go in one field. With a separate `url`, iOS share
+      // targets like Messages keep only the link preview and drop the text;
+      // a link at the end of the text still unfurls into a preview.
+      await navigator.share({ text: shareText(link) })
       return 'shared'
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return 'cancelled'
     }
   }
-  return (await copyText(`${link.text}\n${link.url}`)) ? 'copied' : 'failed'
+  return (await copyText(shareText(link))) ? 'copied' : 'failed'
+}
+
+export function shareText(link: ShareLink): string {
+  return `${link.text}\n${link.url}`
 }
 
 async function copyText(text: string): Promise<boolean> {

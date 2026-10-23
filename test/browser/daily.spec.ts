@@ -304,12 +304,12 @@ test.describe('on a phone', () => {
 
     await share.click()
     await expect.poll(() => page.evaluate(() => (window as unknown as { __shared: ShareData[] }).__shared)).toEqual([
-      { title: 'Set Daily #7', text: 'Set Daily Puzzle #7 · 2:12', url: 'https://set.tido.site/daily' }
+      { text: 'Set Daily Puzzle #7 · 2:12\nhttps://set.tido.site/daily' }
     ])
     await expect(page.getByText('Result copied — paste it anywhere')).toHaveCount(0)
   })
 
-  test('Share hands the share sheet the signed result link on its own, so Messages can preview it', async ({ page }) => {
+  test('Share hands the share sheet the result text with the signed link at its end, so Messages keeps the text and previews the link', async ({ page }) => {
     await page.addInitScript(() => {
       const shared: ShareData[] = []
       ;(window as unknown as { __shared: ShareData[] }).__shared = shared
@@ -336,7 +336,7 @@ test.describe('on a phone', () => {
     await expect(results.getByText('1st of 1')).toBeVisible()
     await results.getByRole('button', { name: 'Share', exact: true }).click()
     await expect.poll(() => page.evaluate(() => (window as unknown as { __shared: ShareData[] }).__shared)).toEqual([
-      { title: 'Set Daily #7', text: 'Set Daily Puzzle #7 · 2:12', url: `https://set.tido.site/daily?r=${token}` }
+      { text: `Set Daily Puzzle #7 · 2:12\nhttps://set.tido.site/daily?r=${token}` }
     ])
   })
 })
