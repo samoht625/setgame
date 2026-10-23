@@ -10,7 +10,7 @@ class SetStats
   ZONE = "America/Chicago"
 
   def self.cached
-    Rails.cache.fetch("set_stats/v1", expires_in: 5.minutes) { new.compute }
+    Rails.cache.fetch("set_stats/v2", expires_in: 5.minutes) { new.compute }
   end
 
   def self.kind(cards)
