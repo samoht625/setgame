@@ -5,6 +5,8 @@ require "test_helper"
 class StatsControllerTest < ActionDispatch::IntegrationTest
   test "stats page counts finished and unfinished finds" do
     Rails.cache.clear
+    SoloScore.delete_all
+    SoloGame.delete_all
     finished = SoloGame.create!(id: SecureRandom.uuid, player_id: "player-secret-xyz", seed: "1", started_at: 1.hour.ago, status: "completed", completed_at: Time.current)
     SoloScore.create!(solo_game: finished, player_id: "player-secret-xyz", elapsed_ms: 9000, completed_at: Time.current,
       events: [{ "type" => "claim", "cards" => [1, 2, 3], "t_ms" => 2000 }, { "type" => "claim", "cards" => [4, 5, 6], "t_ms" => 9000 }])
