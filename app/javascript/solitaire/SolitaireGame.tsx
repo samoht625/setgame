@@ -666,7 +666,7 @@ const SolitaireGame: React.FC<SolitaireGameProps> = ({ holdDeal = false }) => {
     if (staleInProgress) {
       // The player was away 15+ minutes: discard the stale game, deal fresh.
       track('game_quit', { mode: MODE, reason: 'idle', sets: saved.events.length })
-      if (saved.gameId && saved.events.length > 0) reportSoloProgress(saved.gameId, saved.events.length)
+      if (saved.gameId && saved.events.length > 0) reportSoloProgress(saved.gameId, saved.events)
       startFreshAfterIdle()
     } else if (saved && (saved.board.length > 0 || saved.status === 'round_over')) {
       const deal = restoreSoloDeal(saved.board, saved.deck, saved.rngState)
