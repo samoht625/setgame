@@ -29,7 +29,9 @@ step npx --no-install tsc --noEmit
 for s in test:rules test:daily test:cards; do step npm run --silent "$s"; done
 
 if [ "${1:-}" = "--browser" ]; then
-  npx --no-install playwright install chromium >/dev/null
+  # Playwright has no build for Ubuntu 26.04 yet; the 24.04 build works.
+  PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=${PLAYWRIGHT_HOST_PLATFORM_OVERRIDE:-ubuntu24.04-x64} \
+    npx --no-install playwright install chromium >/dev/null || echo "warning: playwright install failed"
   npm run --silent build && npm run --silent build:css
   PORT=${PORT:-3999}
   $BUNDLE exec ruby bin/rails server -p "$PORT" -b 127.0.0.1 >tmp/test-server.log 2>&1 &
