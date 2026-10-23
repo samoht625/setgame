@@ -73,7 +73,10 @@ test('solo funnel events fire once each and abandoned progress is saved on the s
   const progress = page.waitForRequest(request => request.url().endsWith(`/api/solo/games/${gameId}/progress`))
   await menu(page, 'New game')
   const request = await progress
-  expect(request.postDataJSON()).toEqual({ sets_found: 1 })
+  expect(request.postDataJSON()).toEqual({
+    sets_found: 1,
+    events: [{ type: 'claim', cards: expect.any(Array), t_ms: expect.any(Number) }]
+  })
   expect((await request.response())?.status()).toBe(204)
   await ready(page)
   // The reload already reported this game as left, so starting over does not report it again.
