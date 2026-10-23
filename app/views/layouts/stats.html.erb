@@ -29,6 +29,23 @@
       .fill{position:absolute;inset:0 auto 0 0;background:#262626;border-radius:6px}
       .tick{position:absolute;top:-3px;bottom:-3px;width:2px;background:#e11d48;border-radius:1px}
       .num{text-align:right;font-variant-numeric:tabular-nums}
+      .hf{padding:12px 16px 30px}
+      .hf-title{font-size:12px;margin-bottom:4px}
+      .hf-row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;column-gap:10px;row-gap:6px;padding:9px 0}
+      .hf-row+.hf-row{border-top:1px solid #f0f0f0}
+      .hf-row .c{width:34px;height:22px;border-radius:4px}
+      .hf-row .set{gap:3px}
+      .hf-label{font-size:13.5px}
+      .hf-label small{display:block;color:#999;font-size:11px}
+      .hf-track{grid-column:1/-1;position:relative;height:10px}
+      .hf-tick{position:absolute;top:0;bottom:0;width:1px;background:#ececec}
+      .hf-ref{position:absolute;top:-3px;bottom:-3px;border-left:1px dashed #b5b5b5}
+      .hf-fill{position:absolute;left:0;top:4px;height:2px;background:#d4d4d4;border-radius:1px}
+      .hf-dot{position:absolute;top:0;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:#262626}
+      .hf-axis{position:relative;height:14px;font-size:11px;margin-top:4px}
+      .hf-axis span{position:absolute;transform:translateX(-50%)}
+      .hf-axis span:first-child{transform:none}
+      .hf-axis span:last-child{transform:translateX(-100%)}
       .list{display:grid;grid-template-columns:1fr;gap:8px}
       .row{display:flex;align-items:center;gap:8px;background:#fff;border-radius:12px;padding:8px 10px;box-shadow:0 0 0 1px #ececec}
       .row .k{width:20px;color:#a3a3a3;font-size:12.5px;font-variant-numeric:tabular-nums}
@@ -42,7 +59,7 @@
       @media (max-width:640px){.tile b{font-size:21px}.bar{grid-template-columns:96px 1fr 78px}.c{width:58px;height:38px}}
       @media (prefers-color-scheme:dark){
         body{background:#111214;color:#eee}.tile,.bars,.row,.fact{background:#1b1c1f;box-shadow:0 0 0 1px #2a2b2f}
-        .bar+.bar{border-top-color:#26272a}.track{background:#2a2b2f}.fill{background:#e5e5e5}.c{background:#f1f0ec}
+        .bar+.bar,.hf-row+.hf-row{border-top-color:#26272a}.hf-tick{background:#2a2b2f}.hf-fill{background:#4a4b50}.hf-dot{background:#e5e5e5}.track{background:#2a2b2f}.fill{background:#e5e5e5}.c{background:#f1f0ec}
       }
     </style>
   </head>
