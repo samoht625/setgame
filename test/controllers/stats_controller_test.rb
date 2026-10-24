@@ -18,6 +18,8 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1500, stats[:fastest_find][:ms]
     assert_equal({ cards: [1, 2, 3], n: 2 }, stats[:most_found].first)
     assert_equal 3, stats[:type_counts][1]
+    assert_equal [1, 2, 3], stats[:example_by_diff][1]
+    assert_equal 2000, stats[:median_all]
 
     named = SoloGame.create!(id: SecureRandom.uuid, player_id: "p3", seed: "3", started_at: 1.hour.ago, status: "completed", completed_at: Time.current, daily_on: Date.current)
     SoloScore.create!(solo_game: named, player_id: "p3", display_name: "Ada", elapsed_ms: 5000, completed_at: Time.current, daily_on: Date.current, events: [])
@@ -29,6 +31,8 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Set stats"
     assert_includes response.body, "Most found"
     assert_includes response.body, "Most games finished"
+    assert_includes response.body, "vs all"
+    assert_includes response.body, "hf-dot"
     refute_includes response.body, "player-secret-xyz"
   end
 end

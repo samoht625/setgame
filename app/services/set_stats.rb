@@ -10,7 +10,7 @@ class SetStats
   ZONE = "America/Chicago"
 
   def self.cached
-    Rails.cache.fetch("set_stats/v4", expires_in: 5.minutes) { new.compute }
+    Rails.cache.fetch("set_stats/v5", expires_in: 5.minutes) { new.compute }
   end
 
   def self.kind(cards)
@@ -68,6 +68,9 @@ class SetStats
       runs: SoloScore.count,
       distinct_found: counts.length,
       type_counts: (1..4).to_h { |n| [n, type_counts[n]] },
+      median_all: median(finds.map { |_, gap, _| gap }),
+      example_by_diff: (1..4).to_h { |n| [n, example(counts) { |k| k.count(true) == n }] },
+      example_by_shared: ATTRS.each_with_index.to_h { |a, i| [a, example(counts) { |k| k.each_with_index.all? { |d, j| d == (j != i) } }] },
       median_by_diff: (1..4).to_h { |n| [n, median(by_diff[n])] },
       median_by_shared: ATTRS.to_h { |a| [a, median(by_shared[a])] },
       fastest: fastest,
@@ -85,6 +88,11 @@ class SetStats
   end
 
   private
+
+  # The most-found set of a kind, so each timing row shows a familiar example.
+  def example(counts)
+    counts.select { |cards, _| yield self.class.kind(cards) }.max_by { |cards, n| [n, cards.map(&:-@)] }&.first
+  end
 
   # Named players by finished runs (solo + daily), grouped by the public name
   # (one person often plays on several devices). Unnamed runs of a device count

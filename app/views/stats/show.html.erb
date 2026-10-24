@@ -26,18 +26,38 @@
   <% end %>
 
   <h2>How fast</h2>
-  <p class="muted">Median time to find a set, from the previous find (or the deal).</p>
-  <% max = [s[:median_by_diff].values.compact.max, s[:median_by_shared].values.compact.max, 1].compact.max %>
-  <div class="bars">
-    <% (1..4).each do |n| %>
-      <div class="bar"><span><%= n %> different</span><span class="track"><span class="fill" style="width:<%= ((s[:median_by_diff][n] || 0) * 100.0 / max).round(1) %>%"></span></span><span class="num"><%= secs(s[:median_by_diff][n]) %></span></div>
-    <% end %>
-  </div>
-  <div class="bars" style="margin-top:10px">
-    <% SetStats::ATTRS.each do |a| %>
-      <div class="bar"><span>Same <%= a %></span><span class="track"><span class="fill" style="width:<%= ((s[:median_by_shared][a] || 0) * 100.0 / max).round(1) %>%"></span></span><span class="num"><%= secs(s[:median_by_shared][a]) %></span></div>
-    <% end %>
-  </div>
+  <p class="muted">Median time to find a set, from the previous find (or the deal). One time scale for every row; the dashed line is the median of all finds<%= s[:median_all] ? " (#{secs(s[:median_all])})" : "" %>.</p>
+  <%
+    all = s[:median_all]
+    axis_max = [[s[:median_by_diff].values, s[:median_by_shared].values].flatten.compact.max.to_i, 5_000].max
+    axis_max = (axis_max / 5_000.0).ceil * 5_000
+    pos = ->(ms) { (ms.to_f * 100 / axis_max).round(2) }
+    groups = [
+      ["By how many attributes differ", (1..4).map { |n| ["#{n} different", s[:median_by_diff][n], s[:example_by_diff][n]] }],
+      ["By the one attribute that’s the same", SetStats::ATTRS.map { |a| ["Same #{a}", s[:median_by_shared][a], s[:example_by_shared][a]] }]
+    ]
+  %>
+  <% groups.each_with_index do |(title, rows), gi| %>
+    <div class="bars hf"<%= raw(' style="margin-top:10px"') if gi.positive? %>>
+      <div class="hf-title muted"><%= title %></div>
+      <% rows.select { |r| r[1] }.sort_by { |r| r[1] }.each do |label, ms, cards| %>
+        <div class="hf-row">
+          <% if cards %><%= set_cards(cards) %><% else %><span></span><% end %>
+          <span class="hf-label"><%= label %><% if all %><small><%= ms <= all ? "−" : "+" %><%= secs((ms - all).abs) %> vs all</small><% end %></span>
+          <span class="num"><b><%= secs(ms) %></b></span>
+          <span class="hf-track" aria-hidden="true">
+            <% (0..axis_max).step(5_000) do |t| %><span class="hf-tick" style="left:<%= pos.(t) %>%"></span><% end %>
+            <% if all %><span class="hf-ref" style="left:<%= pos.(all) %>%"></span><% end %>
+            <span class="hf-fill" style="width:<%= pos.(ms) %>%"></span>
+            <span class="hf-dot" style="left:<%= pos.(ms) %>%"></span>
+          </span>
+        </div>
+      <% end %>
+      <div class="hf-axis muted" aria-hidden="true">
+        <% (0..axis_max).step(5_000) do |t| %><span style="left:<%= pos.(t) %>%"><%= t / 1000 %>s</span><% end %>
+      </div>
+    </div>
+  <% end %>
 
   <% if s[:fastest].any? %>
     <h2>Quickest to spot</h2>
