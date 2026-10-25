@@ -12,7 +12,7 @@
     <div class="tile"><b><%= number_with_delimiter(s[:total_incl_unfinished]) %></b><span>sets found</span></div>
     <div class="tile"><b><%= number_with_delimiter(s[:players]) %></b><span>players</span></div>
     <div class="tile"><b><%= number_with_delimiter(s[:runs]) %></b><span>games finished</span></div>
-    <div class="tile"><b><%= s[:spread][:min][:n] %>× – <%= s[:spread][:max][:n] %>×</b><span>finds per set, least to most</span></div>
+    <div class="tile"><b><%= s[:spread][:min][:n] %>× – <%= s[:spread][:max][:n] %>×</b><span>finds per set, min–max</span></div>
   </div>
 
   <% if s[:most_games].present? %>
