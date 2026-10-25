@@ -43,4 +43,15 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     refute_includes response.body, "possible sets found at least once"
     refute_includes response.body, "player-secret-xyz"
   end
+
+  test "Puzzle runs never count toward stats" do
+    Rails.cache.clear
+    before = SetStats.new.compute.except(:generated_at)
+    cards = ClassicPuzzle.generate(7)
+    claims = ClassicPuzzle.sets_in(cards).each_with_index.map { |set, i| { "cards" => set, "t_ms" => (i + 1) * 1000 } }
+    PuzzleRun.create!(id: SecureRandom.uuid, player_id: "puzzler", display_name: "Puzzler", puzzle_on: Date.current, cards: cards,
+      claims: claims, started_at: 1.minute.ago, completed_at: Time.current, elapsed_ms: 6000)
+    Rails.cache.clear
+    assert_equal before, SetStats.new.compute.except(:generated_at)
+  end
 end
