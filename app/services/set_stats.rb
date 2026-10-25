@@ -10,7 +10,11 @@ class SetStats
   ZONE = "America/Chicago"
 
   def self.cached
-    Rails.cache.fetch("set_stats/v5", expires_in: 5.minutes) { new.compute }
+    Rails.cache.fetch("set_stats/v6", expires_in: 5.minutes) { new.compute }
+  end
+
+  def self.all_sets
+    @all_sets ||= (1..81).to_a.combination(3).select { |a, b, c| Rules.is_set?(a, b, c) }.freeze
   end
 
   def self.kind(cards)
@@ -75,9 +79,7 @@ class SetStats
       median_by_shared: ATTRS.to_h { |a| [a, median(by_shared[a])] },
       fastest: fastest,
       most_found: counts.sort_by { |c, n| [-n, c] }.first(10).map { |c, n| { cards: c, n: n } },
-      rarest: counts.select { |_, n| n == counts.values.min }.keys.min,
-      rarest_n: counts.values.min,
-      once_count: counts.count { |_, n| n == 1 },
+      spread: spread(counts),
       fastest_find: first_set && { cards: first_set[0], ms: first_set[1] },
       drought: drought,
       busiest_day: hours.group_by(&:to_date).max_by { |_, v| v.length }&.then { |d, v| [d, v.length] },
@@ -88,6 +90,17 @@ class SetStats
   end
 
   private
+
+  # How often each of the 1,080 possible sets has been found (unfound = 0):
+  # the extremes with one representative each, plus a histogram of counts.
+  def spread(counts)
+    all = self.class.all_sets.map { |c| [c, counts.fetch(c, 0)] }
+    lo, hi = all.map(&:last).minmax
+    pick = ->(n) { m = all.select { |_, v| v == n }; { cards: m.first[0], n: n, tied: m.length - 1 } }
+    tally = all.map(&:last).tally
+    { min: pick.(lo), max: pick.(hi), hist: (lo..hi).map { |n| [n, tally.fetch(n, 0)] },
+      median: median(all.map(&:last)) }
+  end
 
   # The most-found set of a kind, so each timing row shows a familiar example.
   def example(counts)

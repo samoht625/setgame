@@ -12,7 +12,7 @@
     <div class="tile"><b><%= number_with_delimiter(s[:total_incl_unfinished]) %></b><span>sets found</span></div>
     <div class="tile"><b><%= number_with_delimiter(s[:players]) %></b><span>players</span></div>
     <div class="tile"><b><%= number_with_delimiter(s[:runs]) %></b><span>games finished</span></div>
-    <div class="tile"><b><%= s[:distinct_found] %> / <%= SetStats::TOTAL_SETS %></b><span>possible sets found at least once</span></div>
+    <div class="tile"><b><%= s[:spread][:min][:n] %>× – <%= s[:spread][:max][:n] %>×</b><span>finds per set, least to most</span></div>
   </div>
 
   <% if s[:most_games].present? %>
@@ -78,6 +78,21 @@
     <% end %>
   </div>
 
+  <% sp = s[:spread]; peak = [sp[:hist].map(&:last).max, 1].max %>
+  <h2>Most vs least found</h2>
+  <p class="muted">How many of the <%= number_with_delimiter(SetStats::TOTAL_SETS) %> possible sets have been found each number of times. Median: <%= sp[:median] %>×.</p>
+  <div class="bars spread">
+    <div class="hist" aria-hidden="true">
+      <% sp[:hist].each do |n, sets| %><span class="<%= "x" if n == sp[:min][:n] || n == sp[:max][:n] %>" style="height:<%= sets.zero? ? 0 : [(sets * 100.0 / peak).round(1), 3].max %>%" title="<%= n %>×: <%= sets %> sets"></span><% end %>
+    </div>
+    <div class="hf-axis muted" aria-hidden="true"><span style="left:0"><%= sp[:min][:n] %>×</span><span style="left:100%"><%= sp[:max][:n] %>×</span></div>
+  </div>
+  <div class="list" style="margin-top:8px">
+    <% [[sp[:max], "most found"], [sp[:min], sp[:min][:n].zero? ? "never found" : "least found"]].each do |e, label| %>
+      <div class="row"><%= set_cards(e[:cards]) %><span class="v"><%= e[:n] %>×<small><%= label %><%= " · +#{e[:tied]} tied" if e[:tied].positive? %></small></span></div>
+    <% end %>
+  </div>
+
   <h2>Most found</h2>
   <div class="list">
     <% s[:most_found].each_with_index do |f, i| %>
@@ -89,7 +104,6 @@
   <div class="facts">
     <% if s[:fastest_find] %><div class="fact">Fastest find ever: <b><%= secs(s[:fastest_find][:ms]) %></b><br><%= set_cards(s[:fastest_find][:cards]) %></div><% end %>
     <% if s[:drought] %><div class="fact">Longest drought between finds: <b><%= secs(s[:drought][:ms]) %></b>, ended by<br><%= set_cards(s[:drought][:cards]) %></div><% end %>
-    <% if s[:rarest] %><div class="fact">Rarest find (<%= s[:rarest_n] %>×). <%= s[:once_count] %> sets have been found only once.<br><%= set_cards(s[:rarest]) %></div><% end %>
     <div class="fact">
       Solo: <b><%= s[:modes]["solo"][:runs] %></b> finished, median <b><%= secs(s[:modes]["solo"][:median_ms]) %></b><br>
       Daily: <b><%= s[:modes]["daily"][:runs] %></b> finished, median <b><%= secs(s[:modes]["daily"][:median_ms]) %></b>
