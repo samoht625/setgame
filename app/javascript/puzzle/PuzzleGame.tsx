@@ -453,6 +453,7 @@ const PuzzleGame: React.FC = () => {
     <>
       {toastNode}
       <GameLayout
+        wide
         hud={
           <Hud>
             <SoloTimer
@@ -475,20 +476,22 @@ const PuzzleGame: React.FC = () => {
           </Hud>
         }
         board={
-          <>
-            <Board
-              cards={run && !starting && playing ? run.cards : []}
-              selectedCards={selectedCards}
-              rejectedCards={rejectedCards}
-              onCardClick={handleCardClick}
-              claiming={clockPending}
-              loading={starting}
-              gameOver={overlay !== null}
-              gameOverLabel={overlay?.label}
-              gameOverContent={overlay?.content}
-            />
+          <div className="lg:flex lg:items-start lg:justify-center lg:gap-8">
+            <div className="min-w-0 lg:max-w-[calc((100dvh-13rem)*2)] lg:flex-1">
+              <Board
+                cards={run && !starting && playing ? run.cards : []}
+                selectedCards={selectedCards}
+                rejectedCards={rejectedCards}
+                onCardClick={handleCardClick}
+                claiming={clockPending}
+                loading={starting}
+                gameOver={overlay !== null}
+                gameOverLabel={overlay?.label}
+                gameOverContent={overlay?.content}
+              />
+            </div>
             <FoundSets found={run && playing && !starting ? run.found : []} total={SET_COUNT} latestKey={claimAnimationKey} />
-          </>
+          </div>
         }
         panel={
           <SidePanel open={panel.open} onClose={() => panel.setOpen(false)} title="Leaderboard" isDesktop={panel.isDesktop}>

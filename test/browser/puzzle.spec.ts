@@ -109,3 +109,28 @@ test.describe('on a phone', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   })
 })
+
+for (const [width, height, phone] of [[1280, 720, false], [1920, 1080, false], [390, 844, true], [375, 667, true]] as const) {
+  test.describe(`at ${width}×${height}`, () => {
+    test.use({ viewport: { width, height }, hasTouch: phone, isMobile: phone })
+
+    test('the timer, board and found sets fit without scrolling', async ({ page }) => {
+      await page.goto('/puzzle')
+      await page.getByRole('button', { name: 'Start', exact: true }).click()
+      await expect(page.locator('[data-card-id]')).toHaveCount(12)
+      for (const triple of allSets(await cards(page)).slice(0, 3)) {
+        await claim(page, triple)
+        await page.waitForTimeout(700)
+      }
+      await expect(page.locator('[data-found-set]')).toHaveCount(3)
+      const fit = await page.evaluate(() => ({
+        scroll: document.documentElement.scrollHeight <= innerHeight && document.documentElement.scrollWidth <= innerWidth,
+        found: document.querySelector('ol[aria-label="Sets found"]')!.getBoundingClientRect().bottom <= innerHeight,
+        mini: document.querySelector('[data-found-set] span')!.getBoundingClientRect().width
+      }))
+      expect(fit.scroll).toBe(true)
+      expect(fit.found).toBe(true)
+      expect(fit.mini).toBeGreaterThanOrEqual(44)
+    })
+  })
+}
