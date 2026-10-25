@@ -5,11 +5,10 @@ import { formatCountdown, ordinal, shareGrid, type DailyShare } from '../lib/dai
 import type { DailyEntry, DailyStatus } from '../lib/solo_api'
 import DailyCompare from './DailyCompare'
 import { DailyStandings } from './DailyPanel'
+import { primaryButton, secondaryButton, secondaryButtonSmall } from '../lib/buttons'
+export { primaryButton, secondaryButton }
 
 const LEADERBOARD_SIZE = 10
-
-export const primaryButton = 'min-h-11 rounded-full bg-neutral-900 px-4 text-sm font-medium text-white transition-colors hover:bg-neutral-700 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300'
-export const secondaryButton = 'min-h-11 rounded-full border border-neutral-300 px-4 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-600 dark:text-neutral-200 dark:hover:bg-neutral-800'
 
 interface DailyCardProps {
   number: number
@@ -122,7 +121,7 @@ const DailyCard: React.FC<DailyCardProps> = ({
             {!stale && msLeft > 0 ? (
               <>Next {noun} in {formatCountdown(msLeft)}</>
             ) : (
-              <button type="button" onClick={onNextDeal} className="min-h-9 font-medium text-neutral-900 underline underline-offset-4 dark:text-neutral-100">
+              <button type="button" onClick={onNextDeal} className={secondaryButtonSmall}>
                 Play today’s {noun}
               </button>
             )}

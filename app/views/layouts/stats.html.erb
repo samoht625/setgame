@@ -14,10 +14,11 @@
       body{margin:0;background:#f5f5f5;color:#171717;font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
       main{max-width:600px;margin:0 auto;padding:28px 18px 56px}
       a{color:inherit}
-      header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:22px}
+      header{display:flex;align-items:center;gap:12px;justify-content:space-between;margin-bottom:22px}
       h1{font-size:22px;margin:0;font-weight:650;letter-spacing:-.01em}
       h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#8a8a8a;font-weight:600;margin:34px 0 12px}
       .muted{color:#8a8a8a;font-size:13px}
+      .btn{display:inline-flex;align-items:center;min-height:36px;padding:0 16px;border-radius:999px;border:1px solid #d4d4d4;background:#fff;color:#404040;font-size:13px;font-weight:500;text-decoration:none;transition:background-color .15s}.btn:hover{background:#f5f5f5}
       .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
       .tile{background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 0 0 1px #e8e8e8}
       .tile b{display:block;white-space:nowrap;font-size:24px;font-weight:650;font-variant-numeric:tabular-nums}
@@ -62,7 +63,7 @@
       .fact .set{margin-top:8px}
       @media (max-width:640px){.tile b{font-size:21px}.bar{grid-template-columns:96px 1fr 78px}.c{width:58px;height:38px}}
       @media (prefers-color-scheme:dark){
-        body{background:#111214;color:#eee}.tile,.bars,.row,.fact{background:#1b1c1f;box-shadow:0 0 0 1px #2a2b2f}
+        body{background:#111214;color:#eee}.btn{background:#1b1c1f;border-color:#525252;color:#e5e5e5}.btn:hover{background:#26272a}.tile,.bars,.row,.fact{background:#1b1c1f;box-shadow:0 0 0 1px #2a2b2f}
         .bar+.bar,.hf-row+.hf-row{border-top-color:#26272a}.hf-tick{background:#2a2b2f}.hf-fill{background:#4a4b50}.hf-dot,.hist span.x{background:#e5e5e5}.hist span{background:#4a4b50}.track{background:#2a2b2f}.fill{background:#e5e5e5}.c{background:#f1f0ec}
       }
     </style>

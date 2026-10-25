@@ -1,5 +1,7 @@
 import React, { useEffect, useId, useRef, useState } from 'react'
 import { NAME_HINT, NAME_MAX_LENGTH, cleanName } from '../lib/player_name'
+import { noAutofill } from '../lib/no_autofill'
+import { primaryButton, secondaryButton } from '../lib/buttons'
 
 interface NameEditorProps {
   initial: string
@@ -11,10 +13,12 @@ interface NameEditorProps {
   compact?: boolean
   /** Off where focusing would pop up a phone keyboard over the page uninvited. */
   autoFocus?: boolean
+  /** Field on its own row, then Cancel and Save as full-size buttons (dialogs). */
+  stacked?: boolean
 }
 
 /** A name field with Save: Enter saves, Escape cancels. */
-const NameEditor: React.FC<NameEditorProps> = ({ initial, onSave, onCancel, compact = false, autoFocus = true }) => {
+const NameEditor: React.FC<NameEditorProps> = ({ initial, onSave, onCancel, compact = false, autoFocus = true, stacked = false }) => {
   const [value, setValue] = useState(initial)
   const [saving, setSaving] = useState(false)
   const [failed, setFailed] = useState(false)
@@ -43,7 +47,7 @@ const NameEditor: React.FC<NameEditorProps> = ({ initial, onSave, onCancel, comp
   const message = invalid ? NAME_HINT : failed ? 'Couldn’t save. Try again.' : null
 
   return (
-    <form onSubmit={submit} className="min-w-0 flex-1">
+    <form onSubmit={submit} className="min-w-0 flex-1" data-form-type="other" data-1p-ignore autoComplete="off">
       <div className="flex min-w-0 items-center gap-1.5">
         <input
           ref={inputRef}
@@ -55,27 +59,40 @@ const NameEditor: React.FC<NameEditorProps> = ({ initial, onSave, onCancel, comp
           aria-describedby={message ? hintId : undefined}
           placeholder="Your name"
           maxLength={NAME_MAX_LENGTH}
-          autoComplete="nickname"
+          {...noAutofill}
+          spellCheck={false}
           enterKeyHint="done"
           // 16px text so phones don't zoom in on focus.
           className={`min-w-0 flex-1 rounded-md border bg-white px-2 text-base text-neutral-900 focus:outline-none dark:bg-neutral-800 dark:text-neutral-100 ${
-            compact ? 'h-8' : 'h-10'
+            compact ? 'h-8' : stacked ? 'h-11' : 'h-10'
           } ${invalid ? 'border-rose-400 focus:border-rose-500' : 'border-neutral-300 focus:border-neutral-500 dark:border-neutral-600 dark:focus:border-neutral-400'}`}
         />
-        <button
-          type="submit"
-          disabled={!canSave}
-          className={`shrink-0 rounded-md bg-neutral-900 px-3 text-sm font-semibold text-white transition-colors hover:bg-neutral-700 disabled:opacity-40 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300 ${
-            compact ? 'h-8' : 'h-10'
-          }`}
-        >
-          {saving ? 'Saving…' : 'Save'}
-        </button>
+        {!stacked && (
+          <button
+            type="submit"
+            disabled={!canSave}
+            className={`shrink-0 rounded-md bg-neutral-900 px-3 text-sm font-semibold text-white transition-colors hover:bg-neutral-700 disabled:opacity-40 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300 ${
+              compact ? 'h-8' : 'h-10'
+            }`}
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        )}
       </div>
       {message && (
         <p id={hintId} role="status" className={`mt-1 text-left text-[11px] ${invalid || failed ? 'text-rose-700 dark:text-rose-300' : ''}`}>
           {message}
         </p>
+      )}
+      {stacked && (
+        <div className="mt-4 flex gap-2">
+          {onCancel && (
+            <button type="button" onClick={onCancel} className={`${secondaryButton} flex-1`}>Cancel</button>
+          )}
+          <button type="submit" disabled={!canSave} className={`${primaryButton} flex-1`}>
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
       )}
     </form>
   )

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { secondaryButtonSmall } from '../lib/buttons'
 import Board from '../components/Board'
 import GameLayout from '../components/GameLayout'
 import SidePanel from '../components/SidePanel'
@@ -377,7 +378,7 @@ const PuzzleGame: React.FC = () => {
       ) : finishedRun.submission === 'pending' ? (
         <div className="mt-3 rounded-xl bg-amber-50 p-2.5 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
           <p role="status">Your time is saved. Retry when you’re connected.</p>
-          <button type="button" onClick={() => void submit(finishedRun)} className="mt-1 min-h-9 rounded-md px-1 font-semibold underline underline-offset-4">
+          <button type="button" onClick={() => void submit(finishedRun)} className={`${secondaryButtonSmall} mt-2`}>
             Retry submission
           </button>
         </div>

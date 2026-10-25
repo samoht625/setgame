@@ -1,4 +1,5 @@
 import React, { useId } from 'react'
+import { secondaryButtonSmall } from '../lib/buttons'
 import NameEditor from '../components/NameEditor'
 import { getSavedName } from '../lib/player_name'
 import LeaderboardList from '../components/LeaderboardList'
@@ -63,7 +64,7 @@ export const DailyStandings: React.FC<DailyStandingsProps> = ({ status, error, o
     return error ? (
       <div className="mt-2 rounded-xl border border-dashed border-neutral-200 px-3 py-4 text-center dark:border-neutral-700">
         <p role="status" className="text-xs text-neutral-600 dark:text-neutral-300">Could not load today’s times.</p>
-        <button type="button" onClick={onRetry} className="mt-1 min-h-9 rounded-md px-3 text-xs font-medium underline underline-offset-4">Try again</button>
+        <button type="button" onClick={onRetry} className={`${secondaryButtonSmall} mt-2`}>Try again</button>
       </div>
     ) : (
       <p role="status" className="mt-2 rounded-xl bg-neutral-50 px-3 py-6 text-center text-xs text-neutral-500 dark:bg-neutral-800/50 dark:text-neutral-400">Loading times…</p>

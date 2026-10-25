@@ -6,7 +6,7 @@
   <% StatsHelper::INKS.each do |name, ink| %><pattern id="st-<%= name %>" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M0 3H12" fill="none" stroke="<%= ink %>" stroke-width="3.5"/></pattern><% end %>
 </defs></svg>
 <main>
-  <header><h1>Set stats</h1><a class="muted" href="/">← Play</a></header>
+  <header><h1>Set stats</h1><a class="btn" href="/">Play</a></header>
 
   <div class="tiles">
     <div class="tile"><b><%= number_with_delimiter(s[:total_incl_unfinished]) %></b><span>sets found</span></div>

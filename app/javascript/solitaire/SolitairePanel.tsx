@@ -1,4 +1,5 @@
 import React from 'react'
+import { secondaryButtonSmall } from '../lib/buttons'
 import LeaderboardList from '../components/LeaderboardList'
 import RecentSets from '../components/RecentSets'
 import type { LeaderboardEntry } from '../lib/solo_api'
@@ -113,7 +114,7 @@ export const SoloLeaderboard: React.FC<SoloLeaderboardProps> = ({
     {personalBestError && (
       <div className="mt-2.5 rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-700 dark:bg-neutral-800/50 dark:text-neutral-200">
         <p role="status">{personalBestError}</p>
-        <button type="button" onClick={onRetryScores} className="min-h-9 rounded-md font-medium underline underline-offset-4">Retry your best times</button>
+        <button type="button" onClick={onRetryScores} className={`${secondaryButtonSmall} mt-2`}>Retry your best times</button>
       </div>
     )}
 
@@ -122,7 +123,7 @@ export const SoloLeaderboard: React.FC<SoloLeaderboardProps> = ({
     ) : scoresError ? (
       <div className="mt-2.5 rounded-xl border border-dashed border-neutral-200 px-3 py-4 text-center dark:border-neutral-700">
         <p role="status" className="text-xs text-neutral-600 dark:text-neutral-300">{scoresError}</p>
-        <button type="button" onClick={onRetryScores} className="mt-1 min-h-9 rounded-md px-3 text-xs font-medium underline underline-offset-4">Try again</button>
+        <button type="button" onClick={onRetryScores} className={`${secondaryButtonSmall} mt-2`}>Try again</button>
       </div>
     ) : leaderboard.length === 0 ? (
       <div className="mt-2.5 rounded-xl border border-dashed border-neutral-200 px-3 py-6 text-center dark:border-neutral-700">

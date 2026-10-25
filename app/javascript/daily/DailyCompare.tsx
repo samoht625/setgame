@@ -1,4 +1,5 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { secondaryButtonSmall } from '../lib/buttons'
 import CardFace from '../components/CardFace'
 import { ordinal } from '../lib/daily'
 import {
@@ -388,7 +389,7 @@ const DailyCompare: React.FC<DailyCompareProps> = ({ date, number, opponent, onC
         ) : replay === 'error' ? (
           <div className="py-14 text-center">
             <p role="status" className="text-sm text-neutral-700 dark:text-neutral-200">Couldn’t load this replay.</p>
-            <button type="button" onClick={() => setAttempt(value => value + 1)} className="mt-1 min-h-9 rounded-md px-3 text-xs font-medium underline underline-offset-4">
+            <button type="button" onClick={() => setAttempt(value => value + 1)} className={`${secondaryButtonSmall} mt-2`}>
               Try again
             </button>
           </div>

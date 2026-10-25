@@ -81,7 +81,7 @@ const Tour: React.FC<{ onDone: () => void }> = ({ onDone }) => {
         </h2>
         <RulesDemo step={STEPS[step]!.demo} />
         <div className="mt-4 flex items-center gap-2">
-          <button type="button" onClick={() => finish(false)} className="min-h-10 rounded-full px-3 text-sm text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100">
+          <button type="button" onClick={() => finish(false)} className="min-h-10 rounded-full border border-neutral-300 px-4 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-200 dark:hover:bg-neutral-800">
             Skip
           </button>
           <span className="flex flex-1 justify-center gap-1.5" aria-label={`Step ${step + 1} of ${STEPS.length}`}>

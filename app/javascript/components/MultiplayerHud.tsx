@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { noAutofill } from '../lib/no_autofill'
 import { Hud, HudDivider, HudStat, RestartIcon } from './Hud'
 import { useGameMenu } from './GameMenu'
 import ScoreValue from './ScoreValue'
@@ -111,6 +112,8 @@ const MultiplayerHud: React.FC<MultiplayerHudProps> = ({
                 }}
                 placeholder="Your name"
                 aria-label="Your name"
+                {...noAutofill}
+                spellCheck={false}
                 maxLength={20}
                 className="w-32 rounded-md border border-neutral-300 bg-white px-2 py-1 text-sm focus:border-neutral-500 focus:outline-none dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 dark:focus:border-neutral-400"
               />

@@ -41,11 +41,9 @@ const NameDialog: React.FC = () => {
               initial={getSavedName() ?? ''}
               onSave={name => { saveName(name); close(); return true }}
               onCancel={close}
+              stacked
             />
           </div>
-          <button type="button" onClick={close} className="mt-3 min-h-9 text-xs font-medium text-neutral-600 underline underline-offset-4 dark:text-neutral-300">
-            Cancel
-          </button>
         </div>
       )}
     </dialog>

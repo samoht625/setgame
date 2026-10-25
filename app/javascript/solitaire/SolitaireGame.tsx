@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { primaryButton, secondaryButton, secondaryButtonSmall } from '../lib/buttons'
 import Board from '../components/Board'
 import GameLayout from '../components/GameLayout'
 import ResultDialog from '../components/ResultDialog'
@@ -42,8 +43,6 @@ const ACTIVITY_SAVE_INTERVAL_MS = 10_000
 // The results dialog shows the top of the leaderboard; the side panel has the rest.
 const RESULTS_LEADERBOARD_SIZE = 5
 
-const primaryButton = 'min-h-11 rounded-full bg-neutral-900 px-4 text-sm font-medium text-white transition-colors hover:bg-neutral-700 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300'
-const secondaryButton = 'min-h-11 rounded-full border border-neutral-300 px-4 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-200 dark:hover:bg-neutral-800'
 
 interface RecentClaim {
   cards: number[]
@@ -723,7 +722,7 @@ const SolitaireGame: React.FC<SolitaireGameProps> = ({ holdDeal = false }) => {
           <button
             type="button"
             onClick={() => void submitFinishedGame(elapsedMs, eventsRef.current)}
-            className="mt-1 min-h-9 rounded-md px-1 font-semibold underline underline-offset-4"
+            className={`${secondaryButtonSmall} mt-2`}
           >
             Retry submission
           </button>
