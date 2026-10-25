@@ -337,6 +337,7 @@ test.describe('on a phone', () => {
 
     const results = page.getByRole('region', { name: 'Daily Deal #7' })
     await expect(results.getByText('1st of 1')).toBeVisible()
+    await expect(results.getByRole('img', { name: 'Your pace on each set: 4 quick, 4 typical, 3 slow' }).locator('[data-mark]')).toHaveCount(11)
     await results.getByRole('button', { name: 'Share', exact: true }).click()
     await expect.poll(() => page.evaluate(() => (window as unknown as { __shared: ShareData[] }).__shared)).toEqual([
       { text: `Set Daily Deal #7 · 2:12\n🟩🟩🟩🟨🟨🟨🟥🟥🟥\n🟩🟨\n🏆 1st of 1 · 🔥 3 days\nhttps://set.tido.site/daily?r=${token}` }

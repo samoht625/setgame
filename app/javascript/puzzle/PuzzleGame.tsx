@@ -407,6 +407,7 @@ const PuzzleGame: React.FC = () => {
           onNameScore={namedRun && status?.me.result && !myScoreName ? nameRun : undefined}
           next={{ href: '/', label: 'Play Daily Deal' }}
           noun="puzzle"
+          marksLabel="Your attempts"
           emptyText="No times yet — find all 6 sets to take the top spot."
         />
       </>

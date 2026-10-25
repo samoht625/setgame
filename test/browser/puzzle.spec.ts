@@ -68,7 +68,8 @@ test('the Puzzle is 12 cards with exactly 6 sets; finding them all lands on a re
   await expect(card.getByText(/^\d+(st|nd|rd|th) of \d+$/)).toBeVisible()
   await expect(card.getByRole('link', { name: 'Play Daily Deal' })).toHaveAttribute('href', '/')
   expect(events.filter(([name]) => name === 'game_complete').map(([, data]) => data?.mode)).toEqual(['puzzle'])
-  await expect(card.locator('[data-share-grid]')).toHaveText('✅❌✅✅✅✅✅')
+  await expect(card.locator('[data-share-grid]')).toHaveAttribute('data-share-grid', 'hmhhhhh')
+  await expect(card.getByRole('img', { name: 'Your attempts: 6 found, 1 missed' })).toBeVisible()
 
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
   await card.getByRole('button', { name: 'Share', exact: true }).click()

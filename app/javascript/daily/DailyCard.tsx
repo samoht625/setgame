@@ -1,7 +1,8 @@
 import React, { useId, useState } from 'react'
 import { formatTime } from '../solitaire/time'
 import { track } from '../lib/analytics'
-import { formatCountdown, ordinal, shareGrid, type DailyShare } from '../lib/daily'
+import { formatCountdown, ordinal, type DailyShare } from '../lib/daily'
+import MarkGrid from '../components/MarkGrid'
 import type { DailyEntry, DailyStatus } from '../lib/solo_api'
 import DailyCompare from './DailyCompare'
 import { DailyStandings } from './DailyPanel'
@@ -36,12 +37,14 @@ interface DailyCardProps {
   /** What rolls over at midnight, e.g. "deal" or "puzzle". */
   noun?: string
   emptyText?: string
+  /** What the grid of squares under the time shows, for screen readers. */
+  marksLabel?: string
 }
 
 /** What the Daily Deal (and the Puzzle) show once today's try is used: the result, today's leaderboard and what's next. */
 const DailyCard: React.FC<DailyCardProps> = ({
   number, result, streak, note, status, statusError, onRetryStatus, playerId, nowMs, onShare, shareNote, onNextDeal, stale = false, onNameScore,
-  title, next = { href: '/puzzle', label: 'Play Puzzle' }, noun = 'deal', emptyText
+  title, next = { href: '/puzzle', label: 'Play Puzzle' }, noun = 'deal', emptyText, marksLabel = 'Your pace on each set'
 }) => {
   const titleId = useId()
   const [comparing, setComparing] = useState<DailyEntry | null>(null)
@@ -71,9 +74,9 @@ const DailyCard: React.FC<DailyCardProps> = ({
               </div>
               <div className="mt-0.5 min-h-5 text-sm text-neutral-500 dark:text-neutral-400">{rank}</div>
               {result.marks && (
-                <p aria-label="Your share grid" data-share-grid className="mt-2 whitespace-pre-line text-base leading-tight tracking-[0.08em]">
-                  {shareGrid(result.marks)}
-                </p>
+                <div className="mt-3 flex justify-center">
+                  <MarkGrid marks={result.marks} label={marksLabel} />
+                </div>
               )}
             </>
           ) : (
