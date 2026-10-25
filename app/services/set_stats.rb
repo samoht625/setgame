@@ -10,7 +10,7 @@ class SetStats
   ZONE = "America/Chicago"
 
   def self.cached
-    Rails.cache.fetch("set_stats/v6", expires_in: 5.minutes) { new.compute }
+    Rails.cache.fetch("set_stats/v7", expires_in: 5.minutes) { new.compute }
   end
 
   def self.all_sets
@@ -99,7 +99,8 @@ class SetStats
     pick = ->(n) { m = all.select { |_, v| v == n }; { cards: m.first[0], n: n, tied: m.length - 1 } }
     tally = all.map(&:last).tally
     { min: pick.(lo), max: pick.(hi), hist: (lo..hi).map { |n| [n, tally.fetch(n, 0)] },
-      median: median(all.map(&:last)) }
+      median: median(all.map(&:last)),
+      least: all.sort_by { |c, n| [n, c] }.first(10).map { |c, n| { cards: c, n: n } } }
   end
 
   # The most-found set of a kind, so each timing row shows a familiar example.

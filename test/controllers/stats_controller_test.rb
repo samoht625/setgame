@@ -24,6 +24,8 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, stats[:spread][:min][:n]
     assert_equal 1078, stats[:spread][:min][:tied]
     assert_equal [[0, 1078], [1, 1], [2, 1]], stats[:spread][:hist]
+    assert_equal 10, stats[:spread][:least].length
+    assert_equal 0, stats[:spread][:least].first[:n]
 
     named = SoloGame.create!(id: SecureRandom.uuid, player_id: "p3", seed: "3", started_at: 1.hour.ago, status: "completed", completed_at: Time.current, daily_on: Date.current)
     SoloScore.create!(solo_game: named, player_id: "p3", display_name: "Ada", elapsed_ms: 5000, completed_at: Time.current, daily_on: Date.current, events: [])
@@ -37,7 +39,7 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Most games finished"
     assert_includes response.body, "vs all"
     assert_includes response.body, "hf-dot"
-    assert_includes response.body, "Most vs least found"
+    assert_includes response.body, "Least found"
     refute_includes response.body, "possible sets found at least once"
     refute_includes response.body, "player-secret-xyz"
   end

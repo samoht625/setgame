@@ -79,7 +79,7 @@
   </div>
 
   <% sp = s[:spread]; peak = [sp[:hist].map(&:last).max, 1].max %>
-  <h2>Most vs least found</h2>
+  <h2>Finds per set</h2>
   <p class="muted">How many of the <%= number_with_delimiter(SetStats::TOTAL_SETS) %> possible sets have been found each number of times. Median: <%= sp[:median] %>×.</p>
   <div class="bars spread">
     <div class="hist" aria-hidden="true">
@@ -87,15 +87,17 @@
     </div>
     <div class="hf-axis muted" aria-hidden="true"><span style="left:0"><%= sp[:min][:n] %>×</span><span style="left:100%"><%= sp[:max][:n] %>×</span></div>
   </div>
-  <div class="list" style="margin-top:8px">
-    <% [[sp[:max], "most found"], [sp[:min], sp[:min][:n].zero? ? "never found" : "least found"]].each do |e, label| %>
-      <div class="row"><%= set_cards(e[:cards]) %><span class="v"><%= e[:n] %>×<small><%= label %><%= " · +#{e[:tied]} tied" if e[:tied].positive? %></small></span></div>
-    <% end %>
-  </div>
 
   <h2>Most found</h2>
   <div class="list">
     <% s[:most_found].each_with_index do |f, i| %>
+      <div class="row"><span class="k"><%= i + 1 %></span><%= set_cards(f[:cards]) %><span class="v"><%= f[:n] %>×</span></div>
+    <% end %>
+  </div>
+
+  <h2>Least found</h2>
+  <div class="list">
+    <% sp[:least].each_with_index do |f, i| %>
       <div class="row"><span class="k"><%= i + 1 %></span><%= set_cards(f[:cards]) %><span class="v"><%= f[:n] %>×</span></div>
     <% end %>
   </div>
