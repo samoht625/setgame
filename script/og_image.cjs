@@ -85,11 +85,40 @@ function staticSvg() {
   `)
 }
 
-function dailySvg({ number, time }) {
+// The share grid as drawn squares (emoji don't render here): g/y/r for a
+// Daily Deal's fast/average/slow sets, h/m for a Puzzle's hits and misses.
+const MARK_COLORS = { g: '#22a55a', y: '#e8b62c', r: '#e0453a', h: '#22a55a', m: '#e0453a' }
+function marksGrid(marks, x, y, maxWidth, maxHeight) {
+  const list = String(marks || '').split('').filter(mark => MARK_COLORS[mark])
+  if (list.length === 0) return ''
+  const perRow = 9
+  const rows = Math.ceil(list.length / perRow)
+  const cols = Math.min(perRow, list.length)
+  const size = Math.min(56, (maxWidth / cols) * 0.86, (maxHeight / rows) * 0.86)
+  const step = size / 0.86
+  const top = y + (maxHeight - rows * step) / 2
+  return list.map((mark, index) => {
+    const cx = x + (index % perRow) * step
+    const cy = top + Math.floor(index / perRow) * step
+    const fill = MARK_COLORS[mark]
+    const glyph = mark === 'h'
+      ? `<path d="M${cx + size * 0.27} ${cy + size * 0.52} l${size * 0.16} ${size * 0.16} l${size * 0.31} -${size * 0.34}" fill="none" stroke="#fff" stroke-width="${size * 0.12}" stroke-linecap="round" stroke-linejoin="round"/>`
+      : mark === 'm'
+        ? `<path d="M${cx + size * 0.32} ${cy + size * 0.32} l${size * 0.36} ${size * 0.36} M${cx + size * 0.68} ${cy + size * 0.32} l-${size * 0.36} ${size * 0.36}" stroke="#fff" stroke-width="${size * 0.12}" stroke-linecap="round"/>`
+        : ''
+    return `<rect x="${cx}" y="${cy}" width="${size}" height="${size}" rx="${size * 0.18}" fill="${fill}"/>${glyph}`
+  }).join('')
+}
+
+function dailySvg({ number, title, time, standing = '', marks = '' }) {
+  const heading = title || `Set Daily Deal #${number}`
+  const grid = marksGrid(marks, 720, 150, 400, 330)
   return frame(`
-    <text x="88" y="244" font-size="44" font-weight="600" letter-spacing="-0.9" fill="${TEXT.body}">Set Daily Deal #${escapeXml(number)}</text>
-    <text x="78" y="438" font-size="200" font-weight="700" letter-spacing="-8" fill="${TEXT.strong}">${escapeXml(time)}</text>
-    ${cardFan(975, 322, 1.0)}
+    ${wordmark(88, 132, 40)}
+    <text x="88" y="258" font-size="44" font-weight="600" letter-spacing="-0.9" fill="${TEXT.body}">${escapeXml(heading)}</text>
+    <text x="78" y="440" font-size="180" font-weight="700" letter-spacing="-7" fill="${TEXT.strong}">${escapeXml(time)}</text>
+    ${standing ? `<text x="88" y="520" font-size="40" font-weight="600" fill="${TEXT.body}">${escapeXml(standing)}</text>` : ''}
+    ${grid || cardFan(975, 322, 1.0)}
   `)
 }
 

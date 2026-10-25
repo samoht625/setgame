@@ -42,6 +42,7 @@ Rails.application.routes.draw do
 
   # Link-preview image for a shared daily result (token from DailyShare)
   get '/og/daily/:token.png' => 'og_images#daily', as: :daily_og_image, format: false
+  get '/og/puzzle/:token.png' => 'og_images#puzzle', as: :puzzle_og_image, format: false
 
   # Tiny JSON endpoint: who is at the multiplayer table right now
   get '/presence' => 'presence#show', defaults: { format: :json }

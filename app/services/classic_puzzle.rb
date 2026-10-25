@@ -120,7 +120,7 @@ class ClassicPuzzle
 
   # Verifies a finished run: all six sets found, a time no shorter than the last
   # find and no longer than the server has seen the run open.
-  def finish!(run, elapsed_ms:, claims:, misses:, display_name:)
+  def finish!(run, elapsed_ms:, claims:, misses:, display_name:, attempts: nil)
     return :already_finished if run.finished?
 
     claims = valid_claims(claims)
@@ -130,10 +130,15 @@ class ClassicPuzzle
     max_ms = ((Time.current - run.started_at) * 1000).to_i + CLOCK_SLACK_MS
     return :invalid_time unless elapsed && elapsed.positive? && elapsed >= claims.last["t_ms"] && elapsed <= max_ms
 
+    misses = Integer(misses, exception: false).to_i.clamp(0, 9_999)
+    # Hits and misses in order ("hmhh…"), kept only when it agrees with the run.
+    attempts = attempts.to_s
+    attempts = nil unless attempts.match?(/\A[hm]{0,60}\z/) && attempts.count("h") == SET_COUNT && attempts.count("m") == misses
     run.update!(
       claims: claims,
       elapsed_ms: elapsed,
-      misses: Integer(misses, exception: false).to_i.clamp(0, 9_999),
+      misses: misses,
+      attempts: attempts,
       completed_at: Time.current,
       display_name: PlayerName.sanitize(display_name) || run.display_name
     )

@@ -169,7 +169,10 @@ test('the daily is one shared deal: played once, clocked from first paint, then 
   await results.getByRole('button', { name: 'Share', exact: true }).click()
   await expect(results.getByText('Result copied — paste it anywhere')).toBeVisible()
   const shared = await page.evaluate(() => navigator.clipboard.readText())
-  expect(shared).toMatch(new RegExp(`^Set Daily Deal #${number} · \\d+:\\d\\d\\nhttps://set\\.tido\\.site/daily\\?r=[\\w-]+$`, 'u'))
+  expect(shared).toMatch(new RegExp(`^Set Daily Deal #${number} · \\d+:\\d\\d\\n(?:[🟩🟨🟥]{1,9}\\n)+🏆 \\d+(?:st|nd|rd|th) of \\d+(?: · 🔥 \\d+ days)?\\nhttps://set\\.tido\\.site/daily\\?r=[\\w-]+$`, 'u'))
+  // Nine squares to a row, one per set found.
+  const rows = shared.split('\n').slice(1, -2)
+  expect(rows.slice(0, -1).every(row => Array.from(row).length === 9)).toBe(true)
   expect(named(events, 'daily_share')).toEqual([{ outcome: 'copied' }])
 
   // The shared link previews this result: crawlers get a personalized title and image.
@@ -325,7 +328,7 @@ test.describe('on a phone', () => {
         next_at: new Date(Date.now() + 3600_000).toISOString(),
         total: 1,
         leaderboard: [],
-        me: { attempted: true, streak: 1, result: { display_name: null, elapsed_ms: 132_000, misses: 2, rank: 1, total: 1, share_token: token, replay: true } }
+        me: { attempted: true, streak: 3, result: { display_name: null, elapsed_ms: 132_000, misses: 2, rank: 1, total: 1, share_token: token, replay: true, streak: 3, marks: 'gggyyyrrrgy' } }
       }
     }))
     await page.goto('/daily')
@@ -336,7 +339,7 @@ test.describe('on a phone', () => {
     await expect(results.getByText('1st of 1')).toBeVisible()
     await results.getByRole('button', { name: 'Share', exact: true }).click()
     await expect.poll(() => page.evaluate(() => (window as unknown as { __shared: ShareData[] }).__shared)).toEqual([
-      { text: `Set Daily Deal #7 · 2:12\nhttps://set.tido.site/daily?r=${token}` }
+      { text: `Set Daily Deal #7 · 2:12\n🟩🟩🟩🟨🟨🟨🟥🟥🟥\n🟩🟨\n🏆 1st of 1 · 🔥 3 days\nhttps://set.tido.site/daily?r=${token}` }
     ])
   })
 })

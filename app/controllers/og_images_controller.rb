@@ -2,7 +2,16 @@
 
 class OgImagesController < ApplicationController
   def daily
-    result = DailyShare.verify(params[:token])
+    serve(DailyShare.verify(params[:token]))
+  end
+
+  def puzzle
+    serve(DailyShare.verify(params[:token], kind: "puzzle"))
+  end
+
+  private
+
+  def serve(result)
     return head :not_found unless result
 
     path = OgImage.daily(result)

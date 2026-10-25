@@ -58,12 +58,26 @@ test('the Puzzle is 12 cards with exactly 6 sets; finding them all lands on a re
   await expect(page.locator('[data-found-set]')).toHaveCount(1)
   expect(await cards(page)).toEqual(board)
 
+  // A miss shows up in the share grid, in order.
+  const miss = [board[0]!, board[1]!, board.slice(2).find(id => !isSet(board[0]!, board[1]!, id))!]
+  await claim(page, miss)
+  await expect(page.getByText('Not a set')).toBeVisible()
   for (const set of sets.slice(1)) await claim(page, set)
   const card = page.getByRole('region', { name: /^Puzzle #\d+$/ })
   await expect(card).toBeVisible()
   await expect(card.getByText(/^\d+(st|nd|rd|th) of \d+$/)).toBeVisible()
   await expect(card.getByRole('link', { name: 'Play Daily Deal' })).toHaveAttribute('href', '/')
   expect(events.filter(([name]) => name === 'game_complete').map(([, data]) => data?.mode)).toEqual(['puzzle'])
+  await expect(card.locator('[data-share-grid]')).toHaveText('✅❌✅✅✅✅✅')
+
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
+  await card.getByRole('button', { name: 'Share', exact: true }).click()
+  const shared = await page.evaluate(() => navigator.clipboard.readText())
+  expect(shared).toMatch(/^Set Puzzle #\d+ · \d+:\d\d\n✅❌✅✅✅✅✅\n🏆 \d+(st|nd|rd|th) of \d+\nhttps:\/\/set\.tido\.site\/puzzle\?r=[\w-]+$/u)
+  const link = new URL(shared.split('\n').at(-1)!)
+  const preview = await (await page.request.get(link.pathname + link.search, { headers: { 'User-Agent': 'facebookexternalhit/1.1 Facebot Twitterbot/1.0' } })).text()
+  const image = preview.match(/<meta property="og:image" content="https:\/\/set\.tido\.site(\/og\/puzzle\/[\w-]+\.png)">/)![1]
+  expect((await page.request.get(image)).status()).toBe(200)
 
   const again = await page.request.post('/api/puzzle/games', { headers: { 'X-Player-Id': await page.evaluate(() => localStorage.getItem('setgame_player_id')!) } })
   expect(again.status()).toBe(409)

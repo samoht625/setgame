@@ -7,7 +7,7 @@ require "open3"
 # and the time, so a rendered file never goes stale; bump VERSION when the
 # layout changes.
 class OgImage
-  VERSION = 5
+  VERSION = 6
   CACHE_DIR = Rails.root.join("tmp/cache/og")
   RENDERER = Rails.root.join("script/og_image.cjs")
   TIMEOUT_SECONDS = 10
@@ -15,10 +15,11 @@ class OgImage
   class << self
     # Path to the cached PNG, or nil when rendering failed.
     def daily(result)
-      path = CACHE_DIR.join("daily-v#{VERSION}-#{result.number}-#{result.elapsed_ms}.png")
+      key = Digest::SHA256.hexdigest([result.kind, result.number, result.elapsed_ms, result.rank, result.total, result.streak, result.marks].join("|"))[0, 20]
+      path = CACHE_DIR.join("#{result.kind}-v#{VERSION}-#{key}.png")
       return path if path.file?
 
-      png = render("daily", number: result.number, time: result.time)
+      png = render("daily", title: result.title, time: result.time, standing: result.standing, marks: result.marks)
       return unless png
 
       FileUtils.mkdir_p(CACHE_DIR)

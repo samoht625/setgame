@@ -104,13 +104,19 @@ module Api
     end
 
     def serialize_result(puzzle, score)
+      rank = puzzle.rank_of(score)
+      total = puzzle.total
+      streak = puzzle.streak_for(score.player_id)
+      marks = score.claims ? ShareGrid.daily_marks(score.claims) : ""
       {
         display_name: score.display_name,
         elapsed_ms: score.elapsed_ms,
         misses: score.misses,
-        rank: puzzle.rank_of(score),
-        total: puzzle.total,
-        share_token: DailyShare.token(number: puzzle.number, elapsed_ms: score.elapsed_ms),
+        rank: rank,
+        total: total,
+        streak: streak,
+        marks: marks,
+        share_token: DailyShare.token(number: puzzle.number, elapsed_ms: score.elapsed_ms, rank: rank, total: total, streak: streak, marks: marks),
         replay: score.claims.present?
       }
     end

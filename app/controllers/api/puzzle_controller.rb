@@ -51,6 +51,7 @@ module Api
         elapsed_ms: params[:elapsed_ms],
         claims: params[:claims],
         misses: params[:misses],
+        attempts: params[:attempts],
         display_name: params[:display_name]
       )
       unless %i[ok already_finished].include?(outcome)
@@ -90,13 +91,19 @@ module Api
     end
 
     def serialize_result(puzzle, run)
+      rank = puzzle.rank_of(run)
+      total = puzzle.total
+      streak = puzzle.streak_for(run.player_id)
+      marks = run.marks
       {
         display_name: run.display_name,
         elapsed_ms: run.elapsed_ms,
         misses: run.misses,
-        rank: puzzle.rank_of(run),
-        total: puzzle.total,
-        share_token: nil,
+        rank: rank,
+        total: total,
+        streak: streak,
+        marks: marks,
+        share_token: DailyShare.token(kind: "puzzle", number: puzzle.number, elapsed_ms: run.elapsed_ms, rank: rank, total: total, streak: streak, marks: marks),
         replay: false
       }
     end

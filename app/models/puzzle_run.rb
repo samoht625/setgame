@@ -14,6 +14,12 @@ class PuzzleRun < ApplicationRecord
     completed_at.present?
   end
 
+  # The share grid's marks: each attempt in order, h(it) or m(iss). Runs
+  # without a recorded order show their hits, then their misses.
+  def marks
+    attempts.presence || ("h" * found.length) + ("m" * misses.to_i)
+  end
+
   # Claims as {cards: [a, b, c], t_ms:}, oldest first.
   def found
     Array(claims).filter_map do |claim|

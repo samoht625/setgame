@@ -59,6 +59,7 @@ export async function finishPuzzle(body: {
   elapsed_ms: number
   claims: PuzzleClaim[]
   misses: number
+  attempts?: string
   display_name: string | null
 }): Promise<{ ok: true } | { ok: false; error: string; retryable: boolean }> {
   try {

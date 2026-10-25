@@ -73,11 +73,16 @@ module Api
         assert_equal({ "player_id" => @player_id, "display_name" => "Daily", "misses" => 3, "replay" => true },
                      status.fetch("leaderboard").last.slice("player_id", "display_name", "misses", "replay"))
         assert_equal false, status.fetch("leaderboard").first.fetch("replay"), "a score without claim timing has no replay"
+        me = status.fetch("me")
+        result = me.fetch("result")
         assert_equal(
           { "attempted" => true, "streak" => 2, "result" => { "display_name" => "Daily", "elapsed_ms" => elapsed_ms, "misses" => 3, "rank" => 2, "total" => 2,
-                                                         "share_token" => DailyShare.token(number: 2, elapsed_ms: elapsed_ms), "replay" => true } },
-          status.fetch("me")
+                                                         "streak" => 2, "replay" => true } },
+          me.merge("result" => result.except("share_token", "marks"))
         )
+        assert_match(/\A[gyr]+\z/, result.fetch("marks"))
+        shared = DailyShare.verify(result.fetch("share_token"))
+        assert_equal [2, elapsed_ms, 2, 2, 2, result.fetch("marks")], [shared.number, shared.elapsed_ms, shared.rank, shared.total, shared.streak, shared.marks]
 
         get "/api/solo/leaderboard", params: { period: "daily" }, headers: @headers
         assert_empty JSON.parse(response.body).fetch("entries")

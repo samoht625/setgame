@@ -73,6 +73,9 @@ export type DailyStatus = {
       total: number
       share_token: string
       replay?: boolean
+      /** The share grid: g/y/r per set (Daily Deal) or h/m per attempt (Puzzle). */
+      marks?: string
+      streak?: number
     } | null
   }
 }

@@ -13,7 +13,16 @@ class OgImagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "image/png", response.media_type
     assert_includes response.headers["Cache-Control"], "immutable"
     assert_equal [1200, 630], response.body.byteslice(16, 8).unpack("NN")
-    assert OgImage::CACHE_DIR.join("daily-v#{OgImage::VERSION}-12-161400.png").file?
+    assert_equal 1, Dir[OgImage::CACHE_DIR.join("daily-v#{OgImage::VERSION}-*.png")].length
+  end
+
+  test "a shared Puzzle result with rank, streak and grid gets its own preview" do
+    token = DailyShare.token(kind: "puzzle", number: 1, elapsed_ms: 41_000, rank: 2, total: 9, streak: 3, marks: "hhmhhhh")
+    get "/og/puzzle/#{token}.png"
+    assert_response :success
+    assert_equal [1200, 630], response.body.byteslice(16, 8).unpack("NN")
+    get "/og/daily/#{token}.png"
+    assert_response :not_found
   end
 
   test "an unsigned result is not rendered" do

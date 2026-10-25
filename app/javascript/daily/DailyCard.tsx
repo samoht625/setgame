@@ -1,7 +1,7 @@
 import React, { useId, useState } from 'react'
 import { formatTime } from '../solitaire/time'
 import { track } from '../lib/analytics'
-import { formatCountdown, ordinal, type DailyShare } from '../lib/daily'
+import { formatCountdown, ordinal, shareGrid, type DailyShare } from '../lib/daily'
 import type { DailyEntry, DailyStatus } from '../lib/solo_api'
 import DailyCompare from './DailyCompare'
 import { DailyStandings } from './DailyPanel'
@@ -71,6 +71,11 @@ const DailyCard: React.FC<DailyCardProps> = ({
                 {formatTime(result.elapsedMs)}
               </div>
               <div className="mt-0.5 min-h-5 text-sm text-neutral-500 dark:text-neutral-400">{rank}</div>
+              {result.marks && (
+                <p aria-label="Your share grid" data-share-grid className="mt-2 whitespace-pre-line text-base leading-tight tracking-[0.08em]">
+                  {shareGrid(result.marks)}
+                </p>
+              )}
             </>
           ) : (
             <>

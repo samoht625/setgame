@@ -10,6 +10,7 @@ class HomeController < ApplicationController
   end
 
   def puzzle
+    @shared_result = DailyShare.verify(params[:r], kind: "puzzle")
   end
 
   # The front door (/) and /daily. ?r= carries a shared result for link

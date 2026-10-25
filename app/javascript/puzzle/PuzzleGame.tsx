@@ -9,13 +9,12 @@ import ScoreValue from '../components/ScoreValue'
 import { useSound } from '../components/SoundProvider'
 import { useSidePanel } from '../hooks/useSidePanel'
 import { SoloTimer } from '../solitaire/SolitaireHud'
-import { formatTime } from '../solitaire/time'
 import DailyPanel from '../daily/DailyPanel'
 import DailyCard, { primaryButton } from '../daily/DailyCard'
 import FoundSets from './FoundSets'
 import { afterNextPaint } from '../lib/after_paint'
 import { seconds, track } from '../lib/analytics'
-import { dailyDate, shareLink } from '../lib/daily'
+import { dailyDate, puzzleShareLink, shareLink, type DailyShare } from '../lib/daily'
 import { getPlayerId } from '../lib/player_id'
 import { getSavedName, onNameChange, saveName } from '../lib/player_name'
 import { isSet } from '../lib/rules'
@@ -33,7 +32,6 @@ const SAVE_KEY = 'setgame_puzzle_v1'
 const QUIT_REPORTED_KEY = 'setgame_puzzle_quit_reported'
 const SET_COUNT = 6
 const MODE = 'puzzle'
-export const PUZZLE_URL = 'https://set.tido.site/puzzle'
 
 type PuzzleRun = {
   date: string
@@ -45,6 +43,8 @@ type PuzzleRun = {
   elapsedMs: number
   found: PuzzleClaim[]
   misses: number
+  /** Every attempt in order: h(it) or m(iss), for the share grid. */
+  attempts?: string
   submission?: 'pending' | 'submitted' | 'rejected'
 }
 
@@ -222,7 +222,8 @@ const PuzzleGame: React.FC = () => {
       startedAtMs: sameRun ? local!.startedAtMs : resumed ? Math.min(Date.parse(started.started_at), Date.now()) : Date.now(),
       elapsedMs: 0,
       found: sameRun && local!.found.length >= started.found.length ? local!.found : started.found,
-      misses: sameRun ? local!.misses : 0
+      misses: sameRun ? local!.misses : 0,
+      attempts: sameRun ? local!.attempts : undefined
     })
     if (!resumed) setClockPending(true)
     track('game_start', { mode: MODE, ranked: true, resumed })
@@ -236,6 +237,7 @@ const PuzzleGame: React.FC = () => {
       elapsed_ms: finished.elapsedMs,
       claims: finished.found,
       misses: finished.misses,
+      attempts: finished.attempts,
       display_name: getSavedName()
     })
     setSubmitting(false)
@@ -253,7 +255,7 @@ const PuzzleGame: React.FC = () => {
     setSelectedCards([])
 
     if (!isSet(sorted[0]!, sorted[1]!, sorted[2]!)) {
-      putRun({ ...current, misses: current.misses + 1 })
+      putRun({ ...current, misses: current.misses + 1, attempts: `${current.attempts ?? ''}m` })
       showToast('Not a set', 'error')
       flashRejection(cards)
       return
@@ -270,6 +272,7 @@ const PuzzleGame: React.FC = () => {
     const next: PuzzleRun = {
       ...current,
       found,
+      attempts: `${current.attempts ?? ''}h`,
       elapsedMs: tMs,
       status: finished ? 'finished' : 'playing',
       submission: finished ? 'pending' : current.submission
@@ -298,8 +301,8 @@ const PuzzleGame: React.FC = () => {
     if (nextSelected.length === 3) claim(nextSelected)
   }
 
-  const share = async (number: number, elapsedMs: number) => {
-    const outcome = await shareLink({ title: `Set Puzzle #${number}`, text: `Set Puzzle #${number} · ${formatTime(elapsedMs)}`, url: PUZZLE_URL })
+  const share = async (result: DailyShare) => {
+    const outcome = await shareLink(puzzleShareLink(result))
     track('puzzle_share', { outcome })
     if (outcome === 'shared' || outcome === 'cancelled') return
     if (shareNoteTimeoutRef.current) clearTimeout(shareNoteTimeoutRef.current)
@@ -317,15 +320,26 @@ const PuzzleGame: React.FC = () => {
   const finishedRun = run?.status === 'finished' ? run : null
   const statusMatchesRun = status !== null && finishedRun !== null && status.date === finishedRun.date
   const staleRun = status !== null && finishedRun !== null && status.date !== finishedRun.date
-  const result = finishedRun
+  const result: DailyShare | null = finishedRun
     ? {
         number: finishedRun.number,
         elapsedMs: finishedRun.elapsedMs,
         rank: statusMatchesRun ? serverResult?.rank : undefined,
-        total: statusMatchesRun ? serverResult?.total : undefined
+        total: statusMatchesRun ? serverResult?.total : undefined,
+        streak: statusMatchesRun ? serverResult?.streak : undefined,
+        token: statusMatchesRun ? serverResult?.share_token : undefined,
+        marks: (statusMatchesRun ? serverResult?.marks : undefined) ?? finishedRun.attempts
       }
     : status && serverResult
-      ? { number: status.number, elapsedMs: serverResult.elapsed_ms, rank: serverResult.rank, total: serverResult.total }
+      ? {
+          number: status.number,
+          elapsedMs: serverResult.elapsed_ms,
+          rank: serverResult.rank,
+          total: serverResult.total,
+          streak: serverResult.streak,
+          token: serverResult.share_token,
+          marks: serverResult.marks
+        }
       : null
   const streak = status && (!run || run.date === status.date) ? status.me.streak : 0
   const number = run?.number ?? status?.number
@@ -385,7 +399,7 @@ const PuzzleGame: React.FC = () => {
           onRetryStatus={refreshStatus}
           playerId={playerId}
           nowMs={nowMs}
-          onShare={() => void share(result.number, result.elapsedMs)}
+          onShare={() => void share(result)}
           shareNote={shareNote}
           onNextDeal={goToToday}
           stale={staleRun}

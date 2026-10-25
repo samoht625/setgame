@@ -1,6 +1,7 @@
 import { formatTime } from '../solitaire/time'
 
 export const DAILY_URL = 'https://set.tido.site/daily'
+export const PUZZLE_URL = 'https://set.tido.site/puzzle'
 // Must match DailyPuzzle::TIME_ZONE.
 export const DAILY_TIME_ZONE = 'America/Los_Angeles'
 
@@ -21,17 +22,49 @@ export type DailyShare = {
   elapsedMs: number
   // Signed by the server; lets link previews show this result.
   token?: string
+  rank?: number
+  total?: number
+  streak?: number
+  /** g/y/r per set found (Daily Deal) or h/m per attempt (Puzzle). */
+  marks?: string
 }
 
 export type ShareLink = { title: string; text: string; url: string }
 
-/** What the share sheet gets. The link is its own field so Messages can unfurl it into a preview. */
-export function dailyShareLink({ number, elapsedMs, token }: DailyShare): ShareLink {
+const MARK_EMOJI: Record<string, string> = { g: '🟩', y: '🟨', r: '🟥', h: '✅', m: '❌' }
+
+/** The spoiler-free grid, nine squares to a row. */
+export function shareGrid(marks: string | undefined): string {
+  const squares = Array.from(marks ?? '').map(mark => MARK_EMOJI[mark]).filter(Boolean)
+  const rows: string[] = []
+  for (let i = 0; i < squares.length; i += 9) rows.push(squares.slice(i, i + 9).join(''))
+  return rows.join('\n')
+}
+
+/** "🏆 2nd of 5 · 🔥 3 days"; the streak only from two days up. */
+export function shareStanding({ rank, total, streak }: DailyShare): string {
+  const parts: string[] = []
+  if (rank && total && rank <= total) parts.push(`🏆 ${ordinal(rank)} of ${total}`)
+  if (streak && streak >= 2) parts.push(`🔥 ${streak} days`)
+  return parts.join(' · ')
+}
+
+function resultLink(name: string, base: string, result: DailyShare): ShareLink {
+  const title = `${name} #${result.number}`
   return {
-    title: `Set Daily Deal #${number}`,
-    text: `Set Daily Deal #${number} · ${formatTime(elapsedMs)}`,
-    url: token ? `${DAILY_URL}?r=${encodeURIComponent(token)}` : DAILY_URL
+    title,
+    text: [`${title} · ${formatTime(result.elapsedMs)}`, shareGrid(result.marks), shareStanding(result)].filter(Boolean).join('\n'),
+    url: result.token ? `${base}?r=${encodeURIComponent(result.token)}` : base
   }
+}
+
+/** What the share sheet gets. The link is its own field so Messages can unfurl it into a preview. */
+export function dailyShareLink(result: DailyShare): ShareLink {
+  return resultLink('Set Daily Deal', DAILY_URL, result)
+}
+
+export function puzzleShareLink(result: DailyShare): ShareLink {
+  return resultLink('Set Puzzle', PUZZLE_URL, result)
 }
 
 const ORDINAL_SUFFIXES: Partial<Record<Intl.LDMLPluralRule, string>> = { one: 'st', two: 'nd', few: 'rd' }
