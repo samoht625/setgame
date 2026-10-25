@@ -1,0 +1,5 @@
+<%# The player this browser's cookie names, so a browser that lost its storage keeps its identity (see player_id.ts). %>
+<% if @known_player_id %>
+  <%= tag.meta name: "setgame-player-id", content: @known_player_id %>
+  <% if @known_player_name %><%= tag.meta name: "setgame-player-name", content: @known_player_name %><% end %>
+<% end %>

@@ -1,13 +1,22 @@
-import { getPlayerId } from './player_id'
+import { adoptServerPlayerId, getPlayerId, isNewPlayer } from './player_id'
 import { getSavedName } from './player_name'
 
-function headers(json = true): HeadersInit {
+export function headers(json = true): HeadersInit {
   const h: Record<string, string> = {
     Accept: 'application/json',
     'X-Player-Id': getPlayerId()
   }
+  // Lets the server keep an existing player over an id this page just made up.
+  if (isNewPlayer()) h['X-Player-New'] = '1'
   if (json) h['Content-Type'] = 'application/json'
   return h
+}
+
+/** fetch for the game API: adopts the player id the server says it used. */
+export async function apiFetch(input: string, init: RequestInit): Promise<Response> {
+  const res = await fetch(input, init)
+  adoptServerPlayerId(res.headers.get('X-Player-Id'))
+  return res
 }
 
 export type SoloGameStart = {
@@ -79,7 +88,7 @@ export type DailyStart = {
 
 export async function startSoloGame(signal?: AbortSignal): Promise<SoloGameStart | null> {
   try {
-    const res = await fetch('/api/solo/games', {
+    const res = await apiFetch('/api/solo/games', {
       method: 'POST',
       headers: headers(),
       credentials: 'same-origin',
@@ -100,7 +109,7 @@ export async function submitSoloScore(body: {
   display_name?: string | null
 }): Promise<{ ok: true; score?: LeaderboardEntry } | { ok: false; error: string; retryable: boolean }> {
   try {
-    const res = await fetch('/api/solo/scores', {
+    const res = await apiFetch('/api/solo/scores', {
       method: 'POST',
       headers: headers(),
       credentials: 'same-origin',
@@ -123,7 +132,7 @@ export const PROGRESS_SYNC_EVERY = 3
 /** Fire-and-forget: records how far an unfinished game got, with its claims. Safe to call while the page is unloading. */
 export function reportSoloProgress(gameId: string, events: ClaimEvent[]): void {
   try {
-    fetch(`/api/solo/games/${encodeURIComponent(gameId)}/progress`, {
+    apiFetch(`/api/solo/games/${encodeURIComponent(gameId)}/progress`, {
       method: 'POST',
       headers: headers(),
       credentials: 'same-origin',
@@ -140,7 +149,7 @@ export async function fetchLeaderboard(
   limit = 20,
   signal?: AbortSignal
 ): Promise<LeaderboardEntry[]> {
-  const res = await fetch(`/api/solo/leaderboard?period=${period}&limit=${limit}`, {
+  const res = await apiFetch(`/api/solo/leaderboard?period=${period}&limit=${limit}`, {
     headers: headers(false),
     credentials: 'same-origin',
     signal
@@ -151,7 +160,7 @@ export async function fetchLeaderboard(
 }
 
 export async function fetchPersonalBests(signal?: AbortSignal): Promise<Record<string, LeaderboardEntry | null>> {
-  const res = await fetch('/api/solo/personal_bests', {
+  const res = await apiFetch('/api/solo/personal_bests', {
     headers: headers(false),
     credentials: 'same-origin',
     signal
@@ -161,7 +170,7 @@ export async function fetchPersonalBests(signal?: AbortSignal): Promise<Record<s
 }
 
 export async function fetchDailyStatus(signal?: AbortSignal): Promise<DailyStatus> {
-  const res = await fetch('/api/daily', {
+  const res = await apiFetch('/api/daily', {
     headers: headers(false),
     credentials: 'same-origin',
     signal
@@ -173,7 +182,7 @@ export async function fetchDailyStatus(signal?: AbortSignal): Promise<DailyStatu
 /** The player's finished run and another finisher's from the same day, claim by claim. */
 export async function fetchDailyComparison(date: string, playerId: string, signal?: AbortSignal): Promise<DailyComparison> {
   const query = new URLSearchParams({ date, player_id: playerId })
-  const res = await fetch(`/api/daily/compare?${query}`, {
+  const res = await apiFetch(`/api/daily/compare?${query}`, {
     headers: headers(false),
     credentials: 'same-origin',
     signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(10000)]) : AbortSignal.timeout(10000)
@@ -185,7 +194,7 @@ export async function fetchDailyComparison(date: string, playerId: string, signa
 /** Deals today's one try, or says it's already been used. */
 export async function startDailyGame(): Promise<DailyStart | 'already_played' | null> {
   try {
-    const res = await fetch('/api/daily/games', {
+    const res = await apiFetch('/api/daily/games', {
       method: 'POST',
       headers: headers(),
       credentials: 'same-origin',
@@ -206,7 +215,7 @@ export function getPlayerDisplayName(): string | null {
 /** Puts a name on the player's own score for today; the game id proves it's theirs. */
 export async function nameDailyScore(gameId: string, displayName: string): Promise<boolean> {
   try {
-    const res = await fetch('/api/daily/name', {
+    const res = await apiFetch('/api/daily/name', {
       method: 'PATCH',
       headers: headers(),
       credentials: 'same-origin',

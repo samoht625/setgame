@@ -9,7 +9,7 @@ import { MenuButton } from './GameMenu'
 interface HeaderProps {
   mode: GameMode
   onSwitchMode: (mode: GameMode) => void
-  /** How many other people are in the multiplayer game right now. */
+  /** How many other people are in the multiplayer game right now (shown in the menu). */
   othersOnline?: number
 }
 
@@ -31,18 +31,18 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
     logoTimeout.current = setTimeout(() => setShowLogoSet(false), 4000)
   }
 
+  // Practice and multiplayer live in the menu; the switch only shows one while you're in it.
+  const secondary = mode === 'solo' || mode === 'multiplayer'
+
   const segment = (value: GameMode, label: string, narrowLabel?: string) => {
     const isActive = mode === value
-    const showJewel = value === 'multiplayer' && !isActive && othersOnline > 0
-    const jewelTitle = `${othersOnline} ${othersOnline === 1 ? 'person is' : 'people are'} playing multiplayer right now`
 
     return (
       <button
         type="button"
         onClick={() => onSwitchMode(value)}
         aria-pressed={isActive}
-        title={showJewel ? jewelTitle : undefined}
-        className={`relative min-h-8 rounded-full px-2.5 text-sm transition-colors sm:px-3 ${
+        className={`relative min-h-8 whitespace-nowrap rounded-full px-2.5 text-sm transition-colors sm:px-3 ${
           isActive
             ? 'bg-white font-medium text-neutral-900 shadow-sm dark:bg-neutral-700 dark:text-neutral-100'
             : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white'
@@ -54,13 +54,6 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
             <span className="max-[420px]:sr-only">{label}</span>
           </>
         ) : label}
-        {showJewel && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-2.5 w-2.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" aria-hidden="true" />
-            <span className="relative inline-flex h-2.5 w-2.5 rotate-45 rounded-[3px] bg-emerald-500 shadow-sm ring-1 ring-white dark:ring-neutral-900" aria-hidden="true" />
-            <span className="sr-only">{jewelTitle}</span>
-          </span>
-        )}
       </button>
     )
   }
@@ -69,8 +62,10 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
     <header>
       <div className="mx-auto flex h-12 w-full max-w-screen-2xl items-center justify-between gap-1 px-3 md:px-6 lg:px-10">
         <button type="button" aria-label="Set logo" onClick={tapLogo} className="flex min-h-11 shrink-0 items-center gap-1 rounded-lg sm:gap-2">
-          <span className="text-base font-semibold tracking-tight">Set</span>
-          <span className="flex h-6 w-11 items-center justify-center gap-1" aria-hidden="true">
+          {/* On narrow phones with a third segment, the logo's little set shows in place of the word. */}
+          <span className={`text-base font-semibold tracking-tight ${secondary && showLogoSet ? 'max-[419px]:hidden' : ''}`}>Set</span>
+          {/* Gives way on narrow phones when the switch has a third segment (Practice, Multiplayer). */}
+          <span className={`h-6 w-11 items-center justify-center gap-1 ${secondary && !showLogoSet ? 'hidden min-[420px]:flex' : 'flex'}`} aria-hidden="true">
             {showLogoSet ? (
               <span data-logo-set className="flex w-full gap-0.5 animate-logo-reveal">
                 {[1, 4, 7].map(cardId => <CardFace key={cardId} cardId={cardId} decorative className="h-auto min-w-0 flex-1 rounded-sm" />)}
@@ -88,11 +83,16 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
 
         <div className="flex min-w-0 items-center gap-1 sm:gap-2">
           <nav aria-label="Game mode" className="flex items-center rounded-full bg-neutral-100 p-1 dark:bg-neutral-800">
-            {segment('solo', 'Solo')}
-            {segment('daily', 'Daily')}
-            {segment('multiplayer', 'Multiplayer', 'Multi')}
+            {segment('daily', 'Daily Deal', secondary ? 'Daily' : undefined)}
+            {segment('puzzle', 'Puzzle')}
+            {mode === 'solo' && segment('solo', 'Practice')}
+            {mode === 'multiplayer' && segment('multiplayer', 'Multiplayer', 'Multi')}
           </nav>
           <MenuButton
+            modeItems={[
+              ...(mode === 'solo' ? [] : [{ label: 'Practice', onSelect: () => onSwitchMode('solo') }]),
+              ...(mode === 'multiplayer' ? [] : [{ label: 'Multiplayer', onSelect: () => onSwitchMode('multiplayer'), badge: othersOnline }])
+            ]}
             appItems={[
               { label: 'How to play', onSelect: openHowToPlay },
               { label: 'Stats', onSelect: () => window.location.assign('/stats') },

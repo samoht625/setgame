@@ -441,7 +441,7 @@ const DailyGame: React.FC = () => {
   // The card has the leaderboard in it already.
   useGameMenu(showCard ? [] : [{ label: 'Leaderboard', onSelect: panel.toggle }])
 
-  // Once today's try is used, /daily is a result card, not a game.
+  // Once today's try is used, the Daily Deal is a result card, not a game.
   if (showCard) {
     const submissionNote = finishedRun && (
       submitting ? (
@@ -485,7 +485,7 @@ const DailyGame: React.FC = () => {
     overlay = null
   } else if (status) {
     overlay = {
-      label: `Set Daily #${status.number}`,
+      label: `Daily Deal #${status.number}`,
       content: (
         <>
           <p className="mt-2 text-sm font-medium text-neutral-900 dark:text-neutral-100">Same deal for everyone today.</p>
@@ -503,7 +503,7 @@ const DailyGame: React.FC = () => {
     }
   } else {
     overlay = {
-      label: 'Set Daily',
+      label: 'Daily Deal',
       content: statusError ? (
         <>
           <p role="status" className="mt-2 text-sm text-neutral-700 dark:text-neutral-200">Couldn’t load today’s deal.</p>
@@ -518,7 +518,7 @@ const DailyGame: React.FC = () => {
   const chip = starting
     ? null
     : number !== undefined
-      ? { label: `Daily #${number}`, tone: 'neutral' as const }
+      ? { label: `Daily Deal #${number}`, tone: 'neutral' as const }
       : null
 
   return (

@@ -4,7 +4,10 @@
     <loc>https://set.tido.site/</loc>
   </url>
   <url>
-    <loc>https://set.tido.site/daily</loc>
+    <loc>https://set.tido.site/puzzle</loc>
+  </url>
+  <url>
+    <loc>https://set.tido.site/practice</loc>
   </url>
   <url>
     <loc>https://set.tido.site/m</loc>

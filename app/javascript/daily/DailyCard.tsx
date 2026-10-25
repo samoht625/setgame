@@ -30,11 +30,19 @@ interface DailyCardProps {
   stale?: boolean
   /** Set when the player's score is Anonymous and they can put a name on it. */
   onNameScore?: (name: string) => Promise<boolean>
+  /** Heading; defaults to the Daily Deal's. */
+  title?: string
+  /** The other daily mode, offered next to Share. */
+  next?: { href: string; label: string }
+  /** What rolls over at midnight, e.g. "deal" or "puzzle". */
+  noun?: string
+  emptyText?: string
 }
 
-/** What /daily shows once today's try is used: the result, today's leaderboard and what's next. */
+/** What the Daily Deal (and the Puzzle) show once today's try is used: the result, today's leaderboard and what's next. */
 const DailyCard: React.FC<DailyCardProps> = ({
-  number, result, streak, note, status, statusError, onRetryStatus, playerId, nowMs, onShare, shareNote, onNextDeal, stale = false, onNameScore
+  number, result, streak, note, status, statusError, onRetryStatus, playerId, nowMs, onShare, shareNote, onNextDeal, stale = false, onNameScore,
+  title, next = { href: '/puzzle', label: 'Play Puzzle' }, noun = 'deal', emptyText
 }) => {
   const titleId = useId()
   const [comparing, setComparing] = useState<DailyEntry | null>(null)
@@ -55,7 +63,7 @@ const DailyCard: React.FC<DailyCardProps> = ({
       >
         <div className="px-5 pb-5 pt-4">
           <h1 id={titleId} className="text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-            Set Daily #{number}
+            {title ?? `Daily Deal #${number}`}
           </h1>
           {result ? (
             <>
@@ -80,8 +88,8 @@ const DailyCard: React.FC<DailyCardProps> = ({
                 Share
               </button>
             )}
-            <a href="/" className={`${onShare ? secondaryButton : primaryButton} inline-flex flex-1 items-center justify-center`}>
-              Play solo
+            <a href={next.href} className={`${onShare ? secondaryButton : primaryButton} inline-flex flex-1 items-center justify-center`}>
+              {next.label}
             </a>
           </div>
           {shareNote && <p role="status" className="mt-2 text-xs text-neutral-600 dark:text-neutral-300">{shareNote}</p>}
@@ -97,6 +105,7 @@ const DailyCard: React.FC<DailyCardProps> = ({
             label="Today’s leaderboard"
             onNameScore={onNameScore}
             onCompare={canCompare ? compare : undefined}
+            emptyText={emptyText}
           />
         </div>
         {comparing && status && (
@@ -106,10 +115,10 @@ const DailyCard: React.FC<DailyCardProps> = ({
         {msLeft !== null && (
           <div className="border-t border-neutral-100 px-5 py-3 text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
             {!stale && msLeft > 0 ? (
-              <>Next deal in {formatCountdown(msLeft)}</>
+              <>Next {noun} in {formatCountdown(msLeft)}</>
             ) : (
               <button type="button" onClick={onNextDeal} className="min-h-9 font-medium text-neutral-900 underline underline-offset-4 dark:text-neutral-100">
-                Play today’s deal
+                Play today’s {noun}
               </button>
             )}
           </div>

@@ -107,10 +107,10 @@ test('the daily is one shared deal: played once, clocked from first paint, then 
   await page.addInitScript(() => localStorage.setItem('setgame_name', 'Daily Tester'))
 
   await page.goto('/daily')
-  await expect(page).toHaveTitle('Set Daily — Today’s deal, same for everyone')
-  await expect(page.getByRole('button', { name: 'Daily', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page).toHaveTitle('Set Daily Deal — Today’s deal, same for everyone')
+  await expect(page.getByRole('button', { name: 'Daily Deal', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByText('Same deal for everyone today.')).toBeVisible()
-  const label = await page.getByText(/^Set Daily #\d+$/).innerText()
+  const label = await page.getByText(/^Daily Deal #\d+$/).first().innerText()
   const number = Number(label.replace(/\D/g, ''))
   // Nothing is dealt, and no clock runs, until the player asks to start.
   await expect(page.locator('[data-card-id]')).toHaveCount(0)
@@ -155,7 +155,7 @@ test('the daily is one shared deal: played once, clocked from first paint, then 
   expect(named(events, 'game_complete')).toEqual([{ mode: 'daily', seconds: expect.any(Number), misses: 1, sets: expect.any(Number), ranked: true }])
 
   // The game gives way to the result card on the page itself: no dialog to dismiss.
-  const results = page.getByRole('region', { name: `Set Daily #${number}` })
+  const results = page.getByRole('region', { name: `Daily Deal #${number}` })
   await expect(results).toBeVisible()
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(page.locator('[data-card-id]')).toHaveCount(0)
@@ -169,14 +169,14 @@ test('the daily is one shared deal: played once, clocked from first paint, then 
   await results.getByRole('button', { name: 'Share', exact: true }).click()
   await expect(results.getByText('Result copied — paste it anywhere')).toBeVisible()
   const shared = await page.evaluate(() => navigator.clipboard.readText())
-  expect(shared).toMatch(new RegExp(`^Set Daily Puzzle #${number} · \\d+:\\d\\d\\nhttps://set\\.tido\\.site/daily\\?r=[\\w-]+$`, 'u'))
+  expect(shared).toMatch(new RegExp(`^Set Daily Deal #${number} · \\d+:\\d\\d\\nhttps://set\\.tido\\.site/daily\\?r=[\\w-]+$`, 'u'))
   expect(named(events, 'daily_share')).toEqual([{ outcome: 'copied' }])
 
   // The shared link previews this result: crawlers get a personalized title and image.
   const link = new URL(shared.split('\n').at(-1)!)
   const preview = await (await page.request.get(link.pathname + link.search, { headers: { 'User-Agent': 'Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)' } })).text()
   const time = shared.match(/ · (\d+:\d\d)\n/)![1]
-  expect(preview).toContain(`<meta property="og:title" content="Set Daily Puzzle #${number} · ${time}">`)
+  expect(preview).toContain(`<meta property="og:title" content="Set Daily Deal #${number} · ${time}">`)
   const image = preview.match(/<meta property="og:image" content="https:\/\/set\.tido\.site(\/og\/daily\/[\w-]+\.png)">/)![1]
   const png = await page.request.get(image)
   expect(png.status()).toBe(200)
@@ -191,9 +191,9 @@ test('the daily is one shared deal: played once, clocked from first paint, then 
   await expect(page.locator('[data-card-id]')).toHaveCount(0)
 
   // There is no second deal: the other way to keep playing is the solo game.
-  await results.getByRole('link', { name: 'Play solo', exact: true }).click()
-  await expect(page).toHaveURL(/\/$/)
-  await expect(page.getByRole('button', { name: 'Solo', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await results.getByRole('link', { name: 'Play Puzzle', exact: true }).click()
+  await expect(page).toHaveURL(/\/puzzle$/)
+  await expect(page.getByRole('button', { name: 'Puzzle', exact: true })).toHaveAttribute('aria-pressed', 'true')
   expect(errors).toEqual([])
 })
 
@@ -210,16 +210,16 @@ test('a started daily survives reloads, and losing it doesn’t buy another try'
   await ready(page)
   expect(await cards(page)).toEqual(afterClaim)
   await expect(page.getByText('1 set found', { exact: true })).toBeVisible()
-  await expect(page.getByText(/^Daily #\d+$/)).toBeVisible()
+  await expect(page.getByText(/^Daily Deal #\d+$/)).toBeVisible()
 
   // Losing the saved game doesn't buy another try, or a second deal of the same cards.
   await page.evaluate(key => localStorage.removeItem(key), SAVE_KEY)
   await page.reload()
-  const card = page.getByRole('region', { name: /^Set Daily #\d+$/ })
+  const card = page.getByRole('region', { name: /^Daily Deal #\d+$/ })
   await expect(card.getByText('You’ve used today’s try.')).toBeVisible()
   await expect(page.locator('[data-card-id]')).toHaveCount(0)
   await expect(card.getByRole('button', { name: 'Share' })).toHaveCount(0)
-  await expect(card.getByRole('link', { name: 'Play solo', exact: true })).toHaveAttribute('href', '/')
+  await expect(card.getByRole('link', { name: 'Play Puzzle', exact: true })).toHaveAttribute('href', '/puzzle')
   const playerId = await page.evaluate(() => localStorage.getItem('setgame_player_id')!)
   const again = await page.request.post('/api/daily/games', { headers: { 'X-Player-Id': playerId } })
   expect(again.status()).toBe(409)
@@ -268,7 +268,7 @@ test('the daily fits every width from intro to result', async ({ page }) => {
     await page.setViewportSize({ width, height })
     // The result's actions sit at the top of the card, on screen without scrolling.
     await expect(page.getByRole('button', { name: 'Share', exact: true })).toBeInViewport({ ratio: 1 })
-    await expect(page.getByRole('link', { name: 'Play solo', exact: true })).toBeInViewport({ ratio: 1 })
+    await expect(page.getByRole('link', { name: 'Play Puzzle', exact: true })).toBeInViewport({ ratio: 1 })
     await noOverflow(page)
   }
 })
@@ -290,7 +290,7 @@ test.describe('on a phone', () => {
     await seedFinishedRun(page, [4, 8, 12, 20, 28, 36, 48, 60, 72, 92, 112, 132].map(s => s * 1000), 2)
     await page.reload()
 
-    const results = page.getByRole('region', { name: 'Set Daily #7' })
+    const results = page.getByRole('region', { name: 'Daily Deal #7' })
     await expect(results).toBeVisible()
     await expect(results.getByText('2:12', { exact: true })).toBeVisible()
     // The run counted two misses, but misses aren't part of the result.
@@ -300,11 +300,11 @@ test.describe('on a phone', () => {
     await noOverflow(page)
     const share = results.getByRole('button', { name: 'Share', exact: true })
     await expect(share).toBeInViewport({ ratio: 1 })
-    await expect(results.getByRole('link', { name: 'Play solo', exact: true })).toBeInViewport({ ratio: 1 })
+    await expect(results.getByRole('link', { name: 'Play Puzzle', exact: true })).toBeInViewport({ ratio: 1 })
 
     await share.click()
     await expect.poll(() => page.evaluate(() => (window as unknown as { __shared: ShareData[] }).__shared)).toEqual([
-      { text: 'Set Daily Puzzle #7 · 2:12\nhttps://set.tido.site/daily' }
+      { text: 'Set Daily Deal #7 · 2:12\nhttps://set.tido.site/daily' }
     ])
     await expect(page.getByText('Result copied — paste it anywhere')).toHaveCount(0)
   })
@@ -332,11 +332,11 @@ test.describe('on a phone', () => {
     await seedFinishedRun(page, [4, 8, 12, 20, 28, 36, 48, 60, 72, 92, 112, 132].map(s => s * 1000), 2)
     await page.reload()
 
-    const results = page.getByRole('region', { name: 'Set Daily #7' })
+    const results = page.getByRole('region', { name: 'Daily Deal #7' })
     await expect(results.getByText('1st of 1')).toBeVisible()
     await results.getByRole('button', { name: 'Share', exact: true }).click()
     await expect.poll(() => page.evaluate(() => (window as unknown as { __shared: ShareData[] }).__shared)).toEqual([
-      { text: `Set Daily Puzzle #7 · 2:12\nhttps://set.tido.site/daily?r=${token}` }
+      { text: `Set Daily Deal #7 · 2:12\nhttps://set.tido.site/daily?r=${token}` }
     ])
   })
 })

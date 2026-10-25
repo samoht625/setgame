@@ -54,7 +54,7 @@ function named(events: Event[], name: string) {
 
 test('solo funnel events fire once each and abandoned progress is saved on the server', async ({ page }) => {
   const events = await recordEvents(page)
-  await page.goto('/')
+  await page.goto('/practice')
   await ready(page)
   await expect.poll(() => named(events, 'game_start')).toEqual([{ mode: 'solo', ranked: true }])
   const gameId = (await saved(page)).gameId
@@ -87,7 +87,7 @@ test('solo funnel events fire once each and abandoned progress is saved on the s
 
 test('starting over mid-game and leaving the page are reported as quits', async ({ page }) => {
   const events = await recordEvents(page)
-  await page.goto('/')
+  await page.goto('/practice')
   await ready(page)
   await claim(page, findTriple(await cards(page)))
   await expect(page.getByText('1 set found', { exact: true })).toBeVisible()
@@ -102,7 +102,7 @@ test('starting over mid-game and leaving the page are reported as quits', async 
 
 test('a finished solo game reports its time and misses', async ({ page }) => {
   const events = await recordEvents(page)
-  await page.goto('/')
+  await page.goto('/practice')
   await ready(page)
   await page.evaluate(key => {
     const state = JSON.parse(localStorage.getItem(key)!)
@@ -127,7 +127,7 @@ test('a broken or blocked tracker never affects play', async ({ page }) => {
     window.umami = { track: () => { throw new Error('tracker exploded') } }
   })
   await page.route('**/api/solo/games/*/progress', route => route.abort())
-  await page.goto('/')
+  await page.goto('/practice')
   await ready(page)
   await claim(page, findTriple(await cards(page)))
   await expect(page.getByText('1 set found', { exact: true })).toBeVisible()
@@ -150,7 +150,8 @@ test('multiplayer reports joining, the first set, and leaving mid-round', async 
   expect(named(events, 'game_start')).toEqual([{ mode: 'multi' }])
   await expect.poll(() => named(events, 'first_set')).toEqual([{ mode: 'multi', seconds: expect.any(Number) }])
 
-  await page.getByRole('button', { name: 'Solo', exact: true }).click()
+  await page.getByRole('button', { name: 'Menu' }).click()
+  await page.getByRole('menuitem', { name: 'Practice' }).click()
   await ready(page)
   expect(named(events, 'game_quit')).toEqual([{ mode: 'multi', reason: 'leave', sets: 1, seconds: expect.any(Number) }])
 })

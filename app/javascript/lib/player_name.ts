@@ -1,4 +1,4 @@
-import { getPlayerId } from './player_id'
+import { getPlayerId, knownPlayer } from './player_id'
 
 /** Same rule as the server's PlayerName: 1–20 letters, digits, spaces, _ or -. */
 export const NAME_MAX_LENGTH = 20
@@ -16,11 +16,24 @@ export const NAME_HINT = 'Letters, numbers, spaces, _ and - only'
 
 /** The name this browser plays under in every mode (solo, daily and multiplayer share it). */
 export function getSavedName(): string | null {
+  const id = getPlayerId()
   try {
-    return localStorage.getItem(`setgame_player_name:${getPlayerId()}`) || localStorage.getItem('setgame_name') || null
+    const saved = localStorage.getItem(`setgame_player_name:${id}`) || localStorage.getItem('setgame_name')
+    if (saved) return saved
   } catch {
-    return null
+    // Fall back to the name the server remembers.
   }
+  // A restored identity gets its leaderboard name back too.
+  const known = knownPlayer()
+  if (known?.id === id && known.name && cleanName(known.name)) {
+    try {
+      localStorage.setItem(`setgame_player_name:${id}`, known.name)
+    } catch {
+      // The name still applies for this visit.
+    }
+    return known.name
+  }
+  return null
 }
 
 /** Saves the name for future scores and tells any open game (multiplayer, today's daily) about it. */

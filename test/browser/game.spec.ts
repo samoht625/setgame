@@ -55,7 +55,7 @@ async function oneSetLeft(page: Page) {
 test('solo claims, pause, resume, full completion, reload and mode history stay consistent', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
-  await page.goto('/')
+  await page.goto('/practice')
   await ready(page)
   const initial = await cards(page)
   const first = page.locator('[data-card-id]').first()
@@ -83,7 +83,8 @@ test('solo claims, pause, resume, full completion, reload and mode history stay 
     await expect(page.getByText(`${count} ${count === 1 ? 'set' : 'sets'} found`, { exact: true })).toBeVisible()
   }
   const boardAfterTen = await cards(page)
-  await page.getByRole('button', { name: 'Multiplayer', exact: true }).click()
+  await page.getByRole('button', { name: 'Menu' }).click()
+  await page.getByRole('menuitem', { name: /^Multiplayer/ }).click()
   await expect(page).toHaveURL(/\/m$/)
   await expect(page.getByText('Live', { exact: true })).toBeVisible()
   await page.goBack()
@@ -107,8 +108,8 @@ test('solo claims, pause, resume, full completion, reload and mode history stay 
   await page.getByRole('button', { name: 'Play again' }).click()
   await ready(page)
   await expect(page.getByText('0 sets found', { exact: true })).toBeVisible()
-  await page.goto('/s')
-  await expect(page).toHaveURL(/\/$/)
+  await page.goto('/solo')
+  await expect(page).toHaveURL(/\/practice$/)
   await ready(page)
   expect(errors).toEqual([])
 })
@@ -116,7 +117,7 @@ test('solo claims, pause, resume, full completion, reload and mode history stay 
 test('an eligible solo game submits a real replay and appears on the leaderboard', async ({ page }) => {
   test.setTimeout(90_000)
   await page.addInitScript(() => localStorage.setItem('setgame_name', 'Solo Browser Tester'))
-  await page.goto('/')
+  await page.goto('/practice')
   await ready(page)
   const response = page.waitForResponse(res => res.url().endsWith('/api/solo/scores'), { timeout: 80000 })
   for (let turn = 0; turn < 30; turn++) {
@@ -139,7 +140,7 @@ test('an eligible solo game submits a real replay and appears on the leaderboard
 })
 
 test('a finished game shows its results in a dialog that closes by button, Escape, backdrop or a new game', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/practice')
   await ready(page)
   await oneSetLeft(page)
   await claim(page, [1, 2, 3])
@@ -174,7 +175,7 @@ test('a finished game shows its results in a dialog that closes by button, Escap
 })
 
 test('the results dialog leaves a leaderboard panel the player opened alone', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/practice')
   await ready(page)
   await menu(page, 'Leaderboard')
   const panel = page.getByRole('complementary', { name: 'Leaderboard' })
@@ -193,7 +194,7 @@ test('the results dialog leaves a leaderboard panel the player opened alone', as
 
 test('the results dialog fits a phone screen and closes with a tap outside', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 667 })
-  await page.goto('/')
+  await page.goto('/practice')
   await ready(page)
   await oneSetLeft(page)
   await claim(page, [1, 2, 3])
@@ -210,7 +211,7 @@ test('the results dialog fits a phone screen and closes with a tap outside', asy
 })
 
 test('New game is a visible button on the solo board row, and the header and board row stay on one line on phones', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/practice')
   await ready(page)
   const before = (await saved(page)).gameId
   for (const width of [320, 375]) {
@@ -236,7 +237,7 @@ test('New game is a visible button on the solo board row, and the header and boa
 
 test('the header menu opens in its final place on the first frame on a phone', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 700 })
-  await page.goto('/')
+  await page.goto('/practice')
   await ready(page)
   // Record the menu's box the moment it's inserted and on the next painted frame.
   await page.evaluate(() => {
@@ -282,7 +283,7 @@ test('leaderboard requests are single, cancellable, and distinguish failure from
     if (period === 'weekly') await new Promise(resolve => setTimeout(resolve, 250))
     await route.fulfill({ status: fail ? 503 : 200, json: fail ? {} : { entries: [{ player_id: 'test', display_name: `${period} leader`, elapsed_ms: 120000, completed_at: '2026-09-07T12:00:00Z' }] } })
   })
-  await page.goto('/')
+  await page.goto('/practice')
   await ready(page)
   // Nothing is fetched until the leaderboard panel is opened.
   expect(requests).toEqual([])
@@ -310,7 +311,7 @@ test('leaderboard requests are single, cancellable, and distinguish failure from
 
 test('the leaderboard opens as a sheet on phones and stays closed on reload', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 })
-  await page.goto('/')
+  await page.goto('/practice')
   await ready(page)
   const sheet = page.getByRole('dialog', { name: 'Leaderboard' })
   await expect(sheet).toHaveCount(0)
@@ -336,14 +337,16 @@ test('a delayed abandoned new game cannot overwrite a more recent solo game', as
     if (number === 1) await delayed
     await route.fulfill({ json: { game_id: `game-${number}`, seed: 123 + number, rules_version: 1 } })
   })
-  await page.goto('/')
+  await page.goto('/practice')
   await expect(page.locator('[aria-busy="true"]')).toBeVisible()
   await page.getByRole('button', { name: 'Menu', exact: true }).click()
   await expect(page.getByRole('menuitem', { name: 'New game', exact: true })).toBeDisabled()
   await page.keyboard.press('Escape')
-  await page.getByRole('button', { name: 'Multiplayer', exact: true }).click()
+  await page.getByRole('button', { name: 'Menu' }).click()
+  await page.getByRole('menuitem', { name: /^Multiplayer/ }).click()
   await expect(page.getByText('Live', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Solo', exact: true }).click()
+  await page.getByRole('button', { name: 'Menu' }).click()
+  await page.getByRole('menuitem', { name: 'Practice' }).click()
   await ready(page)
   expect((await saved(page)).gameId).toBe('game-2')
   release()
@@ -366,7 +369,7 @@ test('a new solo game starts its clock once its cards are on screen, not when th
     await new Promise(resolve => setTimeout(resolve, 1500))
     await route.continue()
   })
-  await page.goto('/')
+  await page.goto('/practice')
   await expect(page.locator('[aria-busy="true"]')).toBeVisible()
   await ready(page)
   const { startedAtMs } = await saved(page)
@@ -384,21 +387,23 @@ test('offline play and unavailable browser storage do not crash either mode', as
     Storage.prototype.setItem = () => { throw new DOMException('Blocked', 'SecurityError') }
   })
   await page.route('**/api/solo/games', route => route.abort())
-  await page.goto('/')
+  await page.goto('/practice')
   await ready(page)
   await expect(page.getByRole('status').filter({ hasText: 'Offline' })).toBeVisible()
   await claim(page, findTriple(await cards(page)))
   await expect(page.getByText('1 set found', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Multiplayer', exact: true }).click()
+  await page.getByRole('button', { name: 'Menu' }).click()
+  await page.getByRole('menuitem', { name: /^Multiplayer/ }).click()
   await expect(page.getByText('Live', { exact: true })).toBeVisible()
   await ready(page)
-  await page.getByRole('button', { name: 'Solo', exact: true }).click()
+  await page.getByRole('button', { name: 'Menu' }).click()
+  await page.getByRole('menuitem', { name: 'Practice' }).click()
   await ready(page)
   expect(errors).toEqual([])
 })
 
 test('a paused save keeps its idle deadline and corrupted local times are ignored', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/practice')
   await ready(page)
   await menu(page, 'Pause')
   await page.evaluate(key => {
@@ -419,7 +424,7 @@ test('a paused save keeps its idle deadline and corrupted local times are ignore
 })
 
 test('failed score submissions survive reload and recover from a lost acknowledgement', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/practice')
   await ready(page)
   await page.evaluate(key => {
     const state = JSON.parse(localStorage.getItem(key)!)
@@ -446,7 +451,7 @@ test('failed score submissions survive reload and recover from a lost acknowledg
 })
 
 test('expanded and empty boards retain usable layouts and reload safely', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/practice')
   await ready(page)
   for (const size of [15, 18]) {
     await page.evaluate(({ key, size }) => {
@@ -481,7 +486,7 @@ test('expanded and empty boards retain usable layouts and reload safely', async 
 for (const colorScheme of ['light', 'dark'] as const) {
   test(`desktop and mobile layouts support ${colorScheme} mode and reduced motion`, async ({ page }) => {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' })
-    await page.goto('/')
+    await page.goto('/practice')
     await ready(page)
     for (const width of [1440, 1024, 768, 375, 320]) {
       await page.setViewportSize({ width, height: 900 })
@@ -492,12 +497,14 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await noOverflow(page)
       await page.screenshot({ path: `tmp/after-${colorScheme}-${width}-solo.png`, fullPage: true })
       await page.getByRole('button', { name: 'Resume game' }).click()
-      await page.getByRole('button', { name: 'Multiplayer', exact: true }).click()
+      await page.getByRole('button', { name: 'Menu' }).click()
+      await page.getByRole('menuitem', { name: /^Multiplayer/ }).click()
       await expect(page.getByText('Live', { exact: true })).toBeVisible()
       await ready(page)
       await noOverflow(page)
       await page.screenshot({ path: `tmp/after-${colorScheme}-${width}-multiplayer.png`, fullPage: true })
-      await page.getByRole('button', { name: 'Solo', exact: true }).click()
+      await page.getByRole('button', { name: 'Menu' }).click()
+      await page.getByRole('menuitem', { name: 'Practice' }).click()
       await ready(page)
     }
   })
@@ -548,9 +555,11 @@ test('multiplayer synchronizes claims, names, reset cancellation, and reconnecti
     await expect(first.getByText('Live', { exact: true })).toBeVisible({ timeout: 20000 })
     await ready(first)
     expect(await cards(first)).toEqual(await cards(second))
-    await first.getByRole('button', { name: 'Solo', exact: true }).click()
-    await expect(first.getByRole('button', { name: /Multiplayer/ })).toHaveAttribute('title', /playing multiplayer/)
-    await first.getByRole('button', { name: /Multiplayer/ }).click()
+    await first.getByRole('button', { name: 'Menu' }).click()
+    await first.getByRole('menuitem', { name: 'Practice' }).click()
+    await first.getByRole('button', { name: 'Menu' }).click()
+    await expect(first.getByRole('menuitem', { name: /^Multiplayer/ })).toContainText('1')
+    await first.getByRole('menuitem', { name: /^Multiplayer/ }).click()
     await expect(first.getByText('Live', { exact: true })).toBeVisible()
   } finally {
     await firstContext.close()

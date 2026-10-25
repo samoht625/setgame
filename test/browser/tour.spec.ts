@@ -29,7 +29,7 @@ test('the first visit shows a two-step rules tour before the deal, then never ag
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
   const events = await recordEvents(page)
-  await page.goto('/')
+  await page.goto('/practice')
 
   const tour = page.getByRole('dialog', { name: 'Every card has 4 features' })
   await expect(tour).toBeVisible()
@@ -85,7 +85,7 @@ test('the tour is modal, and skipping it is remembered too', async ({ page }) =>
 })
 
 test('Skip closes the tour and deals', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/practice')
   await page.getByRole('button', { name: 'Skip', exact: true }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(page.locator('[data-card-id]').first()).toBeVisible()
@@ -93,7 +93,7 @@ test('Skip closes the tour and deals', async ({ page }) => {
 
 test('players from before the tour don’t see it', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('setgame_player_id', '11111111-2222-4333-8444-555555555555'))
-  await page.goto('/')
+  await page.goto('/practice')
   await expect(page.locator('[data-card-id]').first()).toBeVisible()
   await expect(page.getByRole('dialog')).toHaveCount(0)
 })

@@ -28,8 +28,8 @@ export type ShareLink = { title: string; text: string; url: string }
 /** What the share sheet gets. The link is its own field so Messages can unfurl it into a preview. */
 export function dailyShareLink({ number, elapsedMs, token }: DailyShare): ShareLink {
   return {
-    title: `Set Daily #${number}`,
-    text: `Set Daily Puzzle #${number} · ${formatTime(elapsedMs)}`,
+    title: `Set Daily Deal #${number}`,
+    text: `Set Daily Deal #${number} · ${formatTime(elapsedMs)}`,
     url: token ? `${DAILY_URL}?r=${encodeURIComponent(token)}` : DAILY_URL
   }
 }

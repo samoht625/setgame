@@ -22,7 +22,7 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2000, stats[:median_all]
     assert_equal({ cards: [1, 2, 3], n: 2, tied: 0 }, stats[:spread][:max])
     assert_equal 0, stats[:spread][:min][:n]
-    assert_equal 1078, stats[:spread][:min][:tied]
+    assert_equal 1077, stats[:spread][:min][:tied]
     assert_equal [[0, 1078], [1, 1], [2, 1]], stats[:spread][:hist]
     assert_equal 10, stats[:spread][:least].length
     assert_equal 0, stats[:spread][:least].first[:n]

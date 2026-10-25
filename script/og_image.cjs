@@ -87,7 +87,7 @@ function staticSvg() {
 
 function dailySvg({ number, time }) {
   return frame(`
-    <text x="88" y="244" font-size="44" font-weight="600" letter-spacing="-0.9" fill="${TEXT.body}">Set Daily Puzzle #${escapeXml(number)}</text>
+    <text x="88" y="244" font-size="44" font-weight="600" letter-spacing="-0.9" fill="${TEXT.body}">Set Daily Deal #${escapeXml(number)}</text>
     <text x="78" y="438" font-size="200" font-weight="700" letter-spacing="-8" fill="${TEXT.strong}">${escapeXml(time)}</text>
     ${cardFan(975, 322, 1.0)}
   `)

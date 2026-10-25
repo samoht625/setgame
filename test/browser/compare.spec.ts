@@ -125,7 +125,7 @@ test('other finishers get a small vs control; the player’s own row and rows wi
   await page.setViewportSize({ width: 375, height: 760 })
   await finished(page)
   await page.goto('/daily')
-  const card = page.getByRole('region', { name: 'Set Daily #12' })
+  const card = page.getByRole('region', { name: 'Daily Deal #12' })
   const compareButtons = card.getByRole('button', { name: /^Compare with / })
   await expect(compareButtons).toHaveCount(3)
   await expect(compareButtons).toHaveText(['vs', 'vs', 'vs'])

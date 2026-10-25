@@ -9,7 +9,10 @@ module ApplicationCable
       param_player_id = request.params['player_id']
       cookie_player_id = cookies.signed[:player_id]
 
-      if param_player_id&.match?(uuid_pattern)
+      # A browser that only just made its id up doesn't replace the player its cookie names.
+      freshly_minted = request.params['new'] == '1' && cookie_player_id&.match?(uuid_pattern) && cookie_player_id != param_player_id
+
+      if param_player_id&.match?(uuid_pattern) && !freshly_minted
         self.player_id = param_player_id
         cookies.signed[:player_id] = { value: param_player_id, expires: 1.year.from_now }
       elsif cookie_player_id&.match?(uuid_pattern)

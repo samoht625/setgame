@@ -1,8 +1,8 @@
 module ApplicationHelper
   SITE_URL = "https://set.tido.site"
   DEFAULT_TITLE = "Set — Play the card game online, free"
-  DEFAULT_DESCRIPTION = "Find sets against the clock. Play the classic Set card game free in your browser: " \
-                        "timed solo games with leaderboards and live multiplayer with friends. " \
+  DEFAULT_DESCRIPTION = "Play the classic Set card game free in your browser: a Daily Deal and a daily 12-card " \
+                        "Puzzle with leaderboards, timed practice games and live multiplayer with friends. " \
                         "No signup, works on phone and desktop."
   DEFAULT_IMAGE_ALT = "Set: find the set, beat the clock. Three Set cards fanned out, forming a set."
 
@@ -15,7 +15,7 @@ module ApplicationHelper
   end
 
   def canonical_url
-    "#{SITE_URL}#{request.path}"
+    content_for(:canonical).presence || "#{SITE_URL}#{request.path}"
   end
 
   # Link previews may describe a shared result instead of the page itself.

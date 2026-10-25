@@ -97,7 +97,7 @@ test('after finishing as Anonymous, the card prompts for a name under the player
   await asPlayer(page)
   const api = await finishedAnonymously(page)
   await page.goto('/daily')
-  const card = page.getByRole('region', { name: 'Set Daily #12' })
+  const card = page.getByRole('region', { name: 'Daily Deal #12' })
   const prompt = card.getByRole('group', { name: 'Add your name to the leaderboard' })
   await expect(prompt).toBeVisible()
   await expect(prompt).toBeInViewport({ ratio: 1 })
@@ -179,7 +179,7 @@ test('end to end: finish the daily anonymously, then add a name that sticks on t
     await page.waitForTimeout(250)
   }
   // The player's row, in the top ten or below it.
-  const card = page.getByRole('region', { name: /^Set Daily #\d+$/ })
+  const card = page.getByRole('region', { name: /^Daily Deal #\d+$/ })
   const mine = card.locator('[aria-current="true"]')
   const prompt = card.getByRole('group', { name: 'Add your name to the leaderboard' })
   await prompt.getByRole('textbox', { name: 'Your name' }).fill('E2E Player')

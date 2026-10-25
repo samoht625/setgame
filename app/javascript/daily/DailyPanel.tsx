@@ -20,6 +20,8 @@ interface DailyStandingsProps {
   onNameScore?: (name: string) => Promise<boolean>
   /** Set when the player has a finished run to compare against other finishers'. */
   onCompare?: (entry: DailyEntry) => void
+  /** Shown while nobody has a time yet. */
+  emptyText?: string
 }
 
 // Rows without a compare control keep its width, so the times stay in one column.
@@ -56,7 +58,7 @@ const NamePrompt: React.FC<{ onSave: (name: string) => Promise<boolean>; as?: 'l
 }
 
 /** Today's leaderboard, with the player's row even when they are below the cut. */
-export const DailyStandings: React.FC<DailyStandingsProps> = ({ status, error, onRetry, playerId, limit, label, onNameScore, onCompare }) => {
+export const DailyStandings: React.FC<DailyStandingsProps> = ({ status, error, onRetry, playerId, limit, label, onNameScore, onCompare, emptyText = 'No times yet — clear today’s deal to take the top spot.' }) => {
   if (!status) {
     return error ? (
       <div className="mt-2 rounded-xl border border-dashed border-neutral-200 px-3 py-4 text-center dark:border-neutral-700">
@@ -74,7 +76,7 @@ export const DailyStandings: React.FC<DailyStandingsProps> = ({ status, error, o
   return (
     <div>
       <div className="flex items-baseline justify-between">
-        <SectionLabel>{label ?? `Daily #${status.number}`}</SectionLabel>
+        <SectionLabel>{label ?? `Daily Deal #${status.number}`}</SectionLabel>
         <span className="text-[11px] text-neutral-600 dark:text-neutral-300">
           {status.total} {status.total === 1 ? 'finisher' : 'finishers'}
         </span>
@@ -82,7 +84,7 @@ export const DailyStandings: React.FC<DailyStandingsProps> = ({ status, error, o
 
       {status.leaderboard.length === 0 ? (
         <div className="mt-2 rounded-xl border border-dashed border-neutral-200 px-3 py-6 text-center dark:border-neutral-700">
-          <p className="text-xs text-neutral-600 dark:text-neutral-300">No times yet — clear today’s deal to take the top spot.</p>
+          <p className="text-xs text-neutral-600 dark:text-neutral-300">{emptyText}</p>
         </div>
       ) : (
         <LeaderboardList
@@ -115,10 +117,14 @@ interface DailyPanelProps {
   onRetry: () => void
   playerId: string
   nowMs: number
+  /** What rolls over at midnight, e.g. "deal" or "puzzle". */
+  noun?: string
+  label?: string
+  emptyText?: string
 }
 
 /** Your streak, today's leaderboard and when the next deal lands. */
-const DailyPanel: React.FC<DailyPanelProps> = ({ status, error, onRetry, playerId, nowMs }) => {
+const DailyPanel: React.FC<DailyPanelProps> = ({ status, error, onRetry, playerId, nowMs, noun = 'deal', label, emptyText }) => {
   if (!status) return <DailyStandings status={status} error={error} onRetry={onRetry} playerId={playerId} />
 
   const { streak } = status.me
@@ -136,11 +142,11 @@ const DailyPanel: React.FC<DailyPanelProps> = ({ status, error, onRetry, playerI
       </div>
 
       <div className="mt-4">
-        <DailyStandings status={status} error={error} onRetry={onRetry} playerId={playerId} />
+        <DailyStandings status={status} error={error} onRetry={onRetry} playerId={playerId} label={label} emptyText={emptyText} />
       </div>
 
       <p className="mt-4 text-[11px] leading-relaxed text-neutral-600 dark:text-neutral-300">
-        {msLeft > 0 ? `Next deal in ${formatCountdown(msLeft)}` : 'A new deal is ready'} · new deals at midnight Pacific
+        {msLeft > 0 ? `Next ${noun} in ${formatCountdown(msLeft)}` : `A new ${noun} is ready`} · new {noun}s at midnight Pacific
       </p>
     </div>
   )

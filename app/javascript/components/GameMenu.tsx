@@ -46,6 +46,8 @@ const DotsIcon = () => (
 )
 
 interface MenuButtonProps {
+  /** Other ways to play (practice, multiplayer), between the game's items and the app's. */
+  modeItems?: MenuItem[]
   /** Always-there items after the game's own: how to play, sound. */
   appItems: Array<MenuItem & { checked?: boolean }>
   /** A dot on the button (e.g. other people are online). */
@@ -53,7 +55,7 @@ interface MenuButtonProps {
 }
 
 /** The single "more" button in the header and its dropdown. */
-export const MenuButton: React.FC<MenuButtonProps> = ({ appItems, hasBadge = false }) => {
+export const MenuButton: React.FC<MenuButtonProps> = ({ modeItems = [], appItems, hasBadge = false }) => {
   const context = useContext(MenuContext)
   const [open, setOpen] = useState(false)
   const menuId = useId()
@@ -132,6 +134,18 @@ export const MenuButton: React.FC<MenuButtonProps> = ({ appItems, hasBadge = fal
             </button>
           ))}
           {gameItems.length > 0 && <div role="separator" className="my-1 h-px bg-neutral-100 dark:bg-neutral-800" />}
+          {modeItems.map(item => (
+            <button key={item.label} type="button" role="menuitem" disabled={item.disabled} onClick={() => select(item)} className={itemClass}>
+              <span>{item.label}</span>
+              {item.badge !== undefined && item.badge > 0 && (
+                <span aria-label={`${item.badge} playing now`} className="flex items-center gap-1 text-xs font-medium tabular-nums text-emerald-700 dark:text-emerald-300">
+                  <span aria-hidden="true" className="h-1.5 w-1.5 rotate-45 rounded-[2px] bg-emerald-500" />
+                  {item.badge}
+                </span>
+              )}
+            </button>
+          ))}
+          {modeItems.length > 0 && <div role="separator" className="my-1 h-px bg-neutral-100 dark:bg-neutral-800" />}
           {appItems.map(item => (
             <button
               key={item.label}

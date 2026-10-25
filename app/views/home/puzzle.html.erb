@@ -1,0 +1,4 @@
+<% content_for :title, "Set Puzzle — Find all 6 sets in today’s 12 cards" %>
+<% content_for :description, "The daily Set puzzle: 12 cards, exactly 6 sets. Find them all as fast as you can. Same puzzle for everyone, a daily leaderboard and a streak. Free, no signup." %>
+<% content_for :head, render("home/identity") %>
+<div id="root" data-online-ids="<%= GAME_ENGINE.online_player_ids_snapshot.to_json %>"></div>

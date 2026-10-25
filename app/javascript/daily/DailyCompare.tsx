@@ -371,7 +371,7 @@ const DailyCompare: React.FC<DailyCompareProps> = ({ date, number, opponent, onC
     >
       <div className="animate-dialog-in max-h-full w-full max-w-2xl overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-3 text-neutral-900 shadow-2xl sm:p-6 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100">
         <div className="flex items-center justify-between">
-          <h2 className="text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Set Daily #{number}</h2>
+          <h2 className="text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Daily Deal #{number}</h2>
           <button
             type="button"
             onClick={onClose}

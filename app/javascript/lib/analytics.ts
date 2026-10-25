@@ -1,4 +1,4 @@
-export type GameModeEvent = 'solo' | 'daily' | 'multi'
+export type GameModeEvent = 'solo' | 'daily' | 'puzzle' | 'multi'
 
 type EventData = Record<string, string | number | boolean>
 

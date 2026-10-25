@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_04_040000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_25_120000) do
   create_table "game_snapshots", force: :cascade do |t|
     t.string "name", default: "default", null: false
     t.integer "version", default: 1, null: false
@@ -18,6 +18,23 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_04_040000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["name"], name: "index_game_snapshots_on_name", unique: true
+  end
+
+  create_table "puzzle_runs", id: :string, force: :cascade do |t|
+    t.string "player_id", null: false
+    t.date "puzzle_on", null: false
+    t.json "cards", default: [], null: false
+    t.datetime "started_at", null: false
+    t.datetime "completed_at"
+    t.integer "elapsed_ms"
+    t.integer "misses", default: 0, null: false
+    t.json "claims", default: [], null: false
+    t.string "display_name"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["player_id"], name: "index_puzzle_runs_on_player_id"
+    t.index ["puzzle_on", "elapsed_ms"], name: "index_puzzle_runs_on_puzzle_on_and_elapsed_ms"
+    t.index ["puzzle_on", "player_id"], name: "index_puzzle_runs_on_puzzle_on_and_player_id", unique: true
   end
 
   create_table "solo_games", id: :string, force: :cascade do |t|
@@ -32,6 +49,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_04_040000) do
     t.integer "sets_found", default: 0, null: false
     t.datetime "progress_at"
     t.date "daily_on"
+    t.json "events", default: [], null: false
     t.index ["daily_on", "player_id"], name: "index_solo_games_on_daily_on_and_player_id", unique: true, where: "daily_on IS NOT NULL"
     t.index ["player_id"], name: "index_solo_games_on_player_id"
     t.index ["started_at"], name: "index_solo_games_on_started_at"

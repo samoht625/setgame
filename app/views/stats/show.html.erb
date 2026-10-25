@@ -17,10 +17,10 @@
 
   <% if s[:most_games].present? %>
     <h2>Most games finished</h2>
-    <p class="muted">Named players, solo + daily.</p>
+    <p class="muted">Named players, Practice + Daily Deal.</p>
     <div class="list">
       <% s[:most_games].each_with_index do |p, i| %>
-        <div class="row"><span class="k"><%= i + 1 %></span><span><%= p[:name] %></span><span class="v"><%= p[:total] %><small><%= p[:solo] %> solo · <%= p[:daily] %> daily</small></span></div>
+        <div class="row"><span class="k"><%= i + 1 %></span><span><%= p[:name] %></span><span class="v"><%= p[:total] %><small><%= p[:solo] %> practice · <%= p[:daily] %> daily deal</small></span></div>
       <% end %>
     </div>
   <% end %>
@@ -107,8 +107,8 @@
     <% if s[:fastest_find] %><div class="fact">Fastest find ever: <b><%= secs(s[:fastest_find][:ms]) %></b><br><%= set_cards(s[:fastest_find][:cards]) %></div><% end %>
     <% if s[:drought] %><div class="fact">Longest drought between finds: <b><%= secs(s[:drought][:ms]) %></b>, ended by<br><%= set_cards(s[:drought][:cards]) %></div><% end %>
     <div class="fact">
-      Solo: <b><%= s[:modes]["solo"][:runs] %></b> finished, median <b><%= secs(s[:modes]["solo"][:median_ms]) %></b><br>
-      Daily: <b><%= s[:modes]["daily"][:runs] %></b> finished, median <b><%= secs(s[:modes]["daily"][:median_ms]) %></b>
+      Practice: <b><%= s[:modes]["solo"][:runs] %></b> finished, median <b><%= secs(s[:modes]["solo"][:median_ms]) %></b><br>
+      Daily Deal: <b><%= s[:modes]["daily"][:runs] %></b> finished, median <b><%= secs(s[:modes]["daily"][:median_ms]) %></b>
       <% if s[:busiest_day] %><br>Busiest day: <b><%= s[:busiest_day][0].strftime("%b %-d") %></b> (<%= s[:busiest_day][1] %> games)<% end %>
       <% if s[:busiest_hour] %><br>Busiest hour: <b><%= Time.new(2000, 1, 1, s[:busiest_hour]).strftime("%-l %p") %> CT</b><% end %>
     </div>

@@ -30,7 +30,7 @@ async function expectBest(scope: Page | Locator, time: string) {
 // Scores are only fetched while the leaderboard panel is open. The open state
 // persists on desktop, so this only needs to happen once per test.
 async function openLeaderboard(page: Page) {
-  await page.goto('/')
+  await page.goto('/practice')
   await menu(page, 'Leaderboard')
   await expect(page.getByRole('complementary', { name: 'Leaderboard' })).toBeVisible()
 }
@@ -153,9 +153,11 @@ test('remount refreshes personal bests and ignores an abandoned mount response',
   await openLeaderboard(page)
   await expect(page.getByText('daily leader', { exact: true })).toBeVisible()
   await expect.poll(() => personalRequests).toBe(1)
-  await page.getByRole('button', { name: 'Multiplayer', exact: true }).click()
+  await page.getByRole('button', { name: 'Menu' }).click()
+  await page.getByRole('menuitem', { name: /^Multiplayer/ }).click()
   await expect(page).toHaveURL(/\/m$/)
-  await page.getByRole('button', { name: 'Solo', exact: true }).click()
+  await page.getByRole('button', { name: 'Menu' }).click()
+  await page.getByRole('menuitem', { name: 'Practice' }).click()
   await expectBest(page, '4:04')
   expect(personalRequests).toBe(2)
   abandoned.resolve()

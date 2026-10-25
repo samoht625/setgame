@@ -2,7 +2,7 @@
   "id": "/",
   "name": "Set",
   "short_name": "Set",
-  "description": "Find sets against the clock. Free timed solo games and live multiplayer.",
+  "description": "The Set card game: a Daily Deal and a daily 12-card Puzzle, practice games and live multiplayer. Free.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

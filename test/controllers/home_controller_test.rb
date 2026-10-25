@@ -18,8 +18,10 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
 
   test "each page has its own title, description, canonical URL and share preview" do
     {
-      "/" => ["Set — Play the card game online, free", "https://set.tido.site/"],
-      "/daily" => ["Set Daily — Today’s deal, same for everyone", "https://set.tido.site/daily"],
+      "/" => ["Set Daily Deal — Today’s deal, same for everyone", "https://set.tido.site/"],
+      "/daily" => ["Set Daily Deal — Today’s deal, same for everyone", "https://set.tido.site/"],
+      "/puzzle" => ["Set Puzzle — Find all 6 sets in today’s 12 cards", "https://set.tido.site/puzzle"],
+      "/practice" => ["Set Practice — Timed solo games, free", "https://set.tido.site/practice"],
       "/m" => ["Set Multiplayer — Race friends to find sets", "https://set.tido.site/m"]
     }.each do |path, (title, url)|
       get path
@@ -40,6 +42,18 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
       assert_select "dialog#how-to-play", text: /Three cards are a set when each feature/
       assert_select "footer", false
       assert_no_match(/not affiliated with Set Enterprises/, response.body)
+    end
+  end
+
+  test "the Daily Deal is the front door and old links still work" do
+    get "/s"
+    assert_redirected_to "/"
+    get "/solo"
+    assert_redirected_to "/practice"
+    %w[/ /daily /puzzle /practice].each do |path|
+      get path
+      assert_response :success
+      assert_select "#root"
     end
   end
 
@@ -65,7 +79,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
 
     get "/daily", params: { r: token }, headers: { "User-Agent" => messages }
     assert_response :success
-    assert_select "meta[property='og:title'][content=?]", "Set Daily Puzzle #12 · 2:41"
+    assert_select "meta[property='og:title'][content=?]", "Set Daily Deal #12 · 2:41"
     assert_select "meta[property='og:image'][content=?]", "https://set.tido.site/og/daily/#{token}.png"
 
     # The same old Safari without a preview bot's name is still turned away.
@@ -79,10 +93,10 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     PREVIEW_BOTS.values_at("Slack", "X").each do |user_agent|
       get "/daily", params: { r: token }, headers: { "User-Agent" => user_agent }
       assert_response :success
-      assert_select "title", text: "Set Daily — Today’s deal, same for everyone"
-      assert_select "link[rel=canonical][href=?]", "https://set.tido.site/daily"
-      assert_select "meta[property='og:title'][content=?]", "Set Daily Puzzle #12 · 2:41"
-      assert_select "meta[name='twitter:title'][content=?]", "Set Daily Puzzle #12 · 2:41"
+      assert_select "title", text: "Set Daily Deal — Today’s deal, same for everyone"
+      assert_select "link[rel=canonical][href=?]", "https://set.tido.site/"
+      assert_select "meta[property='og:title'][content=?]", "Set Daily Deal #12 · 2:41"
+      assert_select "meta[name='twitter:title'][content=?]", "Set Daily Deal #12 · 2:41"
       assert_select "meta[property='og:url'][content=?]", "https://set.tido.site/daily?r=#{token}"
       assert_select "meta[property='og:image'][content=?]", "https://set.tido.site/og/daily/#{token}.png"
       assert_select "meta[name='twitter:image'][content=?]", "https://set.tido.site/og/daily/#{token}.png"
@@ -90,7 +104,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     end
 
     get "/daily", params: { r: "c-3gk0-abcdefghijkl" }
-    assert_select "meta[property='og:title'][content=?]", "Set Daily — Today’s deal, same for everyone"
+    assert_select "meta[property='og:title'][content=?]", "Set Daily Deal — Today’s deal, same for everyone"
     assert_select "meta[property='og:image'][content=?]", "https://set.tido.site/og-image.png"
   end
 
@@ -126,7 +140,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
 
     sitemap = Nokogiri::XML(Rails.root.join("public/sitemap.xml").read)
     locations = sitemap.remove_namespaces!.xpath("//url/loc").map(&:text)
-    assert_equal %w[https://set.tido.site/ https://set.tido.site/daily https://set.tido.site/m], locations
+    assert_equal %w[https://set.tido.site/ https://set.tido.site/puzzle https://set.tido.site/practice https://set.tido.site/m], locations
 
     manifest = JSON.parse(Rails.root.join("public/manifest.json").read)
     assert_equal "Set", manifest.fetch("name")
