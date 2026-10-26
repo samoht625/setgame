@@ -5,6 +5,9 @@ import { useSound } from './SoundProvider'
 import { openHowToPlay } from '../rules/HowToPlay'
 import { openNameDialog } from './NameDialog'
 import { MenuButton } from './GameMenu'
+import { openSignInDialog } from './SignInDialog'
+import { signedInEmail, signInEnabled } from '../lib/player_id'
+import { signOut } from '../lib/account'
 
 interface HeaderProps {
   mode: GameMode
@@ -97,7 +100,10 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
               { label: 'How to play', onSelect: openHowToPlay },
               { label: 'Stats', onSelect: () => window.location.assign('/stats') },
               { label: 'Your name', onSelect: openNameDialog },
-              { label: 'Sound', onSelect: sound.toggle, checked: sound.enabled }
+              { label: 'Sound', onSelect: sound.toggle, checked: sound.enabled },
+              ...(signedInEmail()
+                ? [{ label: 'Sign out', note: `Signed in as ${signedInEmail()}`, onSelect: () => void signOut() }]
+                : signInEnabled() ? [{ label: 'Sign in', onSelect: openSignInDialog }] : [])
             ]}
           />
         </div>

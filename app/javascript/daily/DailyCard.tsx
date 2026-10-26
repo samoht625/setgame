@@ -7,6 +7,8 @@ import type { DailyEntry, DailyStatus } from '../lib/solo_api'
 import DailyCompare from './DailyCompare'
 import { DailyStandings } from './DailyPanel'
 import { primaryButton, secondaryButton, secondaryButtonSmall } from '../lib/buttons'
+import SignInForm from '../components/SignInForm'
+import { signedInEmail, signInEnabled } from '../lib/player_id'
 export { primaryButton, secondaryButton }
 
 const LEADERBOARD_SIZE = 10
@@ -100,6 +102,12 @@ const DailyCard: React.FC<DailyCardProps> = ({
             </a>
           </div>
           {shareNote && <p role="status" className="mt-2 text-xs text-neutral-600 dark:text-neutral-300">{shareNote}</p>}
+          {result && signInEnabled() && !signedInEmail() && (
+            <div className="mt-4 border-t border-neutral-100 pt-4 text-left dark:border-neutral-800">
+              <p className="mb-2 text-xs text-neutral-500 dark:text-neutral-400">Keep your streak on any device</p>
+              <SignInForm source="card" quiet />
+            </div>
+          )}
         </div>
 
         <div className="border-t border-neutral-100 px-5 py-4 text-left dark:border-neutral-800">

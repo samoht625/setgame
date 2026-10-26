@@ -1,4 +1,4 @@
-import { adoptServerPlayerId, getPlayerId, isNewPlayer } from './player_id'
+import { adoptServerPlayer, getPlayerId, getPlayerKey, isNewPlayer } from './player_id'
 import { getSavedName } from './player_name'
 
 export function headers(json = true): HeadersInit {
@@ -6,16 +6,19 @@ export function headers(json = true): HeadersInit {
     Accept: 'application/json',
     'X-Player-Id': getPlayerId()
   }
+  // Player ids are public; the key proves this browser owns its id.
+  const key = getPlayerKey()
+  if (key) h['X-Player-Key'] = key
   // Lets the server keep an existing player over an id this page just made up.
   if (isNewPlayer()) h['X-Player-New'] = '1'
   if (json) h['Content-Type'] = 'application/json'
   return h
 }
 
-/** fetch for the game API: adopts the player id the server says it used. */
+/** fetch for the game API: adopts the player (and key) the server says it used. */
 export async function apiFetch(input: string, init: RequestInit): Promise<Response> {
   const res = await fetch(input, init)
-  adoptServerPlayerId(res.headers.get('X-Player-Id'))
+  adoptServerPlayer(res.headers.get('X-Player-Id'), res.headers.get('X-Player-Key'))
   return res
 }
 

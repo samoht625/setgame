@@ -1,9 +1,9 @@
 <% content_for :title, "Set Puzzle — Find all 6 sets in today’s 12 cards" %>
-<% content_for :description, "The daily Set puzzle: 12 cards, exactly 6 sets. Find them all as fast as you can. Same puzzle for everyone, a daily leaderboard and a streak. Free, no signup." %>
+<% content_for :description, "The daily Set puzzle: 12 cards, exactly 6 sets. Find them all as fast as you can. Same puzzle for everyone, a daily leaderboard and a streak. No signup needed." %>
 <% content_for :head, render("home/identity") %>
 <% if @shared_result %>
   <% content_for :social_title, "#{@shared_result.title} · #{@shared_result.time}" %>
-  <% content_for :social_description, [@shared_result.standing.presence, "12 cards, 6 sets, same puzzle for everyone today. Can you beat my time? Play free, no signup."].compact.join(" · ") %>
+  <% content_for :social_description, [@shared_result.standing.presence, "12 cards, 6 sets, same puzzle for everyone today. Can you beat my time? No signup."].compact.join(" · ") %>
   <% content_for :social_url, "#{ApplicationHelper::SITE_URL}/puzzle?r=#{@shared_result.token}" %>
   <% content_for :social_image, "#{ApplicationHelper::SITE_URL}#{puzzle_og_image_path(@shared_result.token)}" %>
   <% content_for :social_image_alt, ["#{@shared_result.title} · #{@shared_result.time}", @shared_result.standing.presence].compact.join(" · ") %>

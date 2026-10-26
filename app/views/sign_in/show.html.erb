@@ -1,0 +1,8 @@
+<p>Signing you in…</p>
+<%= form_with url: "/signin", method: :post, id: "sign-in", data: { turbo: false } do %>
+  <%= hidden_field_tag :token, @token %>
+  <button type="submit" class="btn primary">Sign in</button>
+<% end %>
+<%= javascript_tag nonce: true do %>
+  document.getElementById("sign-in").requestSubmit ? document.getElementById("sign-in").requestSubmit() : document.getElementById("sign-in").submit();
+<% end %>

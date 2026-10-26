@@ -3,34 +3,36 @@
 module Api
   class BaseController < ActionController::API
     include ActionController::Cookies
+    include CurrentAccount
 
-    UUID_PATTERN = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
+    UUID_PATTERN = PlayerResolver::UUID_PATTERN
 
     before_action :ensure_player_id!
 
     private
 
-    # The browser's id (X-Player-Id) wins, except when the browser says it only
-    # just made that id up (X-Player-New: 1) and the cookie already names a
-    # player: then the cookie's player is restored instead of being replaced by
-    # a stranger. The id in use is echoed back in X-Player-Id.
+    # A signed-in browser plays as its account's player. Otherwise the
+    # browser's id (X-Player-Id) is used when the browser proves it owns it:
+    # the signed cookie names it, X-Player-Key matches it, or it's brand new.
+    # Player ids are public on the leaderboards, so an id alone never reads or
+    # plays as someone else. A browser that says it only just made its id up
+    # (X-Player-New: 1) gets the cookie's player back instead. The id and its
+    # key are echoed back in X-Player-Id and X-Player-Key.
     def ensure_player_id!
-      header_id = request.headers["X-Player-Id"].to_s
-      cookie_id = cookies.signed[:player_id].to_s
-      header_ok = header_id.match?(UUID_PATTERN)
-      cookie_ok = cookie_id.match?(UUID_PATTERN)
-      freshly_minted = request.headers["X-Player-New"] == "1"
+      @player_id = PlayerResolver.resolve(
+        claimed: request.headers["X-Player-Id"],
+        key: request.headers["X-Player-Key"],
+        cookie: cookies.signed[:player_id],
+        freshly_minted: request.headers["X-Player-New"] == "1",
+        account: current_account
+      )
+      remember_player!(@player_id)
+      expose_player!(@player_id)
+    end
 
-      if header_ok && !(freshly_minted && cookie_ok && cookie_id != header_id)
-        @player_id = header_id
-        cookies.signed[:player_id] = { value: header_id, expires: 1.year.from_now }
-      elsif cookie_ok
-        @player_id = cookie_id
-      else
-        @player_id = SecureRandom.uuid
-        cookies.signed[:player_id] = { value: @player_id, expires: 1.year.from_now }
-      end
-      response.set_header("X-Player-Id", @player_id)
+    def expose_player!(player_id)
+      response.set_header("X-Player-Id", player_id)
+      response.set_header("X-Player-Key", PlayerKey.for(player_id))
     end
 
     def current_player_id

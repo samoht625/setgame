@@ -1,10 +1,10 @@
 <% content_for :title, "Set Daily Deal — Today’s deal, same for everyone" %>
-<% content_for :description, "Play Set free online. One shared deal a day: one ranked try, a daily leaderboard and a streak to keep, plus a daily 12-card puzzle. New deals every midnight Pacific. No signup." %>
+<% content_for :description, "Play Set online. One shared deal a day: one ranked try, a daily leaderboard and a streak to keep, plus a daily 12-card puzzle. New deals every midnight Pacific. No signup." %>
 <% content_for :canonical, "#{ApplicationHelper::SITE_URL}/" %>
 <% content_for :head, render("home/identity") %>
 <% if @shared_result %>
   <% content_for :social_title, "#{@shared_result.title} · #{@shared_result.time}" %>
-  <% content_for :social_description, [@shared_result.standing.presence, "Same deal for everyone today. Can you beat my time? Play free, no signup."].compact.join(" · ") %>
+  <% content_for :social_description, [@shared_result.standing.presence, "Same deal for everyone today. Can you beat my time? No signup."].compact.join(" · ") %>
   <% content_for :social_url, "#{ApplicationHelper::SITE_URL}/daily?r=#{@shared_result.token}" %>
   <% content_for :social_image, "#{ApplicationHelper::SITE_URL}#{daily_og_image_path(@shared_result.token)}" %>
   <% content_for :social_image_alt, ["#{@shared_result.title} · #{@shared_result.time}", @shared_result.standing.presence].compact.join(" · ") %>

@@ -9,4 +9,9 @@ module PlayerIdentity
     run = PuzzleRun.where(player_id: player_id).where.not(display_name: [nil, ""]).order(completed_at: :desc).pick(:display_name, :completed_at)
     [score, run].compact.max_by { |(_, at)| at || Time.at(0) }&.first
   end
+
+  # Whether anything has ever been played under this id.
+  def self.history?(player_id)
+    SoloGame.exists?(player_id: player_id) || PuzzleRun.exists?(player_id: player_id) || SoloScore.exists?(player_id: player_id)
+  end
 end

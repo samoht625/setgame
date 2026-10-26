@@ -350,8 +350,13 @@ test('a replay that fails to load can be retried', async ({ page }) => {
 test('end to end: two finishers compare; a player still mid-deal can’t see anyone’s claims', async ({ page, request }) => {
   test.setTimeout(120_000)
   const players = [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()]
-  const [me, rival, midGame] = players.map(id => ({ 'X-Player-Id': id }))
-  const starts = await Promise.all([me, rival, midGame].map(async headers => (await request.post('/api/daily/games', { headers })).json()))
+  // One cookie jar plays three players, so each sends the key its first response hands back.
+  const [me, rival, midGame]: Record<string, string>[] = players.map(id => ({ 'X-Player-Id': id }))
+  const starts = await Promise.all([me, rival, midGame].map(async headers => {
+    const res = await request.post('/api/daily/games', { headers })
+    headers['X-Player-Key'] = res.headers()['x-player-key']!
+    return res.json()
+  }))
   expect(starts.map(start => start.game_id)).toEqual([expect.any(String), expect.any(String), expect.any(String)])
   const seed = starts[0].seed as number
 
@@ -374,7 +379,10 @@ test('end to end: two finishers compare; a player still mid-deal can’t see any
   expect(peek.status()).toBe(403)
   expect(await peek.text()).not.toContain('claims')
 
-  await page.addInitScript(id => localStorage.setItem('setgame_player_id', id), players[0]!)
+  await page.addInitScript(([id, key]) => {
+    localStorage.setItem('setgame_player_id', id!)
+    localStorage.setItem(`setgame_player_key:${id}`, key!)
+  }, [players[0]!, me['X-Player-Key']!])
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/daily')
   await page.getByRole('button', { name: `Compare with ${rivalName}` }).click()

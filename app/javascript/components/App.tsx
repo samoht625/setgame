@@ -10,6 +10,7 @@ import { SoundProvider } from './SoundProvider'
 import { GameMenuProvider } from './GameMenu'
 import HowToPlay from '../rules/HowToPlay'
 import NameDialog from './NameDialog'
+import SignInDialog from './SignInDialog'
 import Tour, { shouldShowTour } from '../rules/Tour'
 
 // 'solo' is Practice: timed games against the clock.
@@ -74,6 +75,7 @@ const App: React.FC = () => {
         {touring && <Tour onDone={() => setTouring(false)} />}
         <HowToPlay />
         <NameDialog />
+        <SignInDialog />
       </div>
       </GameMenuProvider>
     </SoundProvider>

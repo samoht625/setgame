@@ -4,6 +4,22 @@ ENV["RAILS_ENV"] ||= "test"
 require_relative "../config/environment"
 require "rails/test_help"
 
+# A real browser keeps the X-Player-Key the server hands it and sends it with
+# its player id. Integration tests often switch players inside one cookie
+# jar, so every simulated client sends its id's key unless the test opts out
+# with "X-Player-Key" => nil (an impostor holding only a public id).
+module SendsPlayerKey
+  def process(method, path, params: nil, headers: nil, **rest)
+    if headers&.key?("X-Player-Id") && !headers.key?("X-Player-Key")
+      headers = headers.merge("X-Player-Key" => PlayerKey.for(headers["X-Player-Id"]))
+    elsif headers&.key?("X-Player-Key") && headers["X-Player-Key"].nil?
+      headers = headers.except("X-Player-Key")
+    end
+    super(method, path, params: params, headers: headers, **rest)
+  end
+end
+ActionDispatch::Integration::Session.prepend(SendsPlayerKey)
+
 module ActiveSupport
   class TestCase
     # SQLite + WAL: keep tests in a single process to avoid lock contention.

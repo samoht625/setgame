@@ -4,24 +4,18 @@ module ApplicationCable
   class Connection < ActionCable::Connection::Base
     identified_by :player_id
 
+    # Same rule as the API (see PlayerResolver): a signed-in browser plays as
+    # its account's player, and an id from the URL needs the cookie or its key.
     def connect
-      uuid_pattern = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
-      param_player_id = request.params['player_id']
-      cookie_player_id = cookies.signed[:player_id]
-
-      # A browser that only just made its id up doesn't replace the player its cookie names.
-      freshly_minted = request.params['new'] == '1' && cookie_player_id&.match?(uuid_pattern) && cookie_player_id != param_player_id
-
-      if param_player_id&.match?(uuid_pattern) && !freshly_minted
-        self.player_id = param_player_id
-        cookies.signed[:player_id] = { value: param_player_id, expires: 1.year.from_now }
-      elsif cookie_player_id&.match?(uuid_pattern)
-        self.player_id = cookie_player_id
-        cookies.signed[:player_id] = { value: cookie_player_id, expires: 1.year.from_now }
-      else
-        self.player_id = SecureRandom.uuid
-        cookies.signed[:player_id] = { value: self.player_id, expires: 1.year.from_now }
-      end
+      account = AccountSession.authenticate(cookies.signed[CurrentAccount::SESSION_COOKIE])&.account
+      self.player_id = PlayerResolver.resolve(
+        claimed: request.params["player_id"],
+        key: request.params["key"],
+        cookie: cookies.signed[:player_id],
+        freshly_minted: request.params["new"] == "1",
+        account: account
+      )
+      cookies.signed[:player_id] = { value: player_id, expires: 1.year.from_now, httponly: true, same_site: :lax, secure: Rails.env.production? }
 
       GAME_ENGINE.register_connection(self.player_id)
     end

@@ -10,7 +10,28 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_25_180000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_26_220000) do
+  create_table "account_sessions", force: :cascade do |t|
+    t.integer "account_id", null: false
+    t.string "token_digest", null: false
+    t.string "user_agent"
+    t.datetime "last_seen_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_account_sessions_on_account_id"
+    t.index ["token_digest"], name: "index_account_sessions_on_token_digest", unique: true
+  end
+
+  create_table "accounts", force: :cascade do |t|
+    t.string "email", null: false
+    t.string "player_id", null: false
+    t.string "time_zone"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email"], name: "index_accounts_on_email", unique: true
+    t.index ["player_id"], name: "index_accounts_on_player_id", unique: true
+  end
+
   create_table "game_snapshots", force: :cascade do |t|
     t.string "name", default: "default", null: false
     t.integer "version", default: 1, null: false
@@ -18,6 +39,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_25_180000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["name"], name: "index_game_snapshots_on_name", unique: true
+  end
+
+  create_table "player_merges", force: :cascade do |t|
+    t.integer "account_id", null: false
+    t.string "from_player_id", null: false
+    t.string "to_player_id", null: false
+    t.json "dropped", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.index ["account_id"], name: "index_player_merges_on_account_id"
+    t.index ["from_player_id"], name: "index_player_merges_on_from_player_id"
   end
 
   create_table "puzzle_runs", id: :string, force: :cascade do |t|
@@ -36,6 +67,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_25_180000) do
     t.index ["player_id"], name: "index_puzzle_runs_on_player_id"
     t.index ["puzzle_on", "elapsed_ms"], name: "index_puzzle_runs_on_puzzle_on_and_elapsed_ms"
     t.index ["puzzle_on", "player_id"], name: "index_puzzle_runs_on_puzzle_on_and_player_id", unique: true
+  end
+
+  create_table "sign_in_tokens", force: :cascade do |t|
+    t.string "email", null: false
+    t.string "token_digest", null: false
+    t.string "ip"
+    t.string "return_to"
+    t.string "time_zone"
+    t.datetime "expires_at", null: false
+    t.datetime "used_at"
+    t.datetime "created_at", null: false
+    t.index ["email", "created_at"], name: "index_sign_in_tokens_on_email_and_created_at"
+    t.index ["ip", "created_at"], name: "index_sign_in_tokens_on_ip_and_created_at"
+    t.index ["token_digest"], name: "index_sign_in_tokens_on_token_digest", unique: true
   end
 
   create_table "solo_games", id: :string, force: :cascade do |t|
@@ -74,4 +119,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_25_180000) do
     t.index ["player_id", "completed_at"], name: "index_solo_scores_on_player_id_and_completed_at"
     t.index ["solo_game_id"], name: "index_solo_scores_on_solo_game_id", unique: true
   end
+
+  add_foreign_key "account_sessions", "accounts"
+  add_foreign_key "player_merges", "accounts"
 end

@@ -7,6 +7,8 @@ export type MenuItem = {
   disabled?: boolean
   /** Shown as a small count next to the label (e.g. players online). */
   badge?: number
+  /** A small line of text above the item (e.g. who's signed in). */
+  note?: string
 }
 
 type Registered = { items: React.MutableRefObject<MenuItem[]>; signature: string } | null
@@ -147,8 +149,14 @@ export const MenuButton: React.FC<MenuButtonProps> = ({ modeItems = [], appItems
           ))}
           {modeItems.length > 0 && <div role="separator" className="my-1 h-px bg-neutral-100 dark:bg-neutral-800" />}
           {appItems.map(item => (
+            <React.Fragment key={item.label}>
+            {item.note && (
+              <>
+                <div role="separator" className="my-1 h-px bg-neutral-100 dark:bg-neutral-800" />
+                <p className="truncate px-3 pb-0.5 pt-1.5 text-xs text-neutral-500 dark:text-neutral-400" title={item.note}>{item.note}</p>
+              </>
+            )}
             <button
-              key={item.label}
               type="button"
               role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
               aria-checked={item.checked}
@@ -163,6 +171,7 @@ export const MenuButton: React.FC<MenuButtonProps> = ({ modeItems = [], appItems
                 </span>
               )}
             </button>
+            </React.Fragment>
           ))}
         </div>
       )}

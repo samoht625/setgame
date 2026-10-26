@@ -23,7 +23,13 @@ Rails.application.routes.draw do
     post "puzzle/games/:id/progress", to: "puzzle#progress"
     post "puzzle/games/:id/finish", to: "puzzle#finish"
     patch "puzzle/name", to: "puzzle#name"
+    post "sign_in", to: "sign_in#create"
+    delete "sign_in", to: "sign_in#destroy"
   end
+
+  # The emailed sign-in link lands here; the page posts the token back.
+  get '/signin' => 'sign_in#show', as: :sign_in
+  post '/signin' => 'sign_in#create'
 
   # Multiplayer game ("m" for "meet me at the table")
   get '/m' => 'home#multiplayer', as: :multiplayer
