@@ -1,4 +1,4 @@
-<% s = @stats; attr_label = { "number" => "Number", "color" => "Color", "shape" => "Shape", "shading" => "Shading" } %>
+<% s = @stats %>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
   <path id="st-squiggle" d="M-10-54 C7-54 22.5-41 22.5-19 C22.5-4.5 15 2.5 15 11.5 C15 23.5 25.5 32.5 25.5 39.5 C25.5 46.5 15 50.5 6 50.5 C-13 50.5-23.5 39.5-23.5 22.5 C-23.5 6.5-13.5-6.5-13.5-18 C-13.5-30.5-24.5-40-24.5-45.5 C-24.5-51-17-54-10-54 Z"/>
   <path id="st-diamond" d="M0-59 28 0 0 59-28 0Z"/>
@@ -26,38 +26,22 @@
   <% end %>
 
   <h2>How fast</h2>
-  <p class="muted">Median time to find a set, from the previous find (or the deal). One time scale for every row; the dashed line is the median of all finds<%= s[:median_all] ? " (#{secs(s[:median_all])})" : "" %>.</p>
-  <%
-    all = s[:median_all]
-    axis_max = [[s[:median_by_diff].values, s[:median_by_shared].values].flatten.compact.max.to_i, 5_000].max
-    axis_max = (axis_max / 5_000.0).ceil * 5_000
-    pos = ->(ms) { (ms.to_f * 100 / axis_max).round(2) }
-    groups = [
-      ["By how many attributes differ", (1..4).map { |n| ["#{n} different", s[:median_by_diff][n], s[:example_by_diff][n]] }],
-      ["By the one attribute that’s the same", SetStats::ATTRS.map { |a| ["Same #{a}", s[:median_by_shared][a], s[:example_by_shared][a]] }]
-    ]
-  %>
-  <% groups.each_with_index do |(title, rows), gi| %>
-    <div class="bars hf"<%= raw(' style="margin-top:10px"') if gi.positive? %>>
-      <div class="hf-title muted"><%= title %></div>
-      <% rows.select { |r| r[1] }.sort_by { |r| r[1] }.each do |label, ms, cards| %>
-        <div class="hf-row">
-          <% if cards %><%= set_cards(cards) %><% else %><span></span><% end %>
-          <span class="hf-label"><%= label %><% if all %><small><%= ms <= all ? "−" : "+" %><%= secs((ms - all).abs) %> vs all</small><% end %></span>
-          <span class="num"><b><%= secs(ms) %></b></span>
-          <span class="hf-track" aria-hidden="true">
-            <% (0..axis_max).step(5_000) do |t| %><span class="hf-tick" style="left:<%= pos.(t) %>%"></span><% end %>
-            <% if all %><span class="hf-ref" style="left:<%= pos.(all) %>%"></span><% end %>
-            <span class="hf-fill" style="width:<%= pos.(ms) %>%"></span>
-            <span class="hf-dot" style="left:<%= pos.(ms) %>%"></span>
-          </span>
-        </div>
-      <% end %>
-      <div class="hf-axis muted" aria-hidden="true">
-        <% (0..axis_max).step(5_000) do |t| %><span style="left:<%= pos.(t) %>%"><%= t / 1000 %>s</span><% end %>
+  <p class="muted">Median seconds to find a set, by which attributes are all different. Bar: middle half of finds, 0–20s.</p>
+  <% kmax = 20_000; kpos = ->(ms) { (ms.clamp(0, kmax) * 100.0 / kmax).round(2) } %>
+  <div class="kinds">
+    <% s[:kinds].each do |k| %>
+      <div class="kind">
+        <span class="kind-label"><%= k[:label] %></span>
+        <%= set_cards(k[:cards]) if k[:cards] %>
+        <b class="kind-med"><%= format("%.1fs", k[:median_ms] / 1000.0) %></b>
+        <span class="kind-track" aria-label="middle half <%= secs(k[:p25_ms]) %> to <%= secs(k[:p75_ms]) %>" title="<%= secs(k[:p25_ms]) %> – <%= secs(k[:p75_ms]) %> · <%= number_with_delimiter(k[:n]) %> finds">
+          <% [5_000, 10_000, 15_000].each do |t| %><span class="kind-tick" style="left:<%= kpos.(t) %>%"></span><% end %>
+          <span class="kind-iqr" style="left:<%= kpos.(k[:p25_ms]) %>%;width:<%= (kpos.(k[:p75_ms]) - kpos.(k[:p25_ms])).round(2) %>%"></span>
+          <span class="kind-mid" style="left:<%= kpos.(k[:median_ms]) %>%"></span>
+        </span>
       </div>
-    </div>
-  <% end %>
+    <% end %>
+  </div>
 
   <% if s[:fastest].any? %>
     <h2>Quickest to spot</h2>

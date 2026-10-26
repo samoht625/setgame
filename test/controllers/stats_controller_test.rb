@@ -18,8 +18,10 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1500, stats[:fastest_find][:ms]
     assert_equal({ cards: [1, 2, 3], n: 2 }, stats[:most_found].first)
     assert_equal 3, stats[:type_counts][1]
-    assert_equal [1, 2, 3], stats[:example_by_diff][1]
-    assert_equal 2000, stats[:median_all]
+    assert_equal ["number"], stats[:kinds].map { |k| k[:label] }, "[1,2,3] and [4,5,6] differ only in number"
+    kind = stats[:kinds].first
+    assert_equal [3, 1750.0, 2000.0, 4500.0], kind.values_at(:n, :p25_ms, :median_ms, :p75_ms)
+    assert_includes [[1, 2, 3], [4, 5, 6]], kind[:cards]
     assert_equal({ cards: [1, 2, 3], n: 2, tied: 0 }, stats[:spread][:max])
     assert_equal 0, stats[:spread][:min][:n]
     assert_equal 1077, stats[:spread][:min][:tied]
@@ -37,8 +39,8 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Set stats"
     assert_includes response.body, "Most found"
     assert_includes response.body, "Most games finished"
-    assert_includes response.body, "vs all"
-    assert_includes response.body, "hf-dot"
+    assert_includes response.body, "kind-iqr"
+    refute_includes response.body, "vs all"
     assert_includes response.body, "Least found"
     refute_includes response.body, "possible sets found at least once"
     refute_includes response.body, "player-secret-xyz"

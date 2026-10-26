@@ -10,7 +10,7 @@ class SetStats
   ZONE = "America/Chicago"
 
   def self.cached
-    Rails.cache.fetch("set_stats/v7", expires_in: 5.minutes) { new.compute }
+    Rails.cache.fetch("set_stats/v8", expires_in: 5.minutes) { new.compute }
   end
 
   def self.all_sets
@@ -44,15 +44,12 @@ class SetStats
 
     by_triple = Hash.new { |h, k| h[k] = [] }
     finds.each { |cards, gap, _| by_triple[cards] << gap }
-    by_diff = Hash.new { |h, k| h[k] = [] }
-    by_shared = Hash.new { |h, k| h[k] = [] }
     type_counts = Hash.new(0)
+    by_kind = Hash.new { |h, k| h[k] = [] }
     finds.each do |cards, gap, _|
       k = self.class.kind(cards)
-      n = k.count(true)
-      type_counts[n] += 1
-      by_diff[n] << gap
-      ATTRS.each_with_index { |a, i| by_shared[a] << gap unless k[i] }
+      type_counts[k.count(true)] += 1
+      by_kind[k] << gap
     end
 
     counts = by_triple.transform_values(&:length)
@@ -72,11 +69,7 @@ class SetStats
       runs: SoloScore.count,
       distinct_found: counts.length,
       type_counts: (1..4).to_h { |n| [n, type_counts[n]] },
-      median_all: median(finds.map { |_, gap, _| gap }),
-      example_by_diff: (1..4).to_h { |n| [n, example(counts) { |k| k.count(true) == n }] },
-      example_by_shared: ATTRS.each_with_index.to_h { |a, i| [a, example(counts) { |k| k.each_with_index.all? { |d, j| d == (j != i) } }] },
-      median_by_diff: (1..4).to_h { |n| [n, median(by_diff[n])] },
-      median_by_shared: ATTRS.to_h { |a| [a, median(by_shared[a])] },
+      kinds: kinds(by_kind, counts.keys),
       fastest: fastest,
       most_found: counts.sort_by { |c, n| [-n, c] }.first(10).map { |c, n| { cards: c, n: n } },
       spread: spread(counts),
@@ -103,9 +96,32 @@ class SetStats
       least: all.sort_by { |c, n| [n, c] }.first(10).map { |c, n| { cards: c, n: n } } }
   end
 
-  # The most-found set of a kind, so each timing row shows a familiar example.
-  def example(counts)
-    counts.select { |cards, _| yield self.class.kind(cards) }.max_by { |cards, n| [n, cards.map(&:-@)] }&.first
+  # The 15 kinds of set (which of the four attributes are all different),
+  # easiest first: median and middle 50% of find times, plus one random
+  # found set of that kind to draw.
+  def kinds(by_kind, found)
+    examples = found.group_by { |c| self.class.kind(c) }
+    by_kind.map do |k, gaps|
+      s = gaps.sort
+      { label: kind_label(k), n: s.length, median_ms: quantile(s, 0.5), p25_ms: quantile(s, 0.25),
+        p75_ms: quantile(s, 0.75), cards: examples.fetch(k, []).sample }
+    end.sort_by { |h| h[:median_ms] }
+  end
+
+  def kind_label(k)
+    diff = ATTRS.select.with_index { |_, i| k[i] }
+    case diff.length
+    when 4 then "all four"
+    when 3 then "all but #{(ATTRS - diff).first}"
+    else diff.join(" + ")
+    end
+  end
+
+  # Linear interpolation between closest ranks (same as numpy/pandas).
+  def quantile(sorted, q)
+    pos = (sorted.length - 1) * q
+    lo = sorted[pos.floor]
+    lo + (sorted[pos.ceil] - lo) * (pos - pos.floor)
   end
 
   # Named players by finished runs (solo + daily), grouped by the public name
