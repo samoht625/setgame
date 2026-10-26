@@ -8,7 +8,9 @@ import DailyCompare from './DailyCompare'
 import { DailyStandings } from './DailyPanel'
 import { primaryButton, secondaryButton, secondaryButtonSmall } from '../lib/buttons'
 import SignInForm from '../components/SignInForm'
+import ReminderOffer from '../components/ReminderOffer'
 import { signedInEmail, signInEnabled } from '../lib/player_id'
+import { useReminder } from '../hooks/useReminder'
 export { primaryButton, secondaryButton }
 
 const LEADERBOARD_SIZE = 10
@@ -49,6 +51,9 @@ const DailyCard: React.FC<DailyCardProps> = ({
   title, next = { href: '/puzzle', label: 'Play Puzzle' }, noun = 'deal', emptyText, marksLabel = 'Your pace on each set'
 }) => {
   const titleId = useId()
+  const reminder = useReminder()
+  // Offered once per card: until the reminder is on, then it goes quiet.
+  const [offerReminder] = useState(() => signInEnabled() && !(signedInEmail() && reminder?.enabled))
   const [comparing, setComparing] = useState<DailyEntry | null>(null)
   const msLeft = status ? Date.parse(status.next_at) - nowMs : null
   // Other finishers' runs are only for a player who has finished this deal too.
@@ -102,10 +107,9 @@ const DailyCard: React.FC<DailyCardProps> = ({
             </a>
           </div>
           {shareNote && <p role="status" className="mt-2 text-xs text-neutral-600 dark:text-neutral-300">{shareNote}</p>}
-          {result && signInEnabled() && !signedInEmail() && (
+          {result && offerReminder && (
             <div className="mt-4 border-t border-neutral-100 pt-4 text-left dark:border-neutral-800">
-              <p className="mb-2 text-xs text-neutral-500 dark:text-neutral-400">Keep your streak on any device</p>
-              <SignInForm source="card" quiet />
+              {signedInEmail() ? <ReminderOffer initialMinutes={reminder?.minutes} /> : <SignInForm source="card" quiet reminder />}
             </div>
           )}
         </div>

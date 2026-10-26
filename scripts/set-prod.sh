@@ -81,12 +81,24 @@ restart_service() {
   fi
 }
 
+# Reminder emails: a oneshot service every 5 minutes (see lib/tasks/reminders.rake).
+install_reminder_timer() {
+  echo "==> Reminder timer"
+  local unit_dir="$HOME/.config/systemd/user"
+  mkdir -p "$unit_dir"
+  install -m 0644 "$ROOT/deploy/setgame-reminders.service" "$unit_dir/setgame-reminders.service"
+  install -m 0644 "$ROOT/deploy/setgame-reminders.timer" "$unit_dir/setgame-reminders.timer"
+  systemctl --user daemon-reload
+  systemctl --user enable --now setgame-reminders.timer
+}
+
 chmod +x "$ROOT/scripts/"*.sh 2>/dev/null || true
 prepare_sqlite_runtime
 
 # Always install gems before any restart so sqlite3 is present for ExecStartPre.
 install_ruby_deps
 prepare_database
+install_reminder_timer || echo "set-prod: reminder timer not installed" >&2
 
 if [[ -x "$ORCHESTRATOR" && "${SETGAME_USE_ORCHESTRATOR:-}" == "1" && "${SETGAME_SKIP_RESTART:-}" != "1" ]]; then
   # Env, unit, gems, and schema are already prepared above.

@@ -1,0 +1,11 @@
+[Unit]
+Description=Set reminder emails (sends what's due, then exits)
+After=network-online.target setgame.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/www/setgame
+EnvironmentFile=%h/www/setgame/deploy/setgame.env
+Environment=SETGAME_NO_GAME_ENGINE=1
+ExecStart=%h/www/setgame/scripts/setgame-with-bundle.sh rails reminders:send
+TimeoutStartSec=15min

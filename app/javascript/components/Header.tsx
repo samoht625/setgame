@@ -8,6 +8,9 @@ import { MenuButton } from './GameMenu'
 import { openSignInDialog } from './SignInDialog'
 import { signedInEmail, signInEnabled } from '../lib/player_id'
 import { signOut } from '../lib/account'
+import { openReminderDialog } from './ReminderDialog'
+import { useReminder } from '../hooks/useReminder'
+import { reminderLabel } from '../lib/reminder'
 
 interface HeaderProps {
   mode: GameMode
@@ -18,6 +21,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 }) => {
   const sound = useSound()
+  const reminder = useReminder()
   const [showLogoSet, setShowLogoSet] = useState(false)
   const taps = useRef({ count: 0, lastAt: 0 })
   const logoTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -102,7 +106,10 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
               { label: 'Your name', onSelect: openNameDialog },
               { label: 'Sound', onSelect: sound.toggle, checked: sound.enabled },
               ...(signedInEmail()
-                ? [{ label: 'Sign out', note: `Signed in as ${signedInEmail()}`, onSelect: () => void signOut() }]
+                ? [
+                    { label: 'Reminder', note: `Signed in as ${signedInEmail()}`, detail: reminder?.enabled ? reminderLabel(reminder.minutes) : 'Off', onSelect: openReminderDialog },
+                    { label: 'Sign out', onSelect: () => void signOut() }
+                  ]
                 : signInEnabled() ? [{ label: 'Sign in', onSelect: openSignInDialog }] : [])
             ]}
           />

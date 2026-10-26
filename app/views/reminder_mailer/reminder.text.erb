@@ -1,0 +1,7 @@
+<%= @headline %>
+<% if @streak || @also %><%= [@streak, @also].compact.join(" ") %>
+<% end %>
+Play: <%= @play_url %>
+
+Your reminder for <%= @time_label %> on days you haven't played.
+Unsubscribe: <%= @unsubscribe_url %>

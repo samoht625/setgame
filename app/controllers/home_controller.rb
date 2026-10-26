@@ -36,6 +36,7 @@ class HomeController < ApplicationController
     return if account.nil? && Account.owns_player?(id)
 
     @account_email = account&.email
+    @reminder = account && (account.reminder_enabled ? account.reminder_minutes.to_s : "off:#{account.reminder_minutes}")
     @known_player_id = id
     @known_player_key = PlayerKey.for(id)
     @known_player_name = PlayerIdentity.last_name(id)

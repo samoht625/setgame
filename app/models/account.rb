@@ -8,6 +8,9 @@ class Account < ApplicationRecord
 
   has_many :account_sessions, dependent: :destroy
   has_many :player_merges, dependent: :delete_all
+  has_many :reminder_deliveries, dependent: :delete_all
+
+  validates :reminder_minutes, inclusion: { in: Reminder::TIMES }
 
   validates :email, presence: true, uniqueness: true
   validates :player_id, presence: true, uniqueness: true
@@ -16,6 +19,12 @@ class Account < ApplicationRecord
   def self.normalize_email(raw)
     email = raw.to_s.strip.downcase
     email if email.length <= MAX_EMAIL_LENGTH && email.match?(EMAIL_PATTERN)
+  end
+
+  scope :with_reminder, -> { where(reminder_enabled: true) }
+
+  def zone
+    ActiveSupport::TimeZone[time_zone.to_s] || ActiveSupport::TimeZone[DailyPuzzle::TIME_ZONE]
   end
 
   def self.owns_player?(player_id)

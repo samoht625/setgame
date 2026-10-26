@@ -11,6 +11,7 @@ import { GameMenuProvider } from './GameMenu'
 import HowToPlay from '../rules/HowToPlay'
 import NameDialog from './NameDialog'
 import SignInDialog from './SignInDialog'
+import ReminderDialog from './ReminderDialog'
 import Tour, { shouldShowTour } from '../rules/Tour'
 
 // 'solo' is Practice: timed games against the clock.
@@ -76,6 +77,7 @@ const App: React.FC = () => {
         <HowToPlay />
         <NameDialog />
         <SignInDialog />
+        <ReminderDialog />
       </div>
       </GameMenuProvider>
     </SoundProvider>

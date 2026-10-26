@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_26_220000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_26_233000) do
   create_table "account_sessions", force: :cascade do |t|
     t.integer "account_id", null: false
     t.string "token_digest", null: false
@@ -28,8 +28,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_26_220000) do
     t.string "time_zone"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "reminder_enabled", default: false, null: false
+    t.integer "reminder_minutes", default: 480, null: false
     t.index ["email"], name: "index_accounts_on_email", unique: true
     t.index ["player_id"], name: "index_accounts_on_player_id", unique: true
+    t.index ["reminder_enabled"], name: "index_accounts_on_reminder_enabled"
   end
 
   create_table "game_snapshots", force: :cascade do |t|
@@ -69,6 +72,22 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_26_220000) do
     t.index ["puzzle_on", "player_id"], name: "index_puzzle_runs_on_puzzle_on_and_player_id", unique: true
   end
 
+  create_table "reminder_deliveries", force: :cascade do |t|
+    t.integer "account_id", null: false
+    t.date "local_on", null: false
+    t.date "deal_on", null: false
+    t.string "status", null: false
+    t.string "kinds"
+    t.string "resend_id"
+    t.string "error"
+    t.integer "attempts", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "deal_on"], name: "index_reminder_deliveries_on_account_id_and_deal_on", unique: true
+    t.index ["account_id", "local_on"], name: "index_reminder_deliveries_on_account_id_and_local_on", unique: true
+    t.index ["account_id"], name: "index_reminder_deliveries_on_account_id"
+  end
+
   create_table "sign_in_tokens", force: :cascade do |t|
     t.string "email", null: false
     t.string "token_digest", null: false
@@ -78,6 +97,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_26_220000) do
     t.datetime "expires_at", null: false
     t.datetime "used_at"
     t.datetime "created_at", null: false
+    t.integer "reminder_minutes"
     t.index ["email", "created_at"], name: "index_sign_in_tokens_on_email_and_created_at"
     t.index ["ip", "created_at"], name: "index_sign_in_tokens_on_ip_and_created_at"
     t.index ["token_digest"], name: "index_sign_in_tokens_on_token_digest", unique: true
@@ -122,4 +142,5 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_26_220000) do
 
   add_foreign_key "account_sessions", "accounts"
   add_foreign_key "player_merges", "accounts"
+  add_foreign_key "reminder_deliveries", "accounts"
 end

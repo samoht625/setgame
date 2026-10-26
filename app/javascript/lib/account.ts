@@ -1,10 +1,12 @@
 import { headers, apiFetch } from './solo_api'
 import { switchPlayer } from './player_id'
+import { browserTimeZone } from './reminder'
 
 export type SignInRequest = 'sent' | 'invalid_email' | 'rate_limited' | 'failed'
 
 /** Emails a one-tap sign-in link. The answer never says whether the email has an account. */
-export async function requestSignIn(email: string): Promise<SignInRequest> {
+/** With reminderMinutes, opening the link also turns on the reminder email at that local time. */
+export async function requestSignIn(email: string, reminderMinutes?: number): Promise<SignInRequest> {
   try {
     const res = await apiFetch('/api/sign_in', {
       method: 'POST',
@@ -13,7 +15,8 @@ export async function requestSignIn(email: string): Promise<SignInRequest> {
       body: JSON.stringify({
         email,
         return_to: window.location.pathname,
-        time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        time_zone: browserTimeZone(),
+        reminder_minutes: reminderMinutes
       }),
       signal: AbortSignal.timeout(15000)
     })

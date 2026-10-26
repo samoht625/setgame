@@ -23,6 +23,11 @@ class SignInController < ApplicationController
       signed_in_account: current_account,
       time_zone: record.time_zone
     )
+    # Asked for from a result card: opening the link proves the address, so
+    # the reminder goes on now, in the zone the browser asked from.
+    if record.reminder_minutes
+      account.update!(reminder_enabled: true, reminder_minutes: record.reminder_minutes, time_zone: record.time_zone.presence || account.time_zone)
+    end
     end_account_session! if current_account_session
     start_account_session!(account)
     redirect_to record.return_to.presence || "/", status: :see_other

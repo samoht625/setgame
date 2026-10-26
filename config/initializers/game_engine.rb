@@ -6,6 +6,9 @@ require_relative '../../app/services/game_engine'
 require_relative '../../app/services/game_state_store'
 
 Rails.application.config.after_initialize do
+  # Background jobs (the reminder timer) don't serve multiplayer.
+  next if ENV["SETGAME_NO_GAME_ENGINE"] == "1"
+
   snapshot_store = GameStateStore
 
   begin

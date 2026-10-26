@@ -12,8 +12,9 @@ module Api
       return render json: { error: "invalid_email" }, status: :unprocessable_entity unless email
       return render json: { error: "rate_limited" }, status: :too_many_requests if SignInToken.rate_limited?(email: email, ip: request.remote_ip)
 
-      _record, token = SignInToken.issue!(email: email, ip: request.remote_ip, return_to: params[:return_to].to_s, time_zone: params[:time_zone])
-      sent = SignInMailer.deliver(to: email, url: sign_in_url(token: token))
+      reminder = Reminder.valid_minutes(params[:reminder_minutes]) if params[:reminder_minutes].present?
+      _record, token = SignInToken.issue!(email: email, ip: request.remote_ip, return_to: params[:return_to].to_s, time_zone: params[:time_zone], reminder_minutes: reminder)
+      sent = SignInMailer.deliver(to: email, url: sign_in_url(token: token), reminder: reminder && Reminder.label(reminder))
       return render json: { error: "send_failed" }, status: :bad_gateway unless sent
 
       render json: { ok: true }

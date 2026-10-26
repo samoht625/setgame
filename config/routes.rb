@@ -25,11 +25,17 @@ Rails.application.routes.draw do
     patch "puzzle/name", to: "puzzle#name"
     post "sign_in", to: "sign_in#create"
     delete "sign_in", to: "sign_in#destroy"
+    patch "reminder", to: "reminders#update"
   end
 
   # The emailed sign-in link lands here; the page posts the token back.
   get '/signin' => 'sign_in#show', as: :sign_in
   post '/signin' => 'sign_in#create'
+
+  # Reminder email links: Play signs in and opens the game; one-click unsubscribe.
+  get '/play' => 'reminders#play', as: :reminder_play
+  get '/reminders/unsubscribe' => 'reminders#confirm_unsubscribe', as: :reminder_unsubscribe
+  post '/reminders/unsubscribe' => 'reminders#unsubscribe'
 
   # Multiplayer game ("m" for "meet me at the table")
   get '/m' => 'home#multiplayer', as: :multiplayer

@@ -4,5 +4,5 @@
   <%= tag.meta name: "setgame-player-key", content: @known_player_key %>
   <% if @known_player_name %><%= tag.meta name: "setgame-player-name", content: @known_player_name %><% end %>
 <% end %>
-<% if @account_email %><%= tag.meta name: "setgame-account", content: @account_email %><% end %>
+<% if @account_email %><%= tag.meta name: "setgame-account", content: @account_email %><%= tag.meta name: "setgame-reminder", content: @reminder %><% end %>
 <% if @sign_in_enabled %><meta name="setgame-sign-in" content="1"><% end %>

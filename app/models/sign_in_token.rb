@@ -19,7 +19,7 @@ class SignInToken < ApplicationRecord
   end
 
   # Returns [record, raw_token].
-  def self.issue!(email:, ip: nil, return_to: nil, time_zone: nil)
+  def self.issue!(email:, ip: nil, return_to: nil, time_zone: nil, reminder_minutes: nil)
     token = SecureRandom.urlsafe_base64(32)
     record = create!(
       email: email,
@@ -27,6 +27,7 @@ class SignInToken < ApplicationRecord
       ip: ip,
       return_to: RETURN_PATHS.include?(return_to) ? return_to : "/",
       time_zone: valid_time_zone(time_zone),
+      reminder_minutes: reminder_minutes,
       expires_at: LIFETIME.from_now,
       created_at: Time.current
     )

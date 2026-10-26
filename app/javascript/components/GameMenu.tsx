@@ -9,6 +9,8 @@ export type MenuItem = {
   badge?: number
   /** A small line of text above the item (e.g. who's signed in). */
   note?: string
+  /** Quiet text at the item's end (e.g. a setting's value). */
+  detail?: string
 }
 
 type Registered = { items: React.MutableRefObject<MenuItem[]>; signature: string } | null
@@ -165,6 +167,7 @@ export const MenuButton: React.FC<MenuButtonProps> = ({ modeItems = [], appItems
               className={itemClass}
             >
               <span>{item.label}</span>
+              {item.detail && <span className="text-xs tabular-nums text-neutral-500 dark:text-neutral-400">{item.detail}</span>}
               {item.checked !== undefined && (
                 <span aria-hidden="true" className={`relative h-5 w-8 rounded-full transition-colors ${item.checked ? 'bg-emerald-500' : 'bg-neutral-300 dark:bg-neutral-600'}`}>
                   <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${item.checked ? 'left-3.5' : 'left-0.5'}`} />

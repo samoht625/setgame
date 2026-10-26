@@ -1,0 +1,8 @@
+<p>Turning off reminder emails…</p>
+<%= form_with url: "/reminders/unsubscribe", method: :post, id: "unsubscribe", data: { turbo: false } do %>
+  <%= hidden_field_tag :t, @token %>
+  <button type="submit" class="btn primary">Unsubscribe</button>
+<% end %>
+<%= javascript_tag nonce: true do %>
+  var f = document.getElementById("unsubscribe"); f.requestSubmit ? f.requestSubmit() : f.submit();
+<% end %>
