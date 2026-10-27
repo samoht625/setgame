@@ -65,19 +65,41 @@ class RemindersControllerTest < ActionDispatch::IntegrationTest
     assert_select "meta[name='setgame-account']", false
   end
 
-  test "a sign-in link asked for from a result card turns the reminder on once opened" do
+  test "the reminder prompt's link is a confirm email that turns the reminder on once opened" do
     phone = SecureRandom.uuid
     get "/api/daily", headers: { "X-Player-Id" => phone }
-    post "/api/sign_in", params: { email: "new@example.com", reminder_minutes: 450, time_zone: "Europe/Paris" }, headers: { "X-Player-Id" => phone }, as: :json
+    post "/api/sign_in", params: { email: "new@example.com", reminder_minutes: 450, time_zone: "Europe/Paris", return_to: "/puzzle" }, headers: { "X-Player-Id" => phone }, as: :json
     assert_response :success
     mail = ResendMail.deliveries.last
-    assert_match "reminder at 7:30 AM", mail[:text]
+    assert_equal "Confirm your Set reminder", mail[:subject]
+    assert_match "Tap to get a reminder at 7:30 AM on days you haven’t played.", mail[:html]
+    assert_match(/>Confirm</, mail[:html])
+    assert_match "Tap to get a reminder at 7:30 AM on days you haven't played.", mail[:text]
+    assert_match "The link works for 30 minutes", mail[:text]
     assert_nil Account.find_by(email: "new@example.com"), "nothing is sent to an unproven address"
 
-    token = mail[:text][/token=([\w\-%]+)/, 1]
-    post "/signin", params: { token: CGI.unescape(token) }
+    token = CGI.unescape(mail[:text][/token=([\w\-%]+)/, 1])
+    get "/signin", params: { token: token }
+    assert_match "Turning on your reminder", response.body
+    post "/signin", params: { token: token }
+    assert_redirected_to "/puzzle?signed_in=1&reminder=450"
     account = Account.find_by!(email: "new@example.com")
     assert_equal [true, 450, "Europe/Paris"], [account.reminder_enabled, account.reminder_minutes, account.time_zone]
+
+    reset!
+    travel SignInToken::LIFETIME + 1.second do
+      post "/signin", params: { token: token }
+      assert_response :unprocessable_entity
+      assert_select "a[href=?]", "/?sign_in=1&reminder=1", text: "Send a new link"
+    end
+  end
+
+  test "a menu sign-in email stays a sign-in email" do
+    post "/api/sign_in", params: { email: "menu@example.com" }, as: :json
+    mail = ResendMail.deliveries.last
+    assert_equal "Sign in to Set", mail[:subject]
+    assert_match(/>Sign in</, mail[:html])
+    refute_match(/reminder/i, mail[:text])
   end
 
   test "reminder settings need a signed-in browser" do

@@ -1,7 +1,7 @@
-<p class="status" role="status"><span class="spinner" aria-hidden="true"></span>Signing you in…</p>
+<p class="status" role="status"><span class="spinner" aria-hidden="true"></span><%= @reminder ? "Turning on your reminder…" : "Signing you in…" %></p>
 <%= form_with url: "/signin", method: :post, id: "sign-in", data: { turbo: false } do %>
   <%= hidden_field_tag :token, @token %>
-  <noscript><button type="submit" class="btn primary">Sign in</button></noscript>
+  <noscript><button type="submit" class="btn primary"><%= @reminder ? "Confirm" : "Sign in" %></button></noscript>
 <% end %>
 <%= javascript_tag nonce: true do %>
   document.getElementById("sign-in").requestSubmit ? document.getElementById("sign-in").requestSubmit() : document.getElementById("sign-in").submit();

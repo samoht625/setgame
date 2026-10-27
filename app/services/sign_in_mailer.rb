@@ -4,6 +4,8 @@
 # RESEND_API_KEY is set (see .enabled?).
 module SignInMailer
   SUBJECT = "Sign in to Set"
+  # Asked for from the reminder prompt: the link confirms the reminder (and signs in).
+  CONFIRM_SUBJECT = "Confirm your Set reminder"
 
   def self.enabled?
     return false if ENV["SETGAME_SIGN_IN"] == "off"
@@ -20,6 +22,6 @@ module SignInMailer
     assigns = { url: url, reminder: reminder }
     html = ApplicationController.render(template: "sign_in_mailer/sign_in", formats: [:html], layout: false, assigns: assigns)
     text = ApplicationController.render(template: "sign_in_mailer/sign_in", formats: [:text], layout: false, assigns: assigns)
-    ResendMail.deliver(to: to, subject: SUBJECT, html: html, text: text).ok?
+    ResendMail.deliver(to: to, subject: reminder ? CONFIRM_SUBJECT : SUBJECT, html: html, text: text).ok?
   end
 end

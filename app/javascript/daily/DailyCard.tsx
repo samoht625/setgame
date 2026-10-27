@@ -7,10 +7,10 @@ import type { DailyEntry, DailyStatus } from '../lib/solo_api'
 import DailyCompare from './DailyCompare'
 import { DailyStandings } from './DailyPanel'
 import { primaryButton, secondaryButton, secondaryButtonSmall } from '../lib/buttons'
-import { openSignInDialog } from '../components/SignInDialog'
 import { openReminderDialog } from '../components/ReminderDialog'
 import { signedInEmail, signInEnabled } from '../lib/player_id'
 import { useReminder } from '../hooks/useReminder'
+import ReminderPrompt from './ReminderPrompt'
 export { primaryButton, secondaryButton }
 
 const LEADERBOARD_SIZE = 10
@@ -52,8 +52,10 @@ const DailyCard: React.FC<DailyCardProps> = ({
 }) => {
   const titleId = useId()
   const reminder = useReminder()
-  // Offered once per card: until the reminder is on, then it goes quiet.
-  const offerReminder = signInEnabled() && !(signedInEmail() && reminder?.enabled)
+  // Signed out: a one-time prompt offers the reminder (with sign-in). Signed in with it off: a quiet link under Share.
+  const signedIn = Boolean(signedInEmail())
+  const promptReminder = signInEnabled() && !signedIn && Boolean(result) && !stale
+  const offerReminder = signedIn && !reminder?.enabled
   const [comparing, setComparing] = useState<DailyEntry | null>(null)
   const msLeft = status ? Date.parse(status.next_at) - nowMs : null
   // Other finishers' runs are only for a player who has finished this deal too.
@@ -112,8 +114,8 @@ const DailyCard: React.FC<DailyCardProps> = ({
           {result && offerReminder && (
             <button
               type="button"
-              onClick={() => (signedInEmail() ? openReminderDialog() : openSignInDialog({ reminder: true, source: 'card' }))}
-              className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+              onClick={() => openReminderDialog()}
+              className="mt-2 inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-full px-3 text-xs font-medium text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
             >
               <BellIcon />
               Email me a daily reminder
@@ -141,6 +143,7 @@ const DailyCard: React.FC<DailyCardProps> = ({
             )}
           />
         </div>
+        {promptReminder && <ReminderPrompt />}
         {comparing && status && (
           <DailyCompare date={status.date} number={status.number} opponent={comparing} onClose={() => setComparing(null)} />
         )}

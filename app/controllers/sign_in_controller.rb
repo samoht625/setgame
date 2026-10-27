@@ -10,11 +10,15 @@ class SignInController < ApplicationController
 
   def show
     @token = params[:token].to_s
+    @reminder = SignInToken.peek(@token)&.reminder_minutes.present?
   end
 
   def create
     record = SignInToken.redeem(params[:token].to_s)
-    return render :expired, status: :unprocessable_entity unless record
+    unless record
+      @reminder = SignInToken.peek(params[:token].to_s)&.reminder_minutes.present?
+      return render :expired, status: :unprocessable_entity
+    end
 
     cookie_player = cookies.signed[:player_id].to_s
     account = AccountSignIn.call(
@@ -30,15 +34,16 @@ class SignInController < ApplicationController
     end
     end_account_session! if current_account_session
     start_account_session!(account)
-    redirect_to with_signed_in_flag(record.return_to.presence || "/"), status: :see_other
+    redirect_to with_signed_in_flag(record.return_to.presence || "/", reminder: record.reminder_minutes), status: :see_other
   end
 
   private
 
-  # The game shows a brief "Signed in as …" when it sees ?signed_in=1, then drops it from the URL.
-  def with_signed_in_flag(path)
+  # The game shows a brief "Signed in as …" when it sees ?signed_in=1 (or
+  # "Reminder on · 8:00 AM" with &reminder=480), then drops them from the URL.
+  def with_signed_in_flag(path, reminder: nil)
     uri = URI.parse(path)
-    uri.query = [uri.query.presence, "signed_in=1"].compact.join("&")
+    uri.query = [uri.query.presence, "signed_in=1", ("reminder=#{reminder.to_i}" if reminder)].compact.join("&")
     uri.to_s
   rescue URI::InvalidURIError
     "/?signed_in=1"

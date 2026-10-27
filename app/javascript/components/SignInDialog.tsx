@@ -157,10 +157,10 @@ const SignInDialog: React.FC = () => {
             </form>
           ) : (
             <div role="status">
-              <h2 id={titleId} className="text-base font-semibold">Check your email</h2>
+              <h2 id={titleId} className="text-base font-semibold">{options.reminder ? 'Check your email to confirm' : 'Check your email'}</h2>
               <p className="mt-1 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
                 We sent a link to <span className="break-all font-medium text-neutral-900 dark:text-neutral-100">{email.trim()}</span>.
-                {options.reminder ? ` Open it to sign in and get the reminder at ${reminderLabel(minutes)}.` : ' Open it to sign in.'}
+                {options.reminder ? ` Open it to get the reminder at ${reminderLabel(minutes)}.` : ' Open it to sign in.'}
               </p>
               {error && <p role="alert" className="mt-2 text-xs text-rose-700 dark:text-rose-300">{ERRORS[error]}</p>}
               <div className="mt-4 flex flex-wrap gap-2">

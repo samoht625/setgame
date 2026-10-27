@@ -318,6 +318,69 @@ test('the result card offers the Puzzle until it is done, then Practice, and not
   await expect(results.getByRole('link', { name: 'Puzzle', exact: true })).toHaveCount(0)
 })
 
+test('a signed-out finisher gets a one-time reminder prompt that floats over the card and comes back after a cooldown', async ({ page }) => {
+  await page.goto('/daily')
+  await seedFinishedRun(page, [4, 8, 12, 20, 28, 36, 48, 60, 72, 92, 112, 132].map(s => s * 1000), 2)
+  await page.reload()
+  const results = page.getByRole('region', { name: /Daily Deal #/ })
+  await expect(results).toBeVisible()
+  const before = await results.boundingBox()
+  const prompt = page.getByRole('dialog', { name: 'Keep your streak going' })
+  await expect(prompt).toBeVisible()
+  await expect(prompt.getByText('if you haven’t played.')).toBeVisible()
+  // No quiet link on the card any more, and the prompt doesn't move the card.
+  await expect(page.getByRole('button', { name: 'Email me a daily reminder' })).toHaveCount(0)
+  expect(await results.boundingBox()).toEqual(before)
+  const field = prompt.getByLabel('Email')
+  await expect(field).toHaveAttribute('data-1p-ignore', 'true')
+  await expect(prompt.getByRole('button', { name: 'Remind me' })).toHaveCSS('cursor', 'pointer')
+
+  await prompt.getByRole('button', { name: 'Not now' }).click()
+  await expect(prompt).toHaveCount(0)
+  await page.reload()
+  await expect(results).toBeVisible()
+  await page.waitForTimeout(1600)
+  await expect(prompt).toHaveCount(0)
+
+  // Three days after Not now (and on another day), it offers again; Remind me sends the link.
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('setgame_reminder_prompt_v1')!).dismissals)).toBe(1)
+  await page.evaluate(() => {
+    const memory = JSON.parse(localStorage.getItem('setgame_reminder_prompt_v1') || '{}')
+    localStorage.setItem('setgame_reminder_prompt_v1', JSON.stringify({ ...memory, shownOn: '2000-01-01', closedAt: Date.now() - 3 * 86400_000 - 1000 }))
+  })
+  let body: Record<string, unknown> | null = null
+  await page.route('**/api/sign_in', route => { body = route.request().postDataJSON(); return route.fulfill({ json: { ok: true } }) })
+  await page.reload()
+  await expect(prompt).toBeVisible()
+  await prompt.getByLabel('Email').fill('player@example.com')
+  await prompt.getByRole('button', { name: 'Remind me' }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'Check your email' })).toBeVisible()
+  expect(body).toMatchObject({ email: 'player@example.com', reminder_minutes: 480 })
+
+  // A tap outside closes it too.
+  await page.getByRole('heading', { name: /Daily Deal #/ }).click()
+  await expect(page.getByText('Check your email')).toHaveCount(0)
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('setgame_reminder_prompt_v1')!).dismissals)).toBe(1)
+
+  // After the third Not now it stops offering for good.
+  const later = () => page.evaluate(() => {
+    const memory = JSON.parse(localStorage.getItem('setgame_reminder_prompt_v1') || '{}')
+    localStorage.setItem('setgame_reminder_prompt_v1', JSON.stringify({ ...memory, shownOn: '2000-01-01', closedAt: Date.now() - 4 * 86400_000 }))
+  })
+  for (const turn of [2, 3]) {
+    await later()
+    await page.reload()
+    await expect(prompt).toBeVisible()
+    await prompt.getByRole('button', { name: 'Not now' }).click()
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('setgame_reminder_prompt_v1')!).dismissals)).toBe(turn)
+  }
+  await later()
+  await page.reload()
+  await expect(results).toBeVisible()
+  await page.waitForTimeout(1600)
+  await expect(prompt).toHaveCount(0)
+})
+
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
 

@@ -49,6 +49,13 @@ class SignInToken < ApplicationRecord
     record.reload
   end
 
+  # The record for a token, expired or not, without using it; nil when unknown.
+  def self.peek(token)
+    return nil unless token.is_a?(String) && token.length.between?(20, 100)
+
+    find_by(token_digest: digest(token))
+  end
+
   def self.valid_time_zone(zone)
     zone = zone.to_s
     zone if zone.length <= 64 && zone.match?(%r{\A[A-Za-z_]+(/[A-Za-z0-9_+\-]+)*\z}) && TZInfo::Timezone.all_identifiers.include?(zone)

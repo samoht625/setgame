@@ -16,6 +16,7 @@ import { showToast } from '../lib/toast'
 import { signedInEmail } from '../lib/player_id'
 import ReminderDialog from './ReminderDialog'
 import Tour, { shouldShowTour } from '../rules/Tour'
+import { REMINDER_TIMES, reminderLabel } from '../lib/reminder'
 
 // 'solo' is Practice: timed games against the clock.
 export type GameMode = 'daily' | 'puzzle' | 'solo' | 'multiplayer'
@@ -66,13 +67,16 @@ const App: React.FC = () => {
     const url = new URL(window.location.href)
     const signedIn = url.searchParams.has('signed_in')
     const wantsSignIn = url.searchParams.has('sign_in')
+    const reminder = url.searchParams.get('reminder')
     if (!signedIn && !wantsSignIn) return
     url.searchParams.delete('signed_in')
     url.searchParams.delete('sign_in')
+    url.searchParams.delete('reminder')
     window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash)
     const email = signedInEmail()
-    if (signedIn && email) showToast(`Signed in as ${email}`)
-    else if (wantsSignIn && !email) openSignInDialog({ source: 'expired' })
+    const minutes = Number(reminder)
+    if (signedIn && email) showToast(reminder && REMINDER_TIMES.includes(minutes) ? `Reminder on · ${reminderLabel(minutes)}` : `Signed in as ${email}`)
+    else if (wantsSignIn && !email) openSignInDialog({ source: 'expired', reminder: reminder !== null })
   }, [])
 
   useEffect(() => {
