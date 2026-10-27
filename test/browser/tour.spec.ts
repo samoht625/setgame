@@ -50,7 +50,7 @@ test('the first visit shows a two-step rules tour before the deal, then never ag
   let sets = 0
   for (let i = 0; i < 6; i++) for (let j = i + 1; j < 6; j++) for (let k = j + 1; k < 6; k++) if (isSet(ids[i]!, ids[j]!, ids[k]!)) sets++
   expect(sets).toBe(1)
-  await expect(rule.getByRole('listitem')).toHaveText([/Number.*all different/, /Color.*same/, /Shape.*all different/, /Shading.*all different/])
+  await expect(rule.getByRole('listitem')).toHaveText([/Number.*different/, /Color.*same/, /Shape.*different/, /Shading.*different/])
 
   await rule.getByRole('button', { name: 'Got it', exact: true }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
@@ -106,18 +106,24 @@ test('How to play opens from the header menu, leads with the example set and kee
 
   await page.addInitScript(() => localStorage.setItem('setgame_tour_v1', 'done'))
   await page.goto('/')
-  // The rules aren't spelled out on the page itself any more.
-  await expect(page.getByText('Three cards are a set when each feature', { exact: false })).toBeHidden()
+  // The longer About text stays in the page for search engines, out of sight; the modal has no marketing paragraph.
+  expect(html).toContain('About Set')
+  await expect(page.locator('section.sr-only')).toContainText('About Set')
 
   await page.getByRole('button', { name: 'Menu', exact: true }).click()
   await page.getByRole('menuitem', { name: 'How to play', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'How to play' })
   await expect(dialog).toBeVisible()
   await expect(dialog.locator('[data-revealed="true"]')).toBeVisible()
+  await expect(dialog.getByRole('heading', { name: 'How to play' })).toBeVisible()
   await expect(dialog.getByText('Find 3 cards: each feature all same or all different.')).toBeVisible()
-  await expect(dialog.getByText('Three cards are a set when each feature', { exact: false })).toBeHidden()
-  await dialog.getByText('Full rules').click()
+  // The short rules show straight away: no disclosure, no About paragraph, no "free".
   await expect(dialog.getByText('Three cards are a set when each feature', { exact: false })).toBeVisible()
+  for (const mode of ['Daily Deal', 'Puzzle', 'Practice', 'Multiplayer']) await expect(dialog.getByRole('term').filter({ hasText: mode })).toBeVisible()
+  await expect(dialog.getByText('Full rules')).toHaveCount(0)
+  await expect(dialog.getByText('About Set')).toHaveCount(0)
+  await expect(dialog).not.toContainText(/free/i)
+  await expect(dialog.getByRole('button', { name: 'Close' })).toHaveCSS('cursor', 'pointer')
   await dialog.getByRole('button', { name: 'Close' }).click()
   await expect(dialog).toBeHidden()
 })

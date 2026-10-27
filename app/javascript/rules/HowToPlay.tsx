@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { createPortal, flushSync } from 'react-dom'
 import RulesDemo from './RulesDemo'
 
 const OPEN_EVENT = 'setgame:how-to-play'
@@ -22,9 +22,11 @@ const HowToPlay: React.FC = () => {
     setRoot(document.getElementById('rules-demo-root'))
     if (!dialog) return
     const onOpen = () => {
+      flushSync(() => {
+        setOpen(true)
+        setOpenCount(count => count + 1)
+      })
       if (!dialog.open) dialog.showModal()
-      setOpen(true)
-      setOpenCount(count => count + 1)
     }
     const onClose = () => setOpen(false)
     const onClick = (event: MouseEvent) => {

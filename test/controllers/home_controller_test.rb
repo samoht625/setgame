@@ -53,6 +53,8 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
       assert_select "link[rel=apple-touch-icon][href='/apple-touch-icon.png']"
       # The rules live in the How to play dialog, still in the page for search engines.
       assert_select "dialog#how-to-play", text: /Three cards are a set when each feature/
+      assert_select "dialog#how-to-play", text: /About Set|free/, count: 0
+      assert_select "section.sr-only", text: /About Set/
       assert_select "footer", false
       assert_no_match(/not affiliated with Set Enterprises/, response.body)
     end
