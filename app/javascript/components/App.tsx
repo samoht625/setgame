@@ -45,6 +45,9 @@ const TITLES: Record<GameMode, string> = {
   multiplayer: 'Set Multiplayer'
 }
 
+/** The page behind every game; the prerendered header (script/prerender.tsx) sits in the same box. */
+export const APP_SHELL = 'min-h-dvh bg-neutral-100 text-neutral-900 antialiased dark:bg-[#111214] dark:text-neutral-100'
+
 const App: React.FC = () => {
   const [mode, setMode] = useState<GameMode>(() => modeFromPath(window.location.pathname))
   // First visit only; see shouldShowTour.
@@ -85,7 +88,7 @@ const App: React.FC = () => {
   return (
     <SoundProvider>
       <GameMenuProvider>
-      <div className="min-h-dvh bg-neutral-100 text-neutral-900 antialiased dark:bg-[#111214] dark:text-neutral-100">
+      <div className={APP_SHELL}>
         <CardSymbols />
         <Header mode={mode} onSwitchMode={switchMode} othersOnline={othersOnline} />
         {/* A practice deal (and its clock) waits for the tour; the dailies' clocks only start on Start. */}

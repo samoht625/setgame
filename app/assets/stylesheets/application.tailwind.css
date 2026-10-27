@@ -12,6 +12,8 @@
 html {
   -webkit-tap-highlight-color: transparent;
   color-scheme: light dark;
+  /* Room for a classic scrollbar always, so content never shifts sideways when the page starts or stops scrolling. */
+  scrollbar-gutter: stable;
 }
 
 /* Tailwind v4 dropped the pointer cursor on buttons: bring it back for everything clickable. */

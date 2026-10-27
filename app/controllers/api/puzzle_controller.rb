@@ -4,18 +4,7 @@ module Api
   # The daily classic Puzzle: 12 cards, find all 6 sets. One try a day.
   class PuzzleController < BaseController
     def show
-      puzzle = ClassicPuzzle.today
-      run = puzzle.run_for(current_player_id)
-
-      render json: summary(puzzle).merge(
-        total: puzzle.total,
-        leaderboard: puzzle.leaderboard.map { |entry| serialize_entry(entry) },
-        me: {
-          attempted: run.present?,
-          streak: puzzle.streak_for(current_player_id),
-          result: run&.finished? ? serialize_result(puzzle, run) : nil
-        }
-      )
+      render json: PuzzleStatus.for(current_player_id)
     end
 
     # Deals today's board, or hands back the player's unfinished run so a
@@ -75,37 +64,7 @@ module Api
 
     private
 
-    def summary(puzzle)
-      { date: puzzle.date.iso8601, number: puzzle.number, next_at: puzzle.next_at.iso8601 }
-    end
-
-    def serialize_entry(run)
-      {
-        player_id: run.player_id,
-        display_name: run.display_name,
-        elapsed_ms: run.elapsed_ms,
-        misses: run.misses,
-        completed_at: run.completed_at.iso8601,
-        replay: false
-      }
-    end
-
-    def serialize_result(puzzle, run)
-      rank = puzzle.rank_of(run)
-      total = puzzle.total
-      streak = puzzle.streak_for(run.player_id)
-      marks = run.marks
-      {
-        display_name: run.display_name,
-        elapsed_ms: run.elapsed_ms,
-        misses: run.misses,
-        rank: rank,
-        total: total,
-        streak: streak,
-        marks: marks,
-        share_token: DailyShare.token(kind: "puzzle", number: puzzle.number, elapsed_ms: run.elapsed_ms, rank: rank, total: total, streak: streak, marks: marks),
-        replay: false
-      }
-    end
+    def summary(puzzle) = PuzzleStatus.summary(puzzle)
+    def serialize_result(puzzle, run) = PuzzleStatus.result(puzzle, run)
   end
 end

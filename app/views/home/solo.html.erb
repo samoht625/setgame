@@ -1,4 +1,4 @@
 <% content_for :title, "Set Practice" %>
 <% content_for :head, render("home/identity") %>
 <%# Seed presence so the multiplayer count can render instantly, no extra request. %>
-<div id="root" data-online-ids="<%= GAME_ENGINE.online_player_ids_snapshot.to_json %>"></div>
+<div id="root" data-online-ids="<%= GAME_ENGINE.online_player_ids_snapshot.to_json %>"><%= prerendered(:solo) %></div>

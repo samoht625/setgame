@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { fetchDailyStatus } from '../lib/solo_api'
 import { fetchPuzzleStatus } from '../lib/puzzle_api'
+import { takeBootStatus } from '../lib/boot'
+import type { DailyStatus } from '../lib/solo_api'
 
 const SAVE_KEYS = { daily: 'setgame_daily_v1', puzzle: 'setgame_puzzle_v1' } as const
 
@@ -11,8 +13,15 @@ const SAVE_KEYS = { daily: 'setgame_daily_v1', puzzle: 'setgame_puzzle_v1' } as 
  * unfinished Puzzle resumes). Rechecked when another tab saves that game
  * and when this tab comes back into view. Null until known.
  */
+const isDone = (kind: 'daily' | 'puzzle', status: DailyStatus) =>
+  kind === 'daily' ? status.me.attempted || Boolean(status.me.result) : Boolean(status.me.result)
+
 export function useOtherDailyDone(other: 'daily' | 'puzzle', enabled = true): boolean | null {
-  const [done, setDone] = useState<boolean | null>(null)
+  // The page's inlined status answers it on the first paint, so the card's next game doesn't swap.
+  const [done, setDone] = useState<boolean | null>(() => {
+    const status = takeBootStatus(other)
+    return status ? isDone(other, status) : null
+  })
 
   useEffect(() => {
     if (!enabled) return
@@ -22,7 +31,7 @@ export function useOtherDailyDone(other: 'daily' | 'puzzle', enabled = true): bo
       controller = new AbortController()
       const request = other === 'daily' ? fetchDailyStatus(controller.signal) : fetchPuzzleStatus(controller.signal)
       request
-        .then(status => setDone(other === 'daily' ? status.me.attempted || Boolean(status.me.result) : Boolean(status.me.result)))
+        .then(status => setDone(isDone(other, status)))
         .catch(() => { /* keep what we had */ })
     }
     const onStorage = (event: StorageEvent) => { if (event.key === SAVE_KEYS[other]) check() }

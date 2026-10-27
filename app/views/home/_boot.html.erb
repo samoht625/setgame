@@ -1,0 +1,2 @@
+<%# Today's dailies for this player, so the first paint is final (see HomeController#load_boot_statuses, lib/boot.ts). %>
+<% if @boot_statuses %><script type="application/json" id="setgame-boot"><%= raw json_escape(@boot_statuses.to_json) %></script><% end %>

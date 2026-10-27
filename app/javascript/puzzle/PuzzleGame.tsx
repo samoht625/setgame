@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { takeBootStatus } from '../lib/boot'
 import { useOtherDailyDone, PRACTICE_LINK } from '../hooks/useOtherDailyDone'
 import { secondaryButtonSmall } from '../lib/buttons'
 import Board from '../components/Board'
@@ -101,7 +102,7 @@ const PuzzleGame: React.FC = () => {
   const nowMs = useNow(30_000)
   const [run, setRun] = useState<PuzzleRun | null>(() => loadRun(dailyDate()))
   const runRef = useRef(run)
-  const [status, setStatus] = useState<PuzzleStatus | null>(null)
+  const [status, setStatus] = useState<PuzzleStatus | null>(() => takeBootStatus('puzzle'))
   const [statusError, setStatusError] = useState(false)
   const [statusRevision, setStatusRevision] = useState(0)
   const [starting, setStarting] = useState(false)

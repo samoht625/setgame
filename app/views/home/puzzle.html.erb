@@ -1,5 +1,5 @@
 <% content_for :title, "Set Puzzle" %>
-<% content_for :head, render("home/identity") %>
+<% content_for :head, render("home/identity") + render("home/boot") %>
 <% if @shared_result %>
   <% content_for :social_title, "#{@shared_result.title} · #{@shared_result.time}" %>
   <% content_for :social_description, @shared_result.standing.presence || @shared_result.title %>
@@ -7,4 +7,4 @@
   <% content_for :social_image, "#{ApplicationHelper::SITE_URL}#{puzzle_og_image_path(@shared_result.token)}" %>
   <% content_for :social_image_alt, ["#{@shared_result.title} · #{@shared_result.time}", @shared_result.standing.presence].compact.join(" · ") %>
 <% end %>
-<div id="root" data-online-ids="<%= GAME_ENGINE.online_player_ids_snapshot.to_json %>"></div>
+<div id="root" data-online-ids="<%= GAME_ENGINE.online_player_ids_snapshot.to_json %>"><%= prerendered(:puzzle) %></div>

@@ -17,7 +17,8 @@ export const HudStat: React.FC<{ value: React.ReactNode; label: string; shortLab
   const roomy = useMediaQuery('(min-width: 640px)')
   return (
     <span className="whitespace-nowrap text-xs text-neutral-500 dark:text-neutral-400 sm:text-sm">
-      <span className="font-semibold tabular-nums text-neutral-900 dark:text-neutral-100">{value}</span>
+      {/* Two digits wide, so the label stays put when the count arrives or drops below 10. */}
+      <span className="inline-block min-w-[2ch] text-right font-semibold tabular-nums text-neutral-900 dark:text-neutral-100">{value}</span>
       {' '}
       {roomy || !shortLabel ? label : shortLabel}
     </span>

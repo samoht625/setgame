@@ -10,11 +10,13 @@ import SignInDialog from './SignInDialog'
 import ReminderDialog from './ReminderDialog'
 import AppToast from './AppToast'
 
+export const SITE_HEADER_SHELL = 'text-neutral-900 antialiased dark:text-neutral-100'
+
 /** The game's header, menu and its dialogs on a page outside the game (e.g. /stats). */
 const SiteHeader: React.FC<{ page: 'stats' }> = ({ page }) => (
   <SoundProvider>
     <GameMenuProvider>
-      <div className="text-neutral-900 antialiased dark:text-neutral-100">
+      <div className={SITE_HEADER_SHELL}>
         <CardSymbols />
         <Header mode={null} page={page} onSwitchMode={mode => window.location.assign(PATHS[mode])} />
         <HowToPlay />

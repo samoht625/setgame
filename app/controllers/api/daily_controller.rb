@@ -3,18 +3,7 @@
 module Api
   class DailyController < BaseController
     def show
-      puzzle = DailyPuzzle.today
-      score = puzzle.score_for(current_player_id)
-
-      render json: summary(puzzle).merge(
-        total: puzzle.total,
-        leaderboard: puzzle.leaderboard.map { |entry| serialize_entry(entry) },
-        me: {
-          attempted: puzzle.attempted?(current_player_id),
-          streak: puzzle.streak_for(current_player_id),
-          result: score && serialize_result(puzzle, score)
-        }
-      )
+      render json: DailyStatus.for(current_player_id)
     end
 
     # Each player gets one try at the day's deal; once it's started there is
@@ -76,9 +65,7 @@ module Api
 
     private
 
-    def summary(puzzle)
-      { date: puzzle.date.iso8601, number: puzzle.number, next_at: puzzle.next_at.iso8601 }
-    end
+    def summary(puzzle) = DailyStatus.summary(puzzle)
 
     # Today unless a date is asked for, so a card loaded before midnight still
     # compares against the day it shows. Never a day that hasn't started.
@@ -90,35 +77,6 @@ module Api
       DailyPuzzle.new(date) if date <= today.date
     rescue Date::Error
       nil
-    end
-
-    def serialize_entry(score)
-      {
-        player_id: score.player_id,
-        display_name: score.display_name,
-        elapsed_ms: score.elapsed_ms,
-        misses: score.misses,
-        completed_at: score.completed_at.iso8601,
-        replay: score.claims.present?
-      }
-    end
-
-    def serialize_result(puzzle, score)
-      rank = puzzle.rank_of(score)
-      total = puzzle.total
-      streak = puzzle.streak_for(score.player_id)
-      marks = score.claims ? ShareGrid.daily_marks(score.claims) : ""
-      {
-        display_name: score.display_name,
-        elapsed_ms: score.elapsed_ms,
-        misses: score.misses,
-        rank: rank,
-        total: total,
-        streak: streak,
-        marks: marks,
-        share_token: DailyShare.token(number: puzzle.number, elapsed_ms: score.elapsed_ms, rank: rank, total: total, streak: streak, marks: marks),
-        replay: score.claims.present?
-      }
     end
 
     def serialize_run(puzzle, score)

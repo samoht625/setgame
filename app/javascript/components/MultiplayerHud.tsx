@@ -81,6 +81,10 @@ const MultiplayerHud: React.FC<MultiplayerHudProps> = ({
     ...(isResetPending ? [] : [{ label: 'Reset game', onSelect: onRequestReset, disabled: !isConnected }])
   ])
 
+  // Until the server's first state, nothing here is known yet; keep the strip's
+  // footprint but don't show placeholders that would jump when it arrives.
+  const ready = Boolean(playerId && names[playerId])
+
   return (
     <Hud
       // A pending reset is the one control that stays on screen: anyone can stop it in time.
@@ -98,7 +102,7 @@ const MultiplayerHud: React.FC<MultiplayerHudProps> = ({
         </button>
       ) : undefined}
     >
-      <div className="flex min-w-0 items-center gap-2">
+      <div className={`flex min-w-0 items-center gap-2 ${ready ? '' : 'invisible'}`}>
         {!announcement && (
           isEditing ? (
               <input
@@ -162,7 +166,7 @@ const MultiplayerHud: React.FC<MultiplayerHudProps> = ({
         )}
       </div>
 
-      {!announcement && (
+      {!announcement && ready && (
         <>
           <HudDivider />
           <HudStat value={deckCount} label="cards left" shortLabel="left" />

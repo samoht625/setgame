@@ -40,7 +40,7 @@ export const SoloTimer: React.FC<{ startedAtMs: number; elapsedMs: number; runni
   }, [running, startedAtMs])
 
   return (
-    <div role="timer" aria-label="Elapsed time" className="min-w-[3.25rem] text-xl font-semibold tabular-nums tracking-tight text-neutral-900 dark:text-neutral-100 sm:text-2xl">
+    <div role="timer" aria-label="Elapsed time" className="min-w-[max(3.25rem,4ch)] text-xl font-semibold tabular-nums tracking-tight text-neutral-900 dark:text-neutral-100 sm:text-2xl">
       {loading ? '—' : formatTime(Math.max(0, running ? now - startedAtMs : elapsedMs))}
     </div>
   )

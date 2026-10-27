@@ -16,6 +16,19 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     "Google" => "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
   }.freeze
 
+  test "the dailies inline this player's status so the first paint is the right card" do
+    get "/"
+    boot = JSON.parse(response.body[%r{<script type="application/json" id="setgame-boot">(.*?)</script>}m, 1])
+    assert_nil boot["player_id"], "no cookie: it's what a new player sees"
+    assert_equal DailyStatus.for(SecureRandom.uuid).except(:leaderboard).deep_stringify_keys.except("leaderboard"), boot["daily"].except("leaderboard")
+    assert_equal false, boot["puzzle"]["me"]["attempted"]
+
+    get "/puzzle"
+    assert_includes response.body, 'id="setgame-boot"'
+    get "/practice"
+    refute_includes response.body, 'id="setgame-boot"'
+  end
+
   test "each page has its own title, description, canonical URL and share preview" do
     {
       "/" => ["Set Daily Deal", "https://set.tido.site/"],
