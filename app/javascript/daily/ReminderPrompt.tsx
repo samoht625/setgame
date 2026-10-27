@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef, useState } from 'react'
+import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { EMAIL_PATTERN, requestSignIn, type SignInRequest } from '../lib/account'
 import { track } from '../lib/analytics'
 import { primaryButton } from '../lib/buttons'
@@ -63,8 +63,10 @@ const ReminderPrompt: React.FC = () => {
   const [step, setStep] = useState<'form' | 'sending' | 'sent'>('form')
   const [error, setError] = useState<keyof typeof ERRORS | null>(null)
   const [cooldown, setCooldown] = useState(0)
-  const [formHeight, setFormHeight] = useState<number | null>(null)
-  const formRef = useRef<HTMLFormElement | null>(null)
+  const bodyRef = useRef<HTMLDivElement | null>(null)
+  const lastHeight = useRef<number | null>(null)
+  const animating = useRef(false)
+  const sentView = step === 'sent'
   const ref = useRef<HTMLDialogElement | null>(null)
   const touchY = useRef<number | null>(null)
   const titleId = useId()
@@ -109,11 +111,7 @@ const ReminderPrompt: React.FC = () => {
       setError(value === '' ? 'empty' : 'invalid_email')
       return false
     }
-    // The sent view keeps the form's height, so Done sits where Remind me was.
-    if (!resend) {
-      setFormHeight(formRef.current?.offsetHeight ?? null)
-      setStep('sending')
-    }
+    if (!resend) setStep('sending')
     setError(null)
     const outcome = await requestSignIn(value, DEFAULT_REMINDER_MINUTES)
     track('sign_in_request', { source: 'prompt', outcome, reminder: true, resend })
@@ -127,6 +125,37 @@ const ReminderPrompt: React.FC = () => {
     setError(outcome)
     return false
   }
+
+  // Switching between the form and the sent view glides the sheet to its new height (~200ms) instead of jumping.
+  useLayoutEffect(() => {
+    const el = bodyRef.current
+    const from = lastHeight.current
+    if (!el || from === null) return
+    const to = el.offsetHeight
+    if (Math.abs(from - to) < 1) return
+    animating.current = true
+    el.style.height = `${from}px`
+    el.style.overflow = 'hidden'
+    void el.offsetHeight
+    el.style.transition = 'height 200ms ease'
+    el.style.height = `${to}px`
+    const done = () => {
+      el.style.height = ''
+      el.style.overflow = ''
+      el.style.transition = ''
+      animating.current = false
+      lastHeight.current = el.offsetHeight
+    }
+    el.addEventListener('transitionend', done, { once: true })
+    // Reduced motion (no transition) or a missed transitionend.
+    const timer = setTimeout(done, 300)
+    return () => { clearTimeout(timer); el.removeEventListener('transitionend', done) }
+  }, [sentView])
+
+  // The sheet's natural height after each render, for the next switch.
+  useLayoutEffect(() => {
+    if (bodyRef.current && !animating.current) lastHeight.current = bodyRef.current.offsetHeight
+  })
 
   if (!open) return null
 
@@ -146,20 +175,20 @@ const ReminderPrompt: React.FC = () => {
       }}
       className="animate-sheet-in m-0 mt-auto w-full max-w-none rounded-t-2xl border-0 border-t border-neutral-200 bg-white p-0 text-center text-neutral-900 shadow-2xl outline-none backdrop:bg-neutral-900/30 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:backdrop:bg-black/55 sm:m-auto sm:w-[min(24rem,calc(100vw-2rem))] sm:rounded-2xl sm:border"
     >
-      <div className="px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:pb-5 sm:pt-6">
+      <div ref={bodyRef} className="px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:pb-5 sm:pt-6">
         <div aria-hidden="true" className="mx-auto mb-4 h-1 w-9 rounded-full bg-neutral-300 dark:bg-neutral-700 sm:hidden" />
         {step === 'sent' ? (
-          <div role="status" className="flex flex-col" style={formHeight ? { minHeight: formHeight } : undefined}>
+          <div role="status">
             <h2 id={titleId} className="text-lg font-semibold tracking-tight">Check your email</h2>
             <p className="mt-1 text-balance text-sm text-neutral-500 dark:text-neutral-400">
               We sent a confirm link to <span className="break-all text-neutral-900 dark:text-neutral-100">{email.trim()}</span>.
             </p>
             {error && <p role="alert" className="mt-2 text-xs text-rose-700 dark:text-rose-300">{ERRORS[error]}</p>}
-            <button type="button" onClick={() => close('done')} className={`${primaryButton} mt-auto w-full cursor-pointer`}>Done</button>
+            <button type="button" onClick={() => close('done')} className={`${primaryButton} mt-4 w-full cursor-pointer`}>Done</button>
             <ResendLine cooldown={cooldown} onResend={() => send(true)} className="mt-1" />
           </div>
         ) : (
-          <form ref={formRef} onSubmit={event => { event.preventDefault(); void send() }} noValidate aria-label="Daily reminder" {...ignore}>
+          <form onSubmit={event => { event.preventDefault(); void send() }} noValidate aria-label="Daily reminder" {...ignore}>
             <h2 id={titleId} className="text-lg font-semibold tracking-tight">Keep your streak going</h2>
             <p className="mt-1 text-balance text-sm text-neutral-500 dark:text-neutral-400">We’ll email you at 8 AM if you haven’t played.</p>
             <input

@@ -355,6 +355,18 @@ test('a signed-out finisher gets a one-time reminder prompt that floats over the
   await expect(prompt).toBeVisible()
   await prompt.getByLabel('Email').fill('player@example.com')
   const formBox = await prompt.boundingBox()
+  // Sample the sheet's height every frame across the switch to the sent view.
+  await page.evaluate(() => {
+    const heights: number[] = []
+    ;(window as unknown as { __heights: number[] }).__heights = heights
+    const start = performance.now()
+    const tick = () => {
+      const sheet = document.querySelector('dialog[open]')
+      if (sheet) heights.push(sheet.getBoundingClientRect().height)
+      if (performance.now() - start < 900) requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  })
   await prompt.getByRole('button', { name: 'Remind me' }).click()
   await expect(page.getByRole('status').filter({ hasText: 'Check your email' })).toBeVisible()
   const sheet = page.getByRole('dialog', { name: 'Check your email' })
@@ -362,8 +374,13 @@ test('a signed-out finisher gets a one-time reminder prompt that floats over the
   await expect(sheet.getByRole('button', { name: 'Done' })).toBeVisible()
   await expect(sheet.getByRole('button', { name: /Resend in \d+s/ })).toBeDisabled()
   await expect(page.getByText('Use a different email')).toHaveCount(0)
-  // Same sheet height, so nothing jumps.
-  expect(Math.abs((await sheet.boundingBox())!.height - formBox!.height)).toBeLessThan(2)
+  // The sheet shrinks to fit, gliding there (frames in between) rather than jumping, and never bounces.
+  await page.waitForTimeout(950)
+  const heights = await page.evaluate(() => (window as unknown as { __heights: number[] }).__heights)
+  const final = (await sheet.boundingBox())!.height
+  expect(final).toBeLessThan(formBox!.height - 20)
+  expect(heights.some(h => h < formBox!.height - 2 && h > final + 2)).toBe(true)
+  heights.forEach((h, i) => { if (i > 0) expect(h).toBeLessThanOrEqual(heights[i - 1] + 0.5) })
   expect(body).toMatchObject({ email: 'player@example.com', reminder_minutes: 480 })
 
   // A tap on the scrim closes it too.
