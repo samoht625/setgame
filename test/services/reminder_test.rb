@@ -28,8 +28,9 @@ class ReminderTest < ActiveSupport::TestCase
     counts = Reminder.run!(now: LA_8AM, pause: 0)
     assert_equal({ sent: 1 }, counts.to_h.symbolize_keys)
     mail = ResendMail.deliveries.sole
-    assert_equal "Set Daily Deal ##{DailyPuzzle.new(Date.new(2026, 10, 20)).number}", mail[:subject]
-    assert_match "The Puzzle is waiting too.", mail[:text]
+    assert_equal "Today’s Daily Deal is ready", mail[:subject]
+    assert_equal "Today’s Daily Deal is ready\n\nPlay:", mail[:text][/\A.*?Play:/m]
+    assert_match(/to=%2F$/, mail[:text])
     assert_match %r{/play\?}, mail[:text]
     assert_match %r{\A<https://set\.tido\.site/reminders/unsubscribe\?t=.+>\z}, mail[:headers]["List-Unsubscribe"]
     assert_equal "List-Unsubscribe=One-Click", mail[:headers]["List-Unsubscribe-Post"]
@@ -46,9 +47,8 @@ class ReminderTest < ActiveSupport::TestCase
     end
     Reminder.run!(now: LA_8AM, pause: 0)
     mail = ResendMail.deliveries.sole
-    assert_equal "Keep your 2-day Puzzle streak", mail[:subject]
-    assert_match "Keep your 2-day streak\nPlay today’s Puzzle to keep it.", mail[:text]
-    assert_match "Puzzle ##{ClassicPuzzle.new(Date.new(2026, 10, 20)).number} is still waiting.", mail[:text]
+    assert_equal "Keep your 2-day streak", mail[:subject]
+    assert_match "Keep your 2-day streak\nPlay today’s Puzzle.\n\nPlay:", mail[:text]
     refute_match "waiting too", mail[:text]
     assert_match "to=%2Fpuzzle", mail[:text]
   end
@@ -60,9 +60,9 @@ class ReminderTest < ActiveSupport::TestCase
     end
     Reminder.run!(now: LA_8AM, pause: 0)
     mail = ResendMail.deliveries.sole
-    assert_equal "Keep your 1-day Daily Deal streak", mail[:subject]
-    assert_match "Keep your 1-day streak", mail[:html]
-    assert_match "Play today’s Daily Deal to keep it.", mail[:html]
+    assert_equal "Keep your 1-day streak", mail[:subject]
+    assert_match "Play today’s Daily Deal.", mail[:html]
+    assert_match(/to=%2F$/, mail[:text])
   end
 
   test "finished both: skipped, and decided for the day" do
@@ -122,7 +122,7 @@ class ReminderTest < ActiveSupport::TestCase
     Reminder.run!(now: paris_8am, pause: 0)
     delivery = ReminderDelivery.sole
     assert_equal [Date.new(2026, 10, 21), Date.new(2026, 10, 20)], [delivery.local_on, delivery.deal_on]
-    assert_match "##{DailyPuzzle.new(Date.new(2026, 10, 20)).number}", ResendMail.deliveries.sole[:subject]
+    assert_equal "Today’s Daily Deal is ready", ResendMail.deliveries.sole[:subject]
 
     # Tokyo at 8 AM is the afternoon before in Los Angeles.
     tokyo = travel_to(LA_8AM - 1.day) { Account.create!(email: "t@example.com", player_id: SecureRandom.uuid, time_zone: "Asia/Tokyo", reminder_enabled: true, reminder_minutes: 480) }
@@ -134,33 +134,35 @@ class ReminderTest < ActiveSupport::TestCase
     assert_equal ActiveSupport::TimeZone["America/Los_Angeles"], @account.zone
   end
 
-  test "streaks in both games, neither played today: both lead, in the subject and the body" do
+  test "streaks in both games, neither played: only the longer one, and Play opens that game" do
     travel_to LA_8AM do
-      finish_daily(Date.new(2026, 10, 18)); finish_daily(Date.new(2026, 10, 19))
-      finish_puzzle(Date.new(2026, 10, 19))
+      finish_daily(Date.new(2026, 10, 19))
+      finish_puzzle(Date.new(2026, 10, 18)); finish_puzzle(Date.new(2026, 10, 19))
     end
     Reminder.run!(now: LA_8AM, pause: 0)
     mail = ResendMail.deliveries.sole
-    assert_equal "Keep your 2-day Daily Deal and 1-day Puzzle streaks", mail[:subject]
-    assert_match "Keep your streaks\n2-day Daily Deal · 1-day Puzzle\nPlay both today to keep them.", mail[:text]
+    assert_equal "Keep your 2-day streak", mail[:subject]
+    assert_match "Keep your 2-day streak\nPlay today’s Puzzle.\n\nPlay:", mail[:text]
+    assert_match "to=%2Fpuzzle", mail[:text]
+    refute_match(/1-day|Daily Deal|waiting too|done today|Sent at/, mail[:text])
   end
 
-  test "one game played today: its streak is safe, the other's leads" do
+  test "a streak only in the game already played today: the general line for the one left" do
     travel_to LA_8AM do
       finish_daily(Date.new(2026, 10, 19)); finish_daily(Date.new(2026, 10, 20))
-      finish_puzzle(Date.new(2026, 10, 19))
     end
     Reminder.run!(now: LA_8AM, pause: 0)
     mail = ResendMail.deliveries.sole
-    assert_equal "Keep your 1-day Puzzle streak", mail[:subject]
-    assert_match "Daily Deal streak: 2 days, done today.", mail[:text]
+    assert_equal "Today’s Puzzle is ready", mail[:subject]
+    refute_match "streak", mail[:text]
+    assert_match "to=%2Fpuzzle", mail[:text]
   end
 
-  test "no streak: the plain subject and copy" do
+  test "the email is just a headline, an optional line, Play and the opt-out" do
     Reminder.run!(now: LA_8AM, pause: 0)
-    mail = ResendMail.deliveries.sole
-    assert_match(/\ASet Daily Deal #\d+\z/, mail[:subject])
-    refute_match "streak", mail[:text]
+    text = ResendMail.deliveries.sole[:text]
+    assert_equal ["Today’s Daily Deal is ready", "", "Play: …", "", "Don't want these? Turn off daily emails: …"],
+                 text.lines.map { |l| l.chomp.sub(%r{https://\S+}, "…") }
   end
 
   test "the email says plainly how to turn it off, right under Play" do

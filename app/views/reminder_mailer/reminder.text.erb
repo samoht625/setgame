@@ -1,12 +1,5 @@
-<% if @streak_title %><%= @streak_title %>
-<% if @streak_games %><%= @streak_games %>
-<% end %><%= @streak_note %>
+<%= [@headline, @line].compact.join("\n") %>
 
-<% end %><%= @headline %>
-<% if @also || @safe %><%= [@also, @safe].compact.join(" ") %>
-<% end %>
 Play: <%= @play_url %>
 
 Don't want these? Turn off daily emails: <%= @unsubscribe_url %>
-
-Sent at <%= @time_label %> on days you haven't played.

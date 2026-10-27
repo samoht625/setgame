@@ -19,18 +19,10 @@
                   <span style="display:inline-block;width:6px;height:6px;border-radius:3px;background:#9333ea;margin-left:2px;vertical-align:middle;"></span>
                   <span style="display:inline-block;width:6px;height:6px;border-radius:3px;background:#16a34a;margin-left:2px;vertical-align:middle;"></span>
                 </div>
-                <% if @streak_title %>
-                  <p style="margin:20px 0 0;font-size:22px;line-height:1.25;font-weight:700;letter-spacing:-0.01em;color:#171717;"><%= @streak_title %></p>
-                  <% if @streak_games %><p style="margin:6px 0 0;font-size:15px;line-height:1.4;font-weight:600;color:#171717;"><%= @streak_games %></p><% end %>
-                  <p style="margin:4px 0 0;font-size:14px;line-height:1.45;color:#525252;"><%= @streak_note %></p>
-                <% end %>
-                <p style="margin:18px 0 0;font-size:16px;line-height:1.45;font-weight:600;color:#171717;"><%= @headline %></p>
-                <% if @also || @safe %>
-                  <p style="margin:6px 0 0;font-size:14px;line-height:1.45;color:#525252;"><%= [@also, @safe].compact.join(" ") %></p>
-                <% end %>
+                <p style="margin:20px 0 0;font-size:22px;line-height:1.25;font-weight:700;letter-spacing:-0.01em;color:#171717;"><%= @headline %></p>
+                <% if @line %><p style="margin:6px 0 0;font-size:15px;line-height:1.45;color:#525252;"><%= @line %></p><% end %>
                 <p style="margin:22px 0 0;"><a href="<%= @play_url %>" style="display:inline-block;padding:12px 32px;border-radius:999px;background:#171717;color:#ffffff;font-size:15px;font-weight:500;text-decoration:none;">Play</a></p>
                 <p style="margin:20px 0 0;font-size:14px;line-height:1.5;color:#404040;">Don’t want these? <a href="<%= @unsubscribe_url %>" style="color:#171717;font-weight:500;text-decoration:underline;">Turn off daily emails</a></p>
-                <p style="margin:14px 0 0;font-size:13px;line-height:1.5;color:#737373;">Sent at <%= @time_label %> on days you haven’t played.</p>
               </td>
             </tr>
           </table>
