@@ -1,5 +1,6 @@
 import { adoptServerPlayer, getPlayerId, getPlayerKey, isNewPlayer } from './player_id'
 import { getSavedName } from './player_name'
+import { rememberStatus } from './boot'
 
 export function headers(json = true): HeadersInit {
   const h: Record<string, string> = {
@@ -182,7 +183,7 @@ export async function fetchDailyStatus(signal?: AbortSignal): Promise<DailyStatu
     signal
   })
   if (!res.ok) throw new Error('Could not load the daily')
-  return await res.json()
+  return rememberStatus('daily', await res.json())
 }
 
 /** The player's finished run and another finisher's from the same day, claim by claim. */

@@ -5,32 +5,43 @@ import { getPlayerId, isNewPlayer } from './player_id'
 
 type Boot = { player_id: string | null; daily?: DailyStatus; puzzle?: PuzzleStatus }
 type Statuses = { daily: DailyStatus; puzzle: PuzzleStatus }
+type Known = { [K in keyof Statuses]?: { status: Statuses[K]; playerId: string } }
 
-let boot: Boot | null | undefined
-const taken = new Set<string>()
+let known: Known | null = null
 
-function read(): Boot | null {
-  if (boot !== undefined) return boot
+function seed(): Known {
+  if (known) return known
+  known = {}
+  let data: Boot | null = null
   try {
-    boot = JSON.parse(document.getElementById('setgame-boot')?.textContent || 'null') as Boot | null
+    data = JSON.parse(document.getElementById('setgame-boot')?.textContent || 'null') as Boot | null
   } catch {
-    boot = null
+    data = null
   }
-  return boot
+  if (!data) return known
+  const mine = data.player_id ? data.player_id === getPlayerId() : isNewPlayer()
+  if (!mine) return known
+  const playerId = getPlayerId()
+  if (data.daily) known.daily = { status: data.daily, playerId }
+  if (data.puzzle) known.puzzle = { status: data.puzzle, playerId }
+  return known
 }
 
 /**
- * Today's status for `kind` as the server rendered it into the page (see
- * HomeController#load_boot_statuses), so the first paint shows the right
- * card. Only for this browser's player, only today's, and only once per page
- * load; later mounts (switching games) fetch fresh. Null otherwise.
+ * The latest status for `kind` this page has seen: first the one the server
+ * rendered into the page (HomeController#load_boot_statuses), then each one
+ * fetched since. Lets every mount (a hard refresh or a switch between games)
+ * paint the right card and next game at once; callers still fetch fresh.
+ * Only today's and only for the current player. Null otherwise.
  */
-export function takeBootStatus<K extends keyof Statuses>(kind: K): Statuses[K] | null {
-  if (taken.has(kind)) return null
-  taken.add(kind)
-  const data = read()
-  const status = data?.[kind] as Statuses[K] | undefined
-  if (!data || !status || status.date !== dailyDate()) return null
-  const mine = data.player_id ? data.player_id === getPlayerId() : isNewPlayer()
-  return mine ? status : null
+export function knownStatus<K extends keyof Statuses>(kind: K): Statuses[K] | null {
+  const entry = seed()[kind] as { status: Statuses[K]; playerId: string } | undefined
+  if (!entry || entry.status.date !== dailyDate() || entry.playerId !== getPlayerId()) return null
+  return entry.status
+}
+
+/** Records a status just fetched from the server for this player. */
+export function rememberStatus<K extends keyof Statuses>(kind: K, status: Statuses[K]): Statuses[K] {
+  ;(seed() as Record<string, unknown>)[kind] = { status, playerId: getPlayerId() }
+  return status
 }

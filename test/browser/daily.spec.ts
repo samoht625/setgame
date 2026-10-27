@@ -307,6 +307,15 @@ test('the result card offers the Puzzle until it is done, then Practice, and not
   // A fresh load (e.g. another device) knows straight from the server.
   await page.reload()
   await expect(results.getByRole('link', { name: 'Practice', exact: true })).toBeVisible()
+
+  // Switching games and back paints from what the page already knows: no loading card, no Puzzle flash, even on a slow network.
+  await page.route('**/api/{daily,puzzle}', async route => { await new Promise(r => setTimeout(r, 2000)); await route.fallback() })
+  const modes = page.getByRole('navigation', { name: 'Game mode' })
+  await modes.getByRole('button', { name: 'Puzzle' }).click()
+  await expect(page.getByRole('link', { name: 'Practice', exact: true })).toBeVisible({ timeout: 1000 })
+  await modes.getByRole('button', { name: 'Daily Deal' }).click()
+  await expect(results.getByRole('link', { name: 'Practice', exact: true })).toBeVisible({ timeout: 1000 })
+  await expect(results.getByRole('link', { name: 'Puzzle', exact: true })).toHaveCount(0)
 })
 
 test.describe('on a phone', () => {

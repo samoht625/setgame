@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { takeBootStatus } from '../lib/boot'
+import { knownStatus } from '../lib/boot'
 import { useOtherDailyDone, PRACTICE_LINK } from '../hooks/useOtherDailyDone'
 import { secondaryButtonSmall } from '../lib/buttons'
 import Board from '../components/Board'
@@ -119,7 +119,7 @@ const DailyGame: React.FC = () => {
   const nowMs = useNow(30_000)
   const [save, setSave] = useState<DailySave>(() => loadSave(dailyDate()))
   const saveRef = useRef(save)
-  const [status, setStatus] = useState<DailyStatus | null>(() => takeBootStatus('daily'))
+  const [status, setStatus] = useState<DailyStatus | null>(() => knownStatus('daily'))
   const [statusError, setStatusError] = useState(false)
   const [statusRevision, setStatusRevision] = useState(0)
   const [starting, setStarting] = useState(false)

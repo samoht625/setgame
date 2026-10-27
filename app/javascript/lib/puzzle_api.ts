@@ -1,4 +1,5 @@
 import { apiFetch, headers, type DailyStatus } from './solo_api'
+import { rememberStatus } from './boot'
 
 export type PuzzleClaim = { cards: number[]; t_ms: number }
 
@@ -19,7 +20,7 @@ export type PuzzleStart = {
 export async function fetchPuzzleStatus(signal?: AbortSignal): Promise<PuzzleStatus> {
   const res = await apiFetch('/api/puzzle', { headers: headers(false), credentials: 'same-origin', signal })
   if (!res.ok) throw new Error('Could not load the puzzle')
-  return await res.json()
+  return rememberStatus('puzzle', await res.json())
 }
 
 /** Deals today's board (or resumes today's unfinished run), or says it's done. */

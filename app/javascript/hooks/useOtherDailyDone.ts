@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchDailyStatus } from '../lib/solo_api'
 import { fetchPuzzleStatus } from '../lib/puzzle_api'
-import { takeBootStatus } from '../lib/boot'
+import { knownStatus } from '../lib/boot'
 import type { DailyStatus } from '../lib/solo_api'
 
 const SAVE_KEYS = { daily: 'setgame_daily_v1', puzzle: 'setgame_puzzle_v1' } as const
@@ -17,9 +17,9 @@ const isDone = (kind: 'daily' | 'puzzle', status: DailyStatus) =>
   kind === 'daily' ? status.me.attempted || Boolean(status.me.result) : Boolean(status.me.result)
 
 export function useOtherDailyDone(other: 'daily' | 'puzzle', enabled = true): boolean | null {
-  // The page's inlined status answers it on the first paint, so the card's next game doesn't swap.
+  // The latest status this page has (inlined or fetched) answers it on the first paint, so the card's next game doesn't swap.
   const [done, setDone] = useState<boolean | null>(() => {
-    const status = takeBootStatus(other)
+    const status = knownStatus(other)
     return status ? isDone(other, status) : null
   })
 
