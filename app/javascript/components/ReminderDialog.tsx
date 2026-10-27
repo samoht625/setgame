@@ -54,7 +54,7 @@ const ReminderDialog: React.FC = () => {
       {open && (
         <div className="relative p-5">
           <h2 id="reminder-dialog-title" className="pr-8 text-base font-semibold">
-            Reminder email
+            Daily reminder
             <span className="ml-1.5 text-sm font-normal text-neutral-400 dark:text-neutral-500">{setting.enabled ? 'On' : 'Off'}</span>
           </h2>
           <button

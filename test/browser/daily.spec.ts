@@ -381,6 +381,21 @@ test('a signed-out finisher gets a one-time reminder prompt that floats over the
   await expect(prompt).toHaveCount(0)
 })
 
+test('the reminder settings dialog is titled Daily reminder, like the sign-in form', async ({ page }) => {
+  // Signed in as far as the page knows: the server's account meta tags, added to the page.
+  await page.route('**/daily', async route => {
+    const res = await route.fetch()
+    const html = (await res.text()).replace('</head>', '<meta name="setgame-account" content="rose@example.com"><meta name="setgame-reminder" content="on:480"></head>')
+    await route.fulfill({ response: res, body: html })
+  })
+  await page.goto('/daily')
+  await page.getByRole('button', { name: 'Menu' }).first().click()
+  await page.getByRole('menuitem', { name: /Reminder/ }).click()
+  const dialog = page.getByRole('dialog', { name: /Daily reminder/ })
+  await expect(dialog.getByRole('heading', { name: /Daily reminder/ })).toBeVisible()
+  await expect(page.getByText('Reminder email')).toHaveCount(0)
+})
+
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
 
