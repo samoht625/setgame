@@ -3,8 +3,9 @@ import { CloseIcon } from './Hud'
 import TimeSelect from './TimeSelect'
 import { EMAIL_PATTERN, requestSignIn, type SignInRequest } from '../lib/account'
 import { track } from '../lib/analytics'
-import { primaryButton, secondaryButtonSmall } from '../lib/buttons'
-import { DEFAULT_REMINDER_MINUTES, reminderLabel } from '../lib/reminder'
+import { primaryButton } from '../lib/buttons'
+import ResendLine from './ResendLine'
+import { DEFAULT_REMINDER_MINUTES } from '../lib/reminder'
 
 const OPEN_EVENT = 'setgame:sign-in'
 const RESEND_SECONDS = 30
@@ -37,7 +38,6 @@ const SignInDialog: React.FC = () => {
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<keyof typeof ERRORS | null>(null)
   const [cooldown, setCooldown] = useState(0)
-  const [resent, setResent] = useState(false)
   const titleId = useId()
   const errorId = useId()
 
@@ -47,14 +47,13 @@ const SignInDialog: React.FC = () => {
       setStep('form')
       setError(null)
       setSending(false)
-      setResent(false)
       if (ref.current && !ref.current.open) ref.current.showModal()
     }
     window.addEventListener(OPEN_EVENT, onOpen)
     return () => window.removeEventListener(OPEN_EVENT, onOpen)
   }, [])
 
-  // Focus the field whenever the form shows (on open, and after "Use a different email").
+  // Focus the field whenever the form shows.
   useEffect(() => {
     if (options && step === 'form') inputRef.current?.focus()
   }, [options, step])
@@ -67,10 +66,12 @@ const SignInDialog: React.FC = () => {
 
   const close = () => ref.current?.close()
 
-  const send = async (resend = false): Promise<void> => {
+  const send = async (resend = false): Promise<boolean> => {
     const value = email.trim()
-    if (value === '') return setError('empty')
-    if (!EMAIL_PATTERN.test(value)) return setError('invalid_email')
+    if (value === '' || !EMAIL_PATTERN.test(value)) {
+      setError(value === '' ? 'empty' : 'invalid_email')
+      return false
+    }
     setSending(true)
     setError(null)
     const outcome = await requestSignIn(value, options?.reminder ? minutes : undefined)
@@ -79,13 +80,10 @@ const SignInDialog: React.FC = () => {
     if (outcome === 'sent') {
       setStep('sent')
       setCooldown(RESEND_SECONDS)
-      setResent(resend)
-    } else if (resend) {
-      setResent(false)
-      setError(outcome)
-    } else {
-      setError(outcome)
+      return true
     }
+    setError(outcome)
+    return false
   }
 
   return (
@@ -157,20 +155,13 @@ const SignInDialog: React.FC = () => {
             </form>
           ) : (
             <div role="status">
-              <h2 id={titleId} className="text-base font-semibold">{options.reminder ? 'Check your email to confirm' : 'Check your email'}</h2>
-              <p className="mt-1 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
-                We sent a link to <span className="break-all font-medium text-neutral-900 dark:text-neutral-100">{email.trim()}</span>.
-                {options.reminder ? ` Open it to get the reminder at ${reminderLabel(minutes)}.` : ' Open it to sign in.'}
+              <h2 id={titleId} className="text-base font-semibold">Check your email</h2>
+              <p className="mt-1 text-sm leading-relaxed text-neutral-500 dark:text-neutral-400">
+                We sent {options.reminder ? 'a confirm link' : 'a sign-in link'} to <span className="break-all text-neutral-900 dark:text-neutral-100">{email.trim()}</span>.
               </p>
               {error && <p role="alert" className="mt-2 text-xs text-rose-700 dark:text-rose-300">{ERRORS[error]}</p>}
-              <div className="mt-4 flex flex-wrap gap-2">
-                <button type="button" onClick={() => { setStep('form'); setError(null) }} className={secondaryButtonSmall}>
-                  Use a different email
-                </button>
-                <button type="button" disabled={cooldown > 0 || sending} onClick={() => void send(true)} className={secondaryButtonSmall}>
-                  {sending ? 'Sending…' : cooldown > 0 ? (resent ? `Sent · resend in ${cooldown}s` : `Resend in ${cooldown}s`) : 'Resend'}
-                </button>
-              </div>
+              <button type="button" onClick={close} className={`${primaryButton} mt-4 w-full cursor-pointer`}>Done</button>
+              <ResendLine cooldown={cooldown} onResend={() => send(true)} className="mt-1" />
             </div>
           )}
         </div>

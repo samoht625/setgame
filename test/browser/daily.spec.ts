@@ -354,8 +354,16 @@ test('a signed-out finisher gets a one-time reminder prompt that floats over the
   await page.reload()
   await expect(prompt).toBeVisible()
   await prompt.getByLabel('Email').fill('player@example.com')
+  const formBox = await prompt.boundingBox()
   await prompt.getByRole('button', { name: 'Remind me' }).click()
   await expect(page.getByRole('status').filter({ hasText: 'Check your email' })).toBeVisible()
+  const sheet = page.getByRole('dialog', { name: 'Check your email' })
+  await expect(sheet.getByText('We sent a confirm link to player@example.com.')).toBeVisible()
+  await expect(sheet.getByRole('button', { name: 'Done' })).toBeVisible()
+  await expect(sheet.getByRole('button', { name: /Resend in \d+s/ })).toBeDisabled()
+  await expect(page.getByText('Use a different email')).toHaveCount(0)
+  // Same sheet height, so nothing jumps.
+  expect(Math.abs((await sheet.boundingBox())!.height - formBox!.height)).toBeLessThan(2)
   expect(body).toMatchObject({ email: 'player@example.com', reminder_minutes: 480 })
 
   // A tap on the scrim closes it too.

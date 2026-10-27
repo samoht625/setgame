@@ -1,7 +1,8 @@
 import React, { useEffect, useId, useRef, useState } from 'react'
 import { EMAIL_PATTERN, requestSignIn, type SignInRequest } from '../lib/account'
 import { track } from '../lib/analytics'
-import { primaryButton, secondaryButtonSmall } from '../lib/buttons'
+import { primaryButton } from '../lib/buttons'
+import ResendLine from '../components/ResendLine'
 import { dailyDate } from '../lib/daily'
 import { DEFAULT_REMINDER_MINUTES } from '../lib/reminder'
 
@@ -62,8 +63,8 @@ const ReminderPrompt: React.FC = () => {
   const [step, setStep] = useState<'form' | 'sending' | 'sent'>('form')
   const [error, setError] = useState<keyof typeof ERRORS | null>(null)
   const [cooldown, setCooldown] = useState(0)
-  const [resent, setResent] = useState(false)
-  const [resending, setResending] = useState(false)
+  const [formHeight, setFormHeight] = useState<number | null>(null)
+  const formRef = useRef<HTMLFormElement | null>(null)
   const ref = useRef<HTMLDialogElement | null>(null)
   const touchY = useRef<number | null>(null)
   const titleId = useId()
@@ -102,25 +103,29 @@ const ReminderPrompt: React.FC = () => {
     return () => clearTimeout(timer)
   }, [cooldown])
 
-  const send = async (resend = false) => {
+  const send = async (resend = false): Promise<boolean> => {
     const value = email.trim()
-    if (value === '') return setError('empty')
-    if (!EMAIL_PATTERN.test(value)) return setError('invalid_email')
-    if (resend) setResending(true)
-    else setStep('sending')
+    if (value === '' || !EMAIL_PATTERN.test(value)) {
+      setError(value === '' ? 'empty' : 'invalid_email')
+      return false
+    }
+    // The sent view keeps the form's height, so Done sits where Remind me was.
+    if (!resend) {
+      setFormHeight(formRef.current?.offsetHeight ?? null)
+      setStep('sending')
+    }
     setError(null)
     const outcome = await requestSignIn(value, DEFAULT_REMINDER_MINUTES)
-    setResending(false)
     track('sign_in_request', { source: 'prompt', outcome, reminder: true, resend })
     if (outcome === 'sent') {
       setStep('sent')
       setCooldown(RESEND_SECONDS)
-      setResent(resend)
       remember({ closedAt: Date.now() })
-    } else {
-      if (!resend) setStep('form')
-      setError(outcome)
+      return true
     }
+    if (!resend) setStep('form')
+    setError(outcome)
+    return false
   }
 
   if (!open) return null
@@ -144,24 +149,17 @@ const ReminderPrompt: React.FC = () => {
       <div className="px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:pb-5 sm:pt-6">
         <div aria-hidden="true" className="mx-auto mb-4 h-1 w-9 rounded-full bg-neutral-300 dark:bg-neutral-700 sm:hidden" />
         {step === 'sent' ? (
-          <div role="status">
-            <h2 id={titleId} className="text-lg font-semibold tracking-tight">Check your email to confirm</h2>
-            <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-              We sent a link to <span className="break-all font-medium text-neutral-900 dark:text-neutral-100">{email.trim()}</span>.
+          <div role="status" className="flex flex-col" style={formHeight ? { minHeight: formHeight } : undefined}>
+            <h2 id={titleId} className="text-lg font-semibold tracking-tight">Check your email</h2>
+            <p className="mt-1 text-balance text-sm text-neutral-500 dark:text-neutral-400">
+              We sent a confirm link to <span className="break-all text-neutral-900 dark:text-neutral-100">{email.trim()}</span>.
             </p>
             {error && <p role="alert" className="mt-2 text-xs text-rose-700 dark:text-rose-300">{ERRORS[error]}</p>}
-            <div className="mt-4 flex justify-center gap-2">
-              <button type="button" onClick={() => { setStep('form'); setError(null) }} className={`${secondaryButtonSmall} cursor-pointer`}>
-                Use a different email
-              </button>
-              <button type="button" disabled={cooldown > 0 || resending} onClick={() => void send(true)} className={`${secondaryButtonSmall} cursor-pointer disabled:cursor-default`}>
-                {resending ? 'Sending…' : cooldown > 0 ? (resent ? `Sent · resend in ${cooldown}s` : `Resend in ${cooldown}s`) : 'Resend'}
-              </button>
-            </div>
-            <button type="button" onClick={() => close('done')} className={`${quietButton} mt-2`}>Done</button>
+            <button type="button" onClick={() => close('done')} className={`${primaryButton} mt-auto w-full cursor-pointer`}>Done</button>
+            <ResendLine cooldown={cooldown} onResend={() => send(true)} className="mt-1" />
           </div>
         ) : (
-          <form onSubmit={event => { event.preventDefault(); void send() }} noValidate aria-label="Daily reminder" {...ignore}>
+          <form ref={formRef} onSubmit={event => { event.preventDefault(); void send() }} noValidate aria-label="Daily reminder" {...ignore}>
             <h2 id={titleId} className="text-lg font-semibold tracking-tight">Keep your streak going</h2>
             <p className="mt-1 text-balance text-sm text-neutral-500 dark:text-neutral-400">We’ll email you at 8 AM if you haven’t played.</p>
             <input
