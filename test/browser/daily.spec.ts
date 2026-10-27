@@ -327,7 +327,8 @@ test('a signed-out finisher gets a one-time reminder prompt that floats over the
   const before = await results.boundingBox()
   const prompt = page.getByRole('dialog', { name: 'Keep your streak going' })
   await expect(prompt).toBeVisible()
-  await expect(prompt.getByText('if you haven’t played.')).toBeVisible()
+  await expect(prompt.getByText('We’ll email you at 8 AM if you haven’t played.')).toBeVisible()
+  await expect(prompt.getByRole('textbox', { name: 'Email' })).not.toBeFocused()
   // No quiet link on the card any more, and the prompt doesn't move the card.
   await expect(page.getByRole('button', { name: 'Email me a daily reminder' })).toHaveCount(0)
   expect(await results.boundingBox()).toEqual(before)
@@ -357,8 +358,8 @@ test('a signed-out finisher gets a one-time reminder prompt that floats over the
   await expect(page.getByRole('status').filter({ hasText: 'Check your email' })).toBeVisible()
   expect(body).toMatchObject({ email: 'player@example.com', reminder_minutes: 480 })
 
-  // A tap outside closes it too.
-  await page.getByRole('heading', { name: /Daily Deal #/ }).click()
+  // A tap on the scrim closes it too.
+  await page.mouse.click(10, 10)
   await expect(page.getByText('Check your email')).toHaveCount(0)
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('setgame_reminder_prompt_v1')!).dismissals)).toBe(1)
 

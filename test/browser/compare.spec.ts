@@ -2,6 +2,11 @@ import { test, expect, type Page } from '@playwright/test'
 import { isSet } from '../../app/javascript/lib/rules'
 import { applySoloClaim, isRoundOver, startSoloDeal } from '../../app/javascript/lib/solo_deal'
 
+// These finish a deal signed out; keep the one-time reminder prompt (daily.spec covers it) out of the way.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('setgame_reminder_prompt_v1', JSON.stringify({ dismissals: 3 })))
+})
+
 const SAVE_KEY = 'setgame_daily_v1'
 const ME = '0b0b0b0b-1111-4222-8333-555555555555'
 const SEED = 20261005
