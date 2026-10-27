@@ -51,4 +51,4 @@ export function useOtherDailyDone(other: 'daily' | 'puzzle', enabled = true): bo
   return done
 }
 
-export const PRACTICE_LINK = { href: '/practice', label: 'Play Practice' }
+export const PRACTICE_LINK = { href: '/practice', label: 'Practice' }

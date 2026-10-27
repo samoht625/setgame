@@ -194,7 +194,7 @@ test('the daily is one shared deal: played once, clocked from first paint, then 
   await expect(page.locator('[data-card-id]')).toHaveCount(0)
 
   // There is no second deal: the other way to keep playing is the solo game.
-  await results.getByRole('link', { name: 'Play Puzzle', exact: true }).click()
+  await results.getByRole('link', { name: 'Puzzle', exact: true }).click()
   await expect(page).toHaveURL(/\/puzzle$/)
   await expect(page.getByRole('button', { name: 'Puzzle', exact: true })).toHaveAttribute('aria-pressed', 'true')
   expect(errors).toEqual([])
@@ -222,7 +222,7 @@ test('a started daily survives reloads, and losing it doesn’t buy another try'
   await expect(card.getByText('You’ve used today’s try.')).toBeVisible()
   await expect(page.locator('[data-card-id]')).toHaveCount(0)
   await expect(card.getByRole('button', { name: 'Share' })).toHaveCount(0)
-  await expect(card.getByRole('link', { name: 'Play Puzzle', exact: true })).toHaveAttribute('href', '/puzzle')
+  await expect(card.getByRole('link', { name: 'Puzzle', exact: true })).toHaveAttribute('href', '/puzzle')
   const playerId = await page.evaluate(() => localStorage.getItem('setgame_player_id')!)
   const again = await page.request.post('/api/daily/games', { headers: { 'X-Player-Id': playerId } })
   expect(again.status()).toBe(409)
@@ -271,7 +271,7 @@ test('the daily fits every width from intro to result', async ({ page }) => {
     await page.setViewportSize({ width, height })
     // The result's actions sit at the top of the card, on screen without scrolling.
     await expect(page.getByRole('button', { name: 'Share', exact: true })).toBeInViewport({ ratio: 1 })
-    await expect(page.getByRole('link', { name: 'Play Puzzle', exact: true })).toBeInViewport({ ratio: 1 })
+    await expect(page.getByRole('link', { name: 'Puzzle', exact: true })).toBeInViewport({ ratio: 1 })
     await noOverflow(page)
   }
 })
@@ -293,20 +293,20 @@ test('the result card offers the Puzzle until it is done, then Practice, and not
   await page.reload()
 
   const results = page.getByRole('region', { name: 'Daily Deal #7' })
-  await expect(results.getByRole('link', { name: 'Play Puzzle', exact: true })).toHaveAttribute('href', '/puzzle')
+  await expect(results.getByRole('link', { name: 'Puzzle', exact: true })).toHaveAttribute('href', '/puzzle')
 
   // The Puzzle gets finished in another tab: its save lands in shared storage.
   puzzleFinished = true
   const other = await context.newPage()
   await other.goto('/stats')
   await other.evaluate(() => localStorage.setItem('setgame_puzzle_v1', JSON.stringify({ finishedElsewhere: Date.now() })))
-  await expect(results.getByRole('link', { name: 'Play Practice', exact: true })).toHaveAttribute('href', '/practice')
-  await expect(results.getByRole('link', { name: 'Play Puzzle', exact: true })).toHaveCount(0)
+  await expect(results.getByRole('link', { name: 'Practice', exact: true })).toHaveAttribute('href', '/practice')
+  await expect(results.getByRole('link', { name: 'Puzzle', exact: true })).toHaveCount(0)
   await other.close()
 
   // A fresh load (e.g. another device) knows straight from the server.
   await page.reload()
-  await expect(results.getByRole('link', { name: 'Play Practice', exact: true })).toBeVisible()
+  await expect(results.getByRole('link', { name: 'Practice', exact: true })).toBeVisible()
 })
 
 test.describe('on a phone', () => {
@@ -336,7 +336,7 @@ test.describe('on a phone', () => {
     await noOverflow(page)
     const share = results.getByRole('button', { name: 'Share', exact: true })
     await expect(share).toBeInViewport({ ratio: 1 })
-    await expect(results.getByRole('link', { name: 'Play Puzzle', exact: true })).toBeInViewport({ ratio: 1 })
+    await expect(results.getByRole('link', { name: 'Puzzle', exact: true })).toBeInViewport({ ratio: 1 })
 
     await share.click()
     await expect.poll(() => page.evaluate(() => (window as unknown as { __shared: ShareData[] }).__shared)).toEqual([
