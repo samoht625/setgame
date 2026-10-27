@@ -26,7 +26,7 @@ step() { echo "== $*"; "$@" || fail=1; }
 step $BUNDLE exec ruby bin/rails db:prepare
 step $BUNDLE exec ruby bin/rails test
 step npx --no-install tsc --noEmit
-for s in test:rules test:daily test:cards; do step npm run --silent "$s"; done
+for s in test:rules test:daily test:cards test:demo; do step npm run --silent "$s"; done
 
 if [ "${1:-}" = "--browser" ]; then
   # Playwright has no build for Ubuntu 26.04 yet; the 24.04 build works.

@@ -42,7 +42,7 @@ const HowToPlay: React.FC = () => {
     }
   }, [])
 
-  return root && open ? createPortal(<RulesDemo key={openCount} step="set" />, root) : null
+  return root && open ? createPortal(<RulesDemo key={openCount} step="set" shuffle />, root) : null
 }
 
 export default HowToPlay

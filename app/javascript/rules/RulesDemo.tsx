@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import CardFace from '../components/CardFace'
-import { cardAttributes } from '../lib/rules'
+import { makeExample, nextSameCount, verdicts, type DemoExample } from './demoExample'
 
 /** The example set: 1 red solid squiggle, 2 red striped diamonds, 3 red open ovals. */
 export const DEMO_SET = [1, 38, 75]
@@ -16,10 +16,10 @@ const FEATURES = [
 
 const INKS = ['#ea1c2d', '#613394', '#009b4d']
 
-function verdict(key: (typeof FEATURES)[number]['key']): 'same' | 'different' {
-  const values = new Set(DEMO_SET.map(id => cardAttributes(id)[key]))
-  return values.size === 1 ? 'same' : 'different'
-}
+const FIRST_EXAMPLE: DemoExample = { board: DEMO_BOARD, set: DEMO_SET }
+/** The first example has one feature the same (color). */
+const FIRST_SAME_COUNT = 1
+const FADE_MS = 150
 
 /** A tiny symbol for one value of a feature, drawn with the card artwork's shapes. */
 const Glyph: React.FC<{ shape?: number; color?: number; shading?: number }> = ({ shape = 2, color = 0, shading = 0 }) => {
@@ -51,11 +51,25 @@ function prefersReducedMotion(): boolean {
 interface RulesDemoProps {
   /** `features` names the four features; `set` picks out the set and says why it is one. */
   step: 'features' | 'set'
+  /** Show a New example control that deals six new cards and lights their set. */
+  shuffle?: boolean
 }
 
+const RefreshIcon: React.FC = () => (
+  <svg aria-hidden="true" viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9" />
+    <path d="M12.5 1.8v2.7H9.8" />
+  </svg>
+)
+
 /** Six real cards; on the `set` step the set lights up after a beat. */
-const RulesDemo: React.FC<RulesDemoProps> = ({ step }) => {
+const RulesDemo: React.FC<RulesDemoProps> = ({ step, shuffle = false }) => {
   const [revealed, setRevealed] = useState(false)
+  const [example, setExample] = useState<DemoExample>(FIRST_EXAMPLE)
+  const [round, setRound] = useState(0)
+  const [fading, setFading] = useState(false)
+  const sameCount = useRef(FIRST_SAME_COUNT)
+  const fadeTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
     setRevealed(false)
@@ -64,20 +78,37 @@ const RulesDemo: React.FC<RulesDemoProps> = ({ step }) => {
       setRevealed(true)
       return
     }
-    const timer = setTimeout(() => setRevealed(true), 700)
+    const timer = setTimeout(() => setRevealed(true), round === 0 ? 700 : 450)
     return () => clearTimeout(timer)
-  }, [step])
+  }, [step, round])
 
-  const lit = step === 'set' && revealed
+  useEffect(() => () => clearTimeout(fadeTimer.current), [])
+
+  const dealNew = () => {
+    if (fading) return
+    sameCount.current = nextSameCount(sameCount.current)
+    const next = makeExample(sameCount.current)
+    const swap = () => {
+      setExample(next)
+      setRound(r => r + 1)
+      setFading(false)
+    }
+    if (prefersReducedMotion()) return swap()
+    setFading(true)
+    fadeTimer.current = setTimeout(swap, FADE_MS)
+  }
+
+  const lit = step === 'set' && revealed && !fading
+  const row = verdicts(example.set)
 
   return (
-    <div data-rules-demo={step} data-revealed={lit ? 'true' : 'false'}>
-      <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-neutral-100 p-1.5 dark:bg-neutral-800">
-        {DEMO_BOARD.map(id => {
-          const inSet = DEMO_SET.includes(id)
+    <div data-rules-demo={step} data-revealed={lit ? 'true' : 'false'} data-example={round}>
+      <div className={`grid grid-cols-3 gap-1.5 rounded-xl bg-neutral-100 p-1.5 transition-opacity duration-150 dark:bg-neutral-800 ${fading ? 'opacity-0' : 'opacity-100'}`}>
+        {example.board.map((id, position) => {
+          const inSet = example.set.includes(id)
           return (
             <div
-              key={id}
+              key={position}
               data-demo-card={id}
               data-in-set={lit && inSet ? 'true' : undefined}
               className={`overflow-hidden rounded-md outline-2 outline-offset-1 transition-all duration-500 ease-out ${
@@ -100,7 +131,7 @@ const RulesDemo: React.FC<RulesDemoProps> = ({ step }) => {
             {step === 'set' ? (
               <>
                 <span className="font-medium text-neutral-800 dark:text-neutral-200">{label}</span>
-                <span>{verdict(key) === 'same' ? 'same' : 'different'}</span>
+                <span>{row[key]}</span>
               </>
             ) : (
               <>
@@ -111,6 +142,19 @@ const RulesDemo: React.FC<RulesDemoProps> = ({ step }) => {
           </li>
         ))}
       </ul>
+
+      {shuffle && step === 'set' && (
+        <div className="mt-2 flex justify-center">
+          <button
+            type="button"
+            onClick={dealNew}
+            className="inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full px-3 text-xs font-medium text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+          >
+            <RefreshIcon />
+            New example
+          </button>
+        </div>
+      )}
     </div>
   )
 }

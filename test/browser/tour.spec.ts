@@ -124,6 +124,35 @@ test('How to play opens from the header menu, leads with the example set and kee
   await expect(dialog.getByText('About Set')).toHaveCount(0)
   await expect(dialog).not.toContainText(/free/i)
   await expect(dialog.getByRole('button', { name: 'Close' })).toHaveCSS('cursor', 'pointer')
+
+  // New example deals six new cards, lights their one set and says why, without moving the modal.
+  const newExample = dialog.getByRole('button', { name: 'New example', exact: true })
+  await expect(newExample).toHaveCSS('cursor', 'pointer')
+  const ruleLine = dialog.getByText('Find 3 cards: each feature all same or all different.')
+  const before = await ruleLine.boundingBox()
+  const firstBoard = (await demoCards(dialog)).map(card => card.id).join(',')
+  const boards = new Set([firstBoard])
+  for (let round = 1; round <= 3; round++) {
+    await newExample.click()
+    await expect(dialog.locator(`[data-example="${round}"][data-revealed="true"]`)).toBeVisible()
+    const cards = await demoCards(dialog)
+    boards.add(cards.map(card => card.id).join(','))
+    const lit = cards.filter(card => card.inSet).map(card => card.id)
+    expect(lit).toHaveLength(3)
+    const digit = (id: number, place: number) => Math.floor((id - 1) / place) % 3
+    const expected = [1, 3, 9, 27].map(place => {
+      const size = new Set(lit.map(id => digit(id, place))).size
+      expect([1, 3]).toContain(size)
+      return size === 1 ? 'same' : 'different'
+    })
+    const row = await dialog.getByRole('list', { name: 'Why it’s a set' }).getByRole('listitem').allTextContents()
+    expect(row).toEqual(['Number', 'Color', 'Shape', 'Shading'].map((label, i) => label + expected[i]))
+    const after = await ruleLine.boundingBox()
+    expect(after!.height).toBeCloseTo(before!.height, 0)
+    expect(after!.y).toBeCloseTo(before!.y, 0)
+  }
+  expect(boards.size).toBeGreaterThan(1)
+
   await dialog.getByRole('button', { name: 'Close' }).click()
   await expect(dialog).toBeHidden()
 })
