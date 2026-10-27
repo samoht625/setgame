@@ -36,7 +36,8 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
 
     get "/stats"
     assert_response :success
-    assert_includes response.body, "Set stats"
+    assert_includes response.body, "<h1>Stats</h1>"
+    assert_includes response.body, %(id="site-header")
     assert_includes response.body, "Most found"
     assert_includes response.body, "Most games finished"
     assert_includes response.body, "kind-iqr"

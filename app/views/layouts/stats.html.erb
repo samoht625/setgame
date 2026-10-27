@@ -6,16 +6,20 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
     <meta name="description" content="Set Stats">
     <link rel="icon" href="/icon-32.png" sizes="32x32" type="image/png">
+    <%= csrf_meta_tags %>
+    <%= render "home/identity" %>
+    <%= stylesheet_link_tag "application" %>
+    <%= javascript_include_tag "application", type: "module" %>
     <% if Rails.env.production? %>
       <script defer src="https://analytics.tido.site/script.js" data-website-id="b4235c8a-975d-4920-85d3-0a87a4af920c"></script>
     <% end %>
     <style>
       :root{color-scheme:light dark}
       body{margin:0;background:#f5f5f5;color:#171717;font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
-      main{max-width:600px;margin:0 auto;padding:28px 18px 56px}
+      main{max-width:600px;margin:0 auto;padding:0 18px 56px}
+      p{margin:1em 0}
       a{color:inherit}
-      header{display:flex;align-items:center;gap:12px;justify-content:space-between;margin-bottom:22px}
-      h1{font-size:22px;margin:0;font-weight:650;letter-spacing:-.01em}
+      h1{font-size:20px;margin:4px 0 16px;font-weight:600;letter-spacing:-.01em}
       h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#8a8a8a;font-weight:600;margin:34px 0 12px}
       .muted{color:#8a8a8a;font-size:13px}
       .btn{display:inline-flex;align-items:center;min-height:36px;padding:0 16px;border-radius:999px;border:1px solid #d4d4d4;background:#fff;color:#404040;font-size:13px;font-weight:500;text-decoration:none;transition:background-color .15s}.btn:hover{background:#f5f5f5}
@@ -65,5 +69,5 @@
       }
     </style>
   </head>
-  <body><%= yield %></body>
+  <body><div id="site-header"></div><%= yield %></body>
 </html>

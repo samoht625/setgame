@@ -20,7 +20,7 @@ import Tour, { shouldShowTour } from '../rules/Tour'
 // 'solo' is Practice: timed games against the clock.
 export type GameMode = 'daily' | 'puzzle' | 'solo' | 'multiplayer'
 
-const PATHS: Record<GameMode, string> = {
+export const PATHS: Record<GameMode, string> = {
   daily: '/',
   puzzle: '/puzzle',
   solo: '/practice',

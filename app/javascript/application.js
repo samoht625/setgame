@@ -1,6 +1,7 @@
 // Entry point for the build script in your package.json
 import { createRoot } from 'react-dom/client'
 import App from './components/App'
+import SiteHeader from './components/SiteHeader'
 
 document.addEventListener('DOMContentLoaded', () => {
   // Both / (solo) and /m (multiplayer) render the same shell;
@@ -9,4 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (rootElement) {
     createRoot(rootElement).render(<App />)
   }
+  // Pages outside the game (/stats) get the same header and menu.
+  const headerElement = document.getElementById('site-header')
+  if (headerElement) createRoot(headerElement).render(<SiteHeader page="stats" />)
 })

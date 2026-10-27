@@ -14,13 +14,16 @@ import { reminderLabel } from '../lib/reminder'
 import { getSavedName, onNameChange } from '../lib/player_name'
 
 interface HeaderProps {
-  mode: GameMode
+  /** The game on screen; null on pages outside the game (/stats), where neither segment is selected. */
+  mode: GameMode | null
+  /** A page outside the game, left out of the menu. */
+  page?: 'stats'
   onSwitchMode: (mode: GameMode) => void
   /** How many other people are in the multiplayer game right now (shown in the menu). */
   othersOnline?: number
 }
 
-const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 }) => {
+const Header: React.FC<HeaderProps> = ({ mode, page, onSwitchMode, othersOnline = 0 }) => {
   const sound = useSound()
   const reminder = useReminder()
   const email = signedInEmail()
@@ -41,6 +44,9 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
     if (logoTimeout.current) clearTimeout(logoTimeout.current)
     logoTimeout.current = setTimeout(() => setShowLogoSet(false), 4000)
   }
+
+  // Outside the game (/stats) the logo is a link home.
+  const LogoTag = mode === null ? 'a' : 'button'
 
   // Practice and multiplayer live in the menu; the switch only shows one while you're in it.
   const secondary = mode === 'solo' || mode === 'multiplayer'
@@ -72,7 +78,7 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
   return (
     <header>
       <div className="mx-auto flex h-12 w-full max-w-screen-2xl items-center justify-between gap-1 px-3 md:px-6 lg:px-10">
-        <button type="button" aria-label="Set logo" onClick={tapLogo} className="flex min-h-11 shrink-0 items-center gap-1 rounded-lg sm:gap-2">
+        <LogoTag {...(mode === null ? { href: '/', 'aria-label': 'Set home' } : { type: 'button' as const, 'aria-label': 'Set logo', onClick: tapLogo })} className="flex min-h-11 shrink-0 items-center gap-1 rounded-lg sm:gap-2">
           {/* On narrow phones with a third segment, the logo's little set shows in place of the word. */}
           <span className={`text-base font-semibold tracking-tight ${secondary && showLogoSet ? 'max-[419px]:hidden' : ''}`}>Set</span>
           {/* Gives way on narrow phones when the switch has a third segment (Practice, Multiplayer). */}
@@ -90,7 +96,7 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
             )}
           </span>
           {showLogoSet && <span role="status" className="sr-only">You found a little set!</span>}
-        </button>
+        </LogoTag>
 
         <div className="flex min-w-0 items-center gap-1 sm:gap-2">
           <nav aria-label="Game mode" className="flex items-center rounded-full bg-neutral-100 p-1 dark:bg-neutral-800">
@@ -109,7 +115,7 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
               },
               {
                 items: [
-                  { label: 'Stats', onSelect: () => window.location.assign('/stats') },
+                  ...(page === 'stats' ? [] : [{ label: 'Stats', onSelect: () => window.location.assign('/stats') }]),
                   { label: 'How to play', onSelect: openHowToPlay }
                 ]
               },
