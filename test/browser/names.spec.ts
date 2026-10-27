@@ -93,24 +93,27 @@ test('the daily intro doesn’t ask for a name', async ({ page }) => {
   await expect(page.locator('[data-card-id]').first()).toBeEnabled()
 })
 
-test('after finishing as Anonymous, the card prompts for a name under the player’s row and saving renames today’s score', async ({ page }) => {
+test('after finishing as Anonymous, the card offers a small Add your name action under the player’s row and saving renames today’s score', async ({ page }) => {
   await asPlayer(page)
   const api = await finishedAnonymously(page)
   await page.goto('/daily')
   const card = page.getByRole('region', { name: 'Daily Deal #12' })
-  const prompt = card.getByRole('group', { name: 'Add your name to the leaderboard' })
-  await expect(prompt).toBeVisible()
-  await expect(prompt).toBeInViewport({ ratio: 1 })
+  const add = card.getByRole('button', { name: 'Add your name', exact: true })
+  await expect(add).toBeVisible()
+  await expect(add).toBeInViewport({ ratio: 1 })
   // Right under the player's own row, and only there.
   const mine = card.locator('li[aria-current="true"]')
   const rowBox = (await mine.boundingBox())!
-  const promptBox = (await prompt.boundingBox())!
-  expect(promptBox.y).toBeGreaterThanOrEqual(rowBox.y + rowBox.height - 1)
-  expect(promptBox.y - (rowBox.y + rowBox.height)).toBeLessThan(12)
-  await expect(card.getByRole('group', { name: 'Add your name to the leaderboard' })).toHaveCount(1)
-  // Highlighted, not focused: no phone keyboard popping up over the result.
+  const addBox = (await add.boundingBox())!
+  expect(addBox.y).toBeGreaterThanOrEqual(rowBox.y + rowBox.height - 1)
+  expect(addBox.y - (rowBox.y + rowBox.height)).toBeLessThan(12)
+  await expect(add).toHaveCount(1)
+  // No field until it's tapped: no phone keyboard popping up over the result.
+  await expect(card.getByRole('textbox', { name: 'Your name' })).toHaveCount(0)
+  await add.click()
+  const prompt = card.getByRole('group', { name: 'Add your name to the leaderboard' })
   const input = prompt.getByRole('textbox', { name: 'Your name' })
-  await expect(input).not.toBeFocused()
+  await expect(input).toBeFocused()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await page.screenshot({ path: 'tmp/name-postfinish.png' })
 
@@ -137,7 +140,7 @@ test('the header menu edits the name, and it also goes on today’s Anonymous sc
   await asPlayer(page, 'Old')
   const api = await finishedAnonymously(page)
   await page.goto('/daily')
-  await expect(page.getByRole('group', { name: 'Add your name to the leaderboard' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Add your name', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Menu', exact: true }).click()
   await page.getByRole('menuitem', { name: 'Your name', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Your name' })
@@ -150,7 +153,7 @@ test('the header menu edits the name, and it also goes on today’s Anonymous sc
   expect(await savedName(page)).toBe('New Me')
   await expect.poll(() => api.renames).toEqual([{ game_id: 'my-game', display_name: 'New Me' }])
   await expect(page.locator('li[aria-current="true"]')).toContainText('New Me')
-  await expect(page.getByRole('group', { name: 'Add your name to the leaderboard' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Add your name', exact: true })).toHaveCount(0)
 })
 
 test('the menu name shows up at the multiplayer table right away', async ({ page }) => {
@@ -182,6 +185,7 @@ test('end to end: finish the daily anonymously, then add a name that sticks on t
   const card = page.getByRole('region', { name: /^Daily Deal #\d+$/ })
   const mine = card.locator('[aria-current="true"]')
   const prompt = card.getByRole('group', { name: 'Add your name to the leaderboard' })
+  await card.getByRole('button', { name: 'Add your name', exact: true }).click()
   await prompt.getByRole('textbox', { name: 'Your name' }).fill('E2E Player')
   await prompt.getByRole('button', { name: 'Save' }).click()
   await expect(prompt).toHaveCount(0)

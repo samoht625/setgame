@@ -1,6 +1,7 @@
 import { headers, apiFetch } from './solo_api'
 import { switchPlayer } from './player_id'
 import { browserTimeZone } from './reminder'
+import { showToast, toastAfterReload } from './toast'
 
 export type SignInRequest = 'sent' | 'invalid_email' | 'rate_limited' | 'failed'
 
@@ -33,12 +34,14 @@ export async function requestSignIn(email: string, reminderMinutes?: number): Pr
 export async function signOut(): Promise<boolean> {
   try {
     const res = await apiFetch('/api/sign_in', { method: 'DELETE', headers: headers(), credentials: 'same-origin' })
-    if (!res.ok) return false
+    if (!res.ok) throw new Error(`sign out: ${res.status}`)
     const data = await res.json()
     switchPlayer(data.player_id, data.player_key, { forgetRuns: 'all' })
+    toastAfterReload('Signed out')
     window.location.reload()
     return true
   } catch {
+    showToast('Couldn’t sign out. Try again.')
     return false
   }
 }

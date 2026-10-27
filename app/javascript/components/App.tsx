@@ -10,7 +10,10 @@ import { SoundProvider } from './SoundProvider'
 import { GameMenuProvider } from './GameMenu'
 import HowToPlay from '../rules/HowToPlay'
 import NameDialog from './NameDialog'
-import SignInDialog from './SignInDialog'
+import SignInDialog, { openSignInDialog } from './SignInDialog'
+import AppToast from './AppToast'
+import { showToast } from '../lib/toast'
+import { signedInEmail } from '../lib/player_id'
 import ReminderDialog from './ReminderDialog'
 import Tour, { shouldShowTour } from '../rules/Tour'
 
@@ -55,6 +58,20 @@ const App: React.FC = () => {
     return () => window.removeEventListener('popstate', onPopState)
   }, [])
 
+  // Back from an emailed sign-in link (?signed_in=1) or an expired one (?sign_in=1).
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    const signedIn = url.searchParams.has('signed_in')
+    const wantsSignIn = url.searchParams.has('sign_in')
+    if (!signedIn && !wantsSignIn) return
+    url.searchParams.delete('signed_in')
+    url.searchParams.delete('sign_in')
+    window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash)
+    const email = signedInEmail()
+    if (signedIn && email) showToast(`Signed in as ${email}`)
+    else if (wantsSignIn && !email) openSignInDialog({ source: 'expired' })
+  }, [])
+
   useEffect(() => {
     document.title = TITLES[mode]
   }, [mode])
@@ -78,6 +95,7 @@ const App: React.FC = () => {
         <NameDialog />
         <SignInDialog />
         <ReminderDialog />
+        <AppToast />
       </div>
       </GameMenuProvider>
     </SoundProvider>

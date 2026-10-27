@@ -1,4 +1,4 @@
-import React, { useId } from 'react'
+import React, { useId, useState } from 'react'
 import { secondaryButtonSmall } from '../lib/buttons'
 import NameEditor from '../components/NameEditor'
 import { getSavedName } from '../lib/player_name'
@@ -23,6 +23,8 @@ interface DailyStandingsProps {
   onCompare?: (entry: DailyEntry) => void
   /** Shown while nobody has a time yet. */
   emptyText?: string
+  /** Replaces the finisher count at the right of the heading (e.g. the countdown). */
+  aside?: React.ReactNode
 }
 
 // Rows without a compare control keep its width, so the times stay in one column.
@@ -41,25 +43,29 @@ const CompareButton: React.FC<{ entry: DailyEntry; onCompare: (entry: DailyEntry
 )
 
 /**
- * Under the player's own Anonymous row, right after they finish: an open name
- * field, highlighted rather than focused so a phone keyboard doesn't cover the result.
+ * Under the player's own Anonymous row: a small "Add your name" action that
+ * opens the name field in place. Nothing is focused until it's tapped, so a
+ * phone keyboard doesn't cover the result.
  */
 const NamePrompt: React.FC<{ onSave: (name: string) => Promise<boolean>; as?: 'li' | 'div' }> = ({ onSave, as: Tag = 'li' }) => {
   const titleId = useId()
+  const [open, setOpen] = useState(false)
   return (
-    <Tag className="mt-1 block list-none">
-      <div role="group" aria-labelledby={titleId} className="rounded-lg bg-amber-50 p-2.5 ring-2 ring-amber-300 dark:bg-amber-950/40 dark:ring-amber-700">
-        <p id={titleId} className="text-xs font-semibold text-amber-950 dark:text-amber-100">Add your name to the leaderboard</p>
-        <div className="mt-1.5 flex">
-          <NameEditor compact autoFocus={false} initial={getSavedName() ?? ''} onSave={onSave} />
+    <Tag className="mt-1 block list-none pl-9">
+      {open ? (
+        <div role="group" aria-labelledby={titleId} className="flex">
+          <span id={titleId} className="sr-only">Add your name to the leaderboard</span>
+          <NameEditor compact initial={getSavedName() ?? ''} onSave={onSave} />
         </div>
-      </div>
+      ) : (
+        <button type="button" onClick={() => setOpen(true)} className={secondaryButtonSmall}>Add your name</button>
+      )}
     </Tag>
   )
 }
 
 /** Today's leaderboard, with the player's row even when they are below the cut. */
-export const DailyStandings: React.FC<DailyStandingsProps> = ({ status, error, onRetry, playerId, limit, label, onNameScore, onCompare, emptyText = 'No times yet — clear today’s deal to take the top spot.' }) => {
+export const DailyStandings: React.FC<DailyStandingsProps> = ({ status, error, onRetry, playerId, limit, label, onNameScore, onCompare, aside, emptyText = 'No times yet — clear today’s deal to take the top spot.' }) => {
   if (!status) {
     return error ? (
       <div className="mt-2 rounded-xl border border-dashed border-neutral-200 px-3 py-4 text-center dark:border-neutral-700">
@@ -76,11 +82,13 @@ export const DailyStandings: React.FC<DailyStandingsProps> = ({ status, error, o
 
   return (
     <div>
-      <div className="flex items-baseline justify-between">
+      <div className="flex min-h-6 items-center justify-between gap-2">
         <SectionLabel>{label ?? `Daily Deal #${status.number}`}</SectionLabel>
-        <span className="text-[11px] text-neutral-600 dark:text-neutral-300">
-          {status.total} {status.total === 1 ? 'finisher' : 'finishers'}
-        </span>
+        {aside ?? (
+          <span className="text-[11px] text-neutral-600 dark:text-neutral-300">
+            {status.total} {status.total === 1 ? 'finisher' : 'finishers'}
+          </span>
+        )}
       </div>
 
       {status.leaderboard.length === 0 ? (

@@ -7,8 +7,8 @@ import type { DailyEntry, DailyStatus } from '../lib/solo_api'
 import DailyCompare from './DailyCompare'
 import { DailyStandings } from './DailyPanel'
 import { primaryButton, secondaryButton, secondaryButtonSmall } from '../lib/buttons'
-import SignInForm from '../components/SignInForm'
-import ReminderOffer from '../components/ReminderOffer'
+import { openSignInDialog } from '../components/SignInDialog'
+import { openReminderDialog } from '../components/ReminderDialog'
 import { signedInEmail, signInEnabled } from '../lib/player_id'
 import { useReminder } from '../hooks/useReminder'
 export { primaryButton, secondaryButton }
@@ -53,7 +53,7 @@ const DailyCard: React.FC<DailyCardProps> = ({
   const titleId = useId()
   const reminder = useReminder()
   // Offered once per card: until the reminder is on, then it goes quiet.
-  const [offerReminder] = useState(() => signInEnabled() && !(signedInEmail() && reminder?.enabled))
+  const offerReminder = signInEnabled() && !(signedInEmail() && reminder?.enabled)
   const [comparing, setComparing] = useState<DailyEntry | null>(null)
   const msLeft = status ? Date.parse(status.next_at) - nowMs : null
   // Other finishers' runs are only for a player who has finished this deal too.
@@ -70,7 +70,7 @@ const DailyCard: React.FC<DailyCardProps> = ({
         aria-labelledby={titleId}
         className="overflow-hidden rounded-2xl border border-neutral-200 bg-white text-center shadow-sm dark:border-neutral-700 dark:bg-neutral-900"
       >
-        <div className="px-5 pb-5 pt-4">
+        <div className="px-5 pb-4 pt-4">
           <h1 id={titleId} className="text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
             {title ?? `Daily Deal #${number}`}
           </h1>
@@ -79,7 +79,11 @@ const DailyCard: React.FC<DailyCardProps> = ({
               <div className="mt-1 text-4xl font-semibold tabular-nums tracking-tight text-neutral-900 dark:text-neutral-100">
                 {formatTime(result.elapsedMs)}
               </div>
-              <div className="mt-0.5 min-h-5 text-sm text-neutral-500 dark:text-neutral-400">{rank}</div>
+              <p className="mt-0.5 min-h-5 text-sm text-neutral-500 dark:text-neutral-400">
+                {rank && <span>{rank}</span>}
+                {rank && streak > 0 && <span aria-hidden="true"> · </span>}
+                {streak > 0 && <span className="font-medium text-emerald-700 dark:text-emerald-300">{streak}-day streak</span>}
+              </p>
               {result.marks && (
                 <div className="mt-3 flex justify-center">
                   <MarkGrid marks={result.marks} label={marksLabel} />
@@ -90,10 +94,8 @@ const DailyCard: React.FC<DailyCardProps> = ({
             <>
               <p className="mt-2 text-sm font-medium text-neutral-900 dark:text-neutral-100">You’ve used today’s try.</p>
               <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">It wasn’t finished, so it isn’t on the leaderboard.</p>
+              {streak > 0 && <p className="mt-2 text-xs font-medium text-emerald-700 dark:text-emerald-300">{streak}-day streak</p>}
             </>
-          )}
-          {streak > 0 && (
-            <p className="mt-2 text-xs font-medium text-emerald-700 dark:text-emerald-300">{streak}-day streak</p>
           )}
           {note}
           <div className="mt-4 flex gap-2">
@@ -108,9 +110,14 @@ const DailyCard: React.FC<DailyCardProps> = ({
           </div>
           {shareNote && <p role="status" className="mt-2 text-xs text-neutral-600 dark:text-neutral-300">{shareNote}</p>}
           {result && offerReminder && (
-            <div className="mt-4 border-t border-neutral-100 pt-4 text-left dark:border-neutral-800">
-              {signedInEmail() ? <ReminderOffer initialMinutes={reminder?.minutes} /> : <SignInForm source="card" quiet reminder />}
-            </div>
+            <button
+              type="button"
+              onClick={() => (signedInEmail() ? openReminderDialog() : openSignInDialog({ reminder: true, source: 'card' }))}
+              className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+            >
+              <BellIcon />
+              Email me a daily reminder
+            </button>
           )}
         </div>
 
@@ -121,30 +128,32 @@ const DailyCard: React.FC<DailyCardProps> = ({
             onRetry={onRetryStatus}
             playerId={playerId}
             limit={LEADERBOARD_SIZE}
-            label="Today’s leaderboard"
+            label="Leaderboard"
             onNameScore={onNameScore}
             onCompare={canCompare ? compare : undefined}
             emptyText={emptyText}
-          />
-        </div>
-        {comparing && status && (
-          <DailyCompare date={status.date} number={status.number} opponent={comparing} onClose={() => setComparing(null)} />
-        )}
-
-        {msLeft !== null && (
-          <div className="border-t border-neutral-100 px-5 py-3 text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
-            {!stale && msLeft > 0 ? (
-              <>Next {noun} in {formatCountdown(msLeft)}</>
+            aside={msLeft === null ? undefined : !stale && msLeft > 0 ? (
+              <span className="text-[11px] text-neutral-500 dark:text-neutral-400">Next {noun} in {formatCountdown(msLeft)}</span>
             ) : (
               <button type="button" onClick={onNextDeal} className={secondaryButtonSmall}>
                 Play today’s {noun}
               </button>
             )}
-          </div>
+          />
+        </div>
+        {comparing && status && (
+          <DailyCompare date={status.date} number={status.number} opponent={comparing} onClose={() => setComparing(null)} />
         )}
       </section>
     </main>
   )
 }
+
+const BellIcon: React.FC = () => (
+  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
+    <path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+    <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+  </svg>
+)
 
 export default DailyCard

@@ -48,12 +48,20 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
 
   test "Puzzle runs never count toward stats" do
     Rails.cache.clear
-    before = SetStats.new.compute.except(:generated_at)
+    before = comparable_stats
     cards = ClassicPuzzle.generate(7)
     claims = ClassicPuzzle.sets_in(cards).each_with_index.map { |set, i| { "cards" => set, "t_ms" => (i + 1) * 1000 } }
     PuzzleRun.create!(id: SecureRandom.uuid, player_id: "puzzler", display_name: "Puzzler", puzzle_on: Date.current, cards: cards,
       claims: claims, started_at: 1.minute.ago, completed_at: Time.current, elapsed_ms: 6000)
     Rails.cache.clear
-    assert_equal before, SetStats.new.compute.except(:generated_at)
+    assert_equal before, comparable_stats
+  end
+
+  private
+
+  # Each kind's example set is picked at random, so leave it out of the comparison.
+  def comparable_stats
+    stats = SetStats.new.compute.except(:generated_at)
+    stats.merge(kinds: stats[:kinds].map { |kind| kind.except(:cards) })
   end
 end

@@ -56,7 +56,7 @@ class SignInFlowTest < ActionDispatch::IntegrationTest
     refute SignInToken.last.used_at, "a GET (mail scanners prefetch links) leaves the token unused"
 
     post "/signin", params: { token: token }
-    assert_redirected_to "/"
+    assert_redirected_to "/?signed_in=1"
     account = Account.find_by!(email: "rose@example.com")
     assert_equal phone, account.player_id, "the first sign-in keeps this browser's player"
     session_cookie = response.headers["Set-Cookie"].to_s

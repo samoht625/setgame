@@ -21,6 +21,12 @@ input:focus-visible {
   outline-offset: 3px;
 }
 
+/* The sign-in field shows focus with its darker border and a soft halo instead. */
+input.email-field:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(163 163 163 / 0.3);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation: none !important;

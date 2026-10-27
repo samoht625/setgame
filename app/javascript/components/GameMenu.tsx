@@ -7,8 +7,6 @@ export type MenuItem = {
   disabled?: boolean
   /** Shown as a small count next to the label (e.g. players online). */
   badge?: number
-  /** A small line of text above the item (e.g. who's signed in). */
-  note?: string
   /** Quiet text at the item's end (e.g. a setting's value). */
   detail?: string
 }
@@ -56,10 +54,26 @@ interface MenuButtonProps {
   appItems: Array<MenuItem & { checked?: boolean }>
   /** A dot on the button (e.g. other people are online). */
   hasBadge?: boolean
+  /** The signed-in account: shown as the menu's header and as an initial on the button. */
+  account?: { email: string } | null
+  /** Account actions (reminder, sign in / out), last in the menu. */
+  accountItems?: MenuItem[]
 }
 
+/** A small neutral circle with the email's first letter. */
+export const Avatar: React.FC<{ email: string; size?: 'sm' | 'md' }> = ({ email, size = 'md' }) => (
+  <span
+    aria-hidden="true"
+    className={`flex shrink-0 items-center justify-center rounded-full bg-neutral-200 font-semibold uppercase text-neutral-700 dark:bg-neutral-700 dark:text-neutral-100 ${
+      size === 'sm' ? 'h-7 w-7 text-xs' : 'h-8 w-8 text-sm'
+    }`}
+  >
+    {email.trim().charAt(0) || '?'}
+  </span>
+)
+
 /** The single "more" button in the header and its dropdown. */
-export const MenuButton: React.FC<MenuButtonProps> = ({ modeItems = [], appItems, hasBadge = false }) => {
+export const MenuButton: React.FC<MenuButtonProps> = ({ modeItems = [], appItems, hasBadge = false, account = null, accountItems = [] }) => {
   const context = useContext(MenuContext)
   const [open, setOpen] = useState(false)
   const menuId = useId()
@@ -118,7 +132,7 @@ export const MenuButton: React.FC<MenuButtonProps> = ({ modeItems = [], appItems
           open ? 'bg-neutral-200 text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100' : 'text-neutral-600 hover:bg-neutral-200/70 dark:text-neutral-300 dark:hover:bg-neutral-800'
         }`}
       >
-        <DotsIcon />
+        {account ? <Avatar email={account.email} size="sm" /> : <DotsIcon />}
         {hasBadge && <span aria-hidden="true" className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-neutral-100 dark:ring-[#111214]" />}
       </button>
       {open && (
@@ -127,8 +141,17 @@ export const MenuButton: React.FC<MenuButtonProps> = ({ modeItems = [], appItems
           role="menu"
           aria-label="Menu"
           onKeyDown={onMenuKeyDown}
-          className="animate-menu-in absolute right-0 top-11 z-40 w-52 rounded-xl border border-neutral-200 bg-white p-1 shadow-xl dark:border-neutral-700 dark:bg-neutral-900"
+          className={`animate-menu-in absolute right-0 top-11 z-40 ${account ? 'w-64' : 'w-52'} rounded-xl border border-neutral-200 bg-white p-1 shadow-xl dark:border-neutral-700 dark:bg-neutral-900`}
         >
+          {account && (
+            <>
+              <div className="flex min-h-12 items-center gap-2.5 px-3 py-1.5" title={account.email}>
+                <Avatar email={account.email} />
+                <span className="min-w-0 truncate text-sm text-neutral-700 dark:text-neutral-200">{account.email}</span>
+              </div>
+              <div role="separator" className="my-1 h-px bg-neutral-100 dark:bg-neutral-800" />
+            </>
+          )}
           {gameItems.map(item => (
             <button key={item.label} type="button" role="menuitem" disabled={item.disabled} onClick={() => select(item)} className={itemClass}>
               <span>{item.label}</span>
@@ -151,14 +174,8 @@ export const MenuButton: React.FC<MenuButtonProps> = ({ modeItems = [], appItems
           ))}
           {modeItems.length > 0 && <div role="separator" className="my-1 h-px bg-neutral-100 dark:bg-neutral-800" />}
           {appItems.map(item => (
-            <React.Fragment key={item.label}>
-            {item.note && (
-              <>
-                <div role="separator" className="my-1 h-px bg-neutral-100 dark:bg-neutral-800" />
-                <p className="truncate px-3 pb-0.5 pt-1.5 text-xs text-neutral-500 dark:text-neutral-400" title={item.note}>{item.note}</p>
-              </>
-            )}
             <button
+              key={item.label}
               type="button"
               role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
               aria-checked={item.checked}
@@ -167,14 +184,19 @@ export const MenuButton: React.FC<MenuButtonProps> = ({ modeItems = [], appItems
               className={itemClass}
             >
               <span>{item.label}</span>
-              {item.detail && <span className="text-xs tabular-nums text-neutral-500 dark:text-neutral-400">{item.detail}</span>}
               {item.checked !== undefined && (
                 <span aria-hidden="true" className={`relative h-5 w-8 rounded-full transition-colors ${item.checked ? 'bg-emerald-500' : 'bg-neutral-300 dark:bg-neutral-600'}`}>
                   <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${item.checked ? 'left-3.5' : 'left-0.5'}`} />
                 </span>
               )}
             </button>
-            </React.Fragment>
+          ))}
+          {accountItems.length > 0 && <div role="separator" className="my-1 h-px bg-neutral-100 dark:bg-neutral-800" />}
+          {accountItems.map(item => (
+            <button key={item.label} type="button" role="menuitem" disabled={item.disabled} onClick={() => select(item)} className={itemClass}>
+              <span>{item.label}</span>
+              {item.detail && <span className="text-xs tabular-nums text-neutral-500 dark:text-neutral-400">{item.detail}</span>}
+            </button>
           ))}
         </div>
       )}
