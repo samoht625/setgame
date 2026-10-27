@@ -36,6 +36,7 @@ Rails.application.routes.draw do
   get '/play' => 'reminders#play', as: :reminder_play
   get '/reminders/unsubscribe' => 'reminders#confirm_unsubscribe', as: :reminder_unsubscribe
   post '/reminders/unsubscribe' => 'reminders#unsubscribe'
+  post '/reminders/resubscribe' => 'reminders#resubscribe'
 
   # Multiplayer game ("m" for "meet me at the table")
   get '/m' => 'home#multiplayer', as: :multiplayer

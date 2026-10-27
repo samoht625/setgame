@@ -1,7 +1,12 @@
-<%= @headline %>
-<% if @streak || @also %><%= [@streak, @also].compact.join(" ") %>
+<% if @streak_title %><%= @streak_title %>
+<% if @streak_games %><%= @streak_games %>
+<% end %><%= @streak_note %>
+
+<% end %><%= @headline %>
+<% if @also || @safe %><%= [@also, @safe].compact.join(" ") %>
 <% end %>
 Play: <%= @play_url %>
 
-Your reminder for <%= @time_label %> on days you haven't played.
-Unsubscribe: <%= @unsubscribe_url %>
+Don't want these? Turn off daily emails: <%= @unsubscribe_url %>
+
+Sent at <%= @time_label %> on days you haven't played.

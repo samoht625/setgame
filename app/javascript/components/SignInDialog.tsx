@@ -148,6 +148,9 @@ const SignInDialog: React.FC = () => {
                 }`}
               />
               {error && <p id={errorId} role="alert" className="mt-1.5 px-4 text-xs text-rose-700 dark:text-rose-300">{ERRORS[error]}</p>}
+              {!options.reminder && (
+                <p className="mt-2 px-4 text-xs text-neutral-500 dark:text-neutral-400">Includes a daily reminder on days you haven’t played. Turn it off anytime.</p>
+              )}
               <button type="submit" disabled={sending} className={`${primaryButton} mt-3 w-full`}>
                 {sending ? 'Sending…' : 'Email me a link'}
               </button>

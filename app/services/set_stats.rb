@@ -8,9 +8,12 @@ class SetStats
   TOTAL_SETS = 1080
   MIN_SAMPLE = 5
   ZONE = "America/Chicago"
+  # A gap this long between finds is a tab left open, not someone looking:
+  # it still counts as a find, but not toward any timing.
+  IDLE_MS = 5 * 60 * 1000
 
   def self.cached
-    Rails.cache.fetch("set_stats/v8", expires_in: 5.minutes) { new.compute }
+    Rails.cache.fetch("set_stats/v9", expires_in: 5.minutes) { new.compute }
   end
 
   def self.all_sets
@@ -25,39 +28,35 @@ class SetStats
   def compute
     finds = []  # [cards, gap_ms, mode]
     runs = { "solo" => [], "daily" => [] }
-    droughts = []
 
     SoloScore.select(:id, :events, :elapsed_ms, :daily_on).find_each do |s|
       mode = s.daily_on ? "daily" : "solo"
       runs[mode] << s.elapsed_ms
-      add_claims(s.events, mode, finds, droughts)
+      add_claims(s.events, mode, finds)
     end
     unfinished_counted = 0
     SoloGame.where.not(status: "completed").select(:id, :events, :sets_found, :daily_on).find_each do |g|
       claims = Array(g.events)
       if claims.any?
-        add_claims(claims, g.daily_on ? "daily" : "solo", finds, droughts)
+        add_claims(claims, g.daily_on ? "daily" : "solo", finds)
       else
         unfinished_counted += g.sets_found.to_i
       end
     end
 
+    counts = finds.map(&:first).tally
+    timed = finds.select { |_, gap, _| gap <= IDLE_MS }
     by_triple = Hash.new { |h, k| h[k] = [] }
-    finds.each { |cards, gap, _| by_triple[cards] << gap }
+    timed.each { |cards, gap, _| by_triple[cards] << gap }
     type_counts = Hash.new(0)
+    finds.each { |cards, _, _| type_counts[self.class.kind(cards).count(true)] += 1 }
     by_kind = Hash.new { |h, k| h[k] = [] }
-    finds.each do |cards, gap, _|
-      k = self.class.kind(cards)
-      type_counts[k.count(true)] += 1
-      by_kind[k] << gap
-    end
+    timed.each { |cards, gap, _| by_kind[self.class.kind(cards)] << gap }
 
-    counts = by_triple.transform_values(&:length)
     fastest = by_triple.select { |_, g| g.length >= MIN_SAMPLE }
       .map { |c, g| { cards: c, median_ms: median(g), n: g.length } }
       .sort_by { |h| h[:median_ms] }.first(10)
-    first_set = finds.min_by { |_, gap, _| gap }
-    drought = droughts.max_by { |d| d[:ms] }
+    first_set = timed.min_by { |_, gap, _| gap }
 
     games = SoloGame.where("sets_found > 0 OR status = 'completed'")
     hours = games.pluck(:started_at).map { |t| t.in_time_zone(ZONE) }
@@ -74,7 +73,6 @@ class SetStats
       most_found: counts.sort_by { |c, n| [-n, c] }.first(10).map { |c, n| { cards: c, n: n } },
       spread: spread(counts),
       fastest_find: first_set && { cards: first_set[0], ms: first_set[1] },
-      drought: drought,
       busiest_day: hours.group_by(&:to_date).max_by { |_, v| v.length }&.then { |d, v| [d, v.length] },
       busiest_hour: hours.group_by(&:hour).max_by { |_, v| v.length }&.first,
       most_games: most_games,
@@ -143,7 +141,7 @@ class SetStats
       .sort_by { |h| [-h[:total], h[:name].downcase] }.first(limit)
   end
 
-  def add_claims(events, mode, finds, droughts)
+  def add_claims(events, mode, finds)
     prev = 0
     Array(events).each do |e|
       cards = e["cards"]
@@ -155,7 +153,6 @@ class SetStats
       next if gap.negative?
 
       finds << [cards.sort, gap, mode]
-      droughts << { ms: gap, cards: cards.sort }
     end
   end
 

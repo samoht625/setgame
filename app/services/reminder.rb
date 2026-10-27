@@ -34,6 +34,8 @@ module Reminder
     local = now.in_time_zone(account.zone)
     chosen = local.beginning_of_day + account.reminder_minutes.minutes
     return nil unless local >= chosen && local < chosen + CATCH_UP
+    # Turned on (or moved) after today's time had passed: the first one is tomorrow's.
+    return nil if account.reminder_on_since && account.reminder_on_since > chosen
 
     deal_on = DailyPuzzle.today(now).date
     existing = account.reminder_deliveries.where(local_on: local.to_date).or(account.reminder_deliveries.where(deal_on: deal_on))
@@ -91,11 +93,11 @@ module Reminder
 
   # A one-off send outside the schedule (testing): records nothing, so the
   # day's scheduled reminder still happens. Returns ResendMail::Result.
-  def self.send_test!(account, now: Time.current, logger: Rails.logger)
+  def self.send_test!(account, now: Time.current, logger: Rails.logger, streaks: nil)
     deal_on = DailyPuzzle.today(now).date
     kinds = remaining(account.player_id, deal_on).presence || %w[daily puzzle]
     plan = Plan.new(account: account, local_on: now.in_time_zone(account.zone).to_date, deal_on: deal_on, kinds: kinds)
-    result = ReminderMailer.deliver(plan)
+    result = ReminderMailer.deliver(plan, streaks: streaks)
     logger.info("[Reminder] test send account=#{account.id} deal=#{deal_on} kinds=#{kinds.join(',')} ok=#{result.ok?} resend_id=#{result.id}")
     result
   end
@@ -109,6 +111,15 @@ module Reminder
       .where("attempts < ?", ReminderDelivery::MAX_ATTEMPTS)
       .update_all(["status = 'sending', attempts = attempts + 1, updated_at = ?", Time.current])
     retried == 1 ? ReminderDelivery.find_by!(account: plan.account, local_on: plan.local_on) : nil
+  end
+
+  # When the account's next reminder can go out (whether or not there will be
+  # anything left to play then): its chosen local time, today or tomorrow.
+  def self.next_at(account, now: Time.current)
+    local = now.in_time_zone(account.zone)
+    today = local.beginning_of_day + account.reminder_minutes.minutes
+    since = [account.reminder_on_since, now].compact.max
+    today >= since ? today : (local.beginning_of_day + 1.day + account.reminder_minutes.minutes)
   end
 
   # Signed links. Play signs the browser in for a couple of days; unsubscribe never expires.

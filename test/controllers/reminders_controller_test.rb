@@ -21,6 +21,23 @@ class RemindersControllerTest < ActionDispatch::IntegrationTest
     refute @account.reload.reminder_enabled
   end
 
+  test "the off page has a one-tap Turn back on, which doesn't send a catch-up email" do
+    token = Reminder.unsubscribe_token(@account)
+    post "/reminders/unsubscribe", params: { t: token }
+    assert_select "h1", "Daily emails are off"
+    assert_select "form[action='/reminders/resubscribe'] input[name='t'][value=?]", token
+    assert_select "form[action='/reminders/resubscribe'] button", "Turn back on"
+
+    post "/reminders/resubscribe", params: { t: token }
+    assert_response :success
+    assert_select "h1", "Daily emails are on"
+    assert @account.reload.reminder_enabled
+    assert_nil Reminder.due(@account, now: Time.current + 1.minute) unless Reminder.next_at(@account) <= Time.current + 1.minute
+
+    post "/reminders/resubscribe", params: { t: "nope" }
+    assert_response :not_found
+  end
+
   test "a bad unsubscribe token does nothing" do
     post "/reminders/unsubscribe", params: { t: "nope" }
     assert_response :not_found

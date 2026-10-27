@@ -23,11 +23,19 @@ class Account < ApplicationRecord
 
   scope :with_reminder, -> { where(reminder_enabled: true) }
 
+  before_save :restart_reminder_clock, if: -> { reminder_enabled? && (will_save_change_to_reminder_enabled? || will_save_change_to_reminder_minutes?) }
+
   def zone
     ActiveSupport::TimeZone[time_zone.to_s] || ActiveSupport::TimeZone[DailyPuzzle::TIME_ZONE]
   end
 
   def self.owns_player?(player_id)
     exists?(player_id: player_id)
+  end
+
+  private
+
+  def restart_reminder_clock
+    self.reminder_on_since = Time.current
   end
 end

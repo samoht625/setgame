@@ -1,2 +1,6 @@
-<p>No more reminder emails. You can turn them back on from the menu.</p>
-<a href="/" class="btn secondary">Back to Set</a>
+<h1>Daily emails are off</h1>
+<p>You won’t get any more reminders.</p>
+<%= form_with url: "/reminders/resubscribe", method: :post, data: { turbo: false } do %>
+  <%= hidden_field_tag :t, @token %>
+  <button type="submit" class="btn secondary">Turn back on</button>
+<% end %>

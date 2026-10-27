@@ -8,7 +8,7 @@ class RemindersController < ApplicationController
   layout "sign_in"
   # Mail providers POST List-Unsubscribe=One-Click without a form token; the
   # signed token in the URL is the authorization.
-  skip_forgery_protection only: :unsubscribe
+  skip_forgery_protection only: %i[unsubscribe resubscribe]
 
   PLAY_PATHS = %w[/ /puzzle].freeze
 
@@ -36,6 +36,18 @@ class RemindersController < ApplicationController
 
     account.update!(reminder_enabled: false)
     Rails.logger.info("[Reminder] unsubscribed account=#{account.id}")
+    @token = params[:t].to_s
     render :unsubscribed
+  end
+
+  # "Turn back on" from the page above: same token, same time as before.
+  def resubscribe
+    @account = Reminder.account_for(:unsubscribe, params[:t])
+    return render :invalid, status: :not_found unless @account
+
+    @account.update!(reminder_enabled: true)
+    Rails.logger.info("[Reminder] resubscribed account=#{@account.id}")
+    @next_at = Reminder.next_at(@account)
+    render :resubscribed
   end
 end

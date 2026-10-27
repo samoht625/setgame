@@ -9,8 +9,11 @@ class ReminderTest < ActiveSupport::TestCase
 
   setup do
     ResendMail.deliveries.clear
-    @account = Account.create!(email: "rose@example.com", player_id: SecureRandom.uuid, time_zone: "America/Los_Angeles",
-                               reminder_enabled: true, reminder_minutes: 480)
+    # Turned on well before the days these tests send on.
+    @account = travel_to(LA_8AM - 30.days) do
+      Account.create!(email: "rose@example.com", player_id: SecureRandom.uuid, time_zone: "America/Los_Angeles",
+                      reminder_enabled: true, reminder_minutes: 480)
+    end
   end
 
   test "labels and times" do
@@ -43,8 +46,9 @@ class ReminderTest < ActiveSupport::TestCase
     end
     Reminder.run!(now: LA_8AM, pause: 0)
     mail = ResendMail.deliveries.sole
-    assert_equal "Set Puzzle ##{ClassicPuzzle.new(Date.new(2026, 10, 20)).number}", mail[:subject]
-    assert_match "Keep your 2-day streak.", mail[:text]
+    assert_equal "Keep your 2-day Puzzle streak", mail[:subject]
+    assert_match "Keep your 2-day streak\nPlay today’s Puzzle to keep it.", mail[:text]
+    assert_match "Puzzle ##{ClassicPuzzle.new(Date.new(2026, 10, 20)).number} is still waiting.", mail[:text]
     refute_match "waiting too", mail[:text]
     assert_match "to=%2Fpuzzle", mail[:text]
   end
@@ -56,8 +60,9 @@ class ReminderTest < ActiveSupport::TestCase
     end
     Reminder.run!(now: LA_8AM, pause: 0)
     mail = ResendMail.deliveries.sole
-    assert_match "Set Daily Deal", mail[:subject]
-    assert_match "Keep your 1-day streak.", mail[:text]
+    assert_equal "Keep your 1-day Daily Deal streak", mail[:subject]
+    assert_match "Keep your 1-day streak", mail[:html]
+    assert_match "Play today’s Daily Deal to keep it.", mail[:html]
   end
 
   test "finished both: skipped, and decided for the day" do
@@ -120,13 +125,66 @@ class ReminderTest < ActiveSupport::TestCase
     assert_match "##{DailyPuzzle.new(Date.new(2026, 10, 20)).number}", ResendMail.deliveries.sole[:subject]
 
     # Tokyo at 8 AM is the afternoon before in Los Angeles.
-    tokyo = Account.create!(email: "t@example.com", player_id: SecureRandom.uuid, time_zone: "Asia/Tokyo", reminder_enabled: true, reminder_minutes: 480)
+    tokyo = travel_to(LA_8AM - 1.day) { Account.create!(email: "t@example.com", player_id: SecureRandom.uuid, time_zone: "Asia/Tokyo", reminder_enabled: true, reminder_minutes: 480) }
     plan = Reminder.due(tokyo, now: Time.utc(2026, 10, 20, 23))
     assert_equal [Date.new(2026, 10, 21), Date.new(2026, 10, 20)], [plan.local_on, plan.deal_on]
 
     # No zone saved: Pacific.
     @account.update!(time_zone: nil)
     assert_equal ActiveSupport::TimeZone["America/Los_Angeles"], @account.zone
+  end
+
+  test "streaks in both games, neither played today: both lead, in the subject and the body" do
+    travel_to LA_8AM do
+      finish_daily(Date.new(2026, 10, 18)); finish_daily(Date.new(2026, 10, 19))
+      finish_puzzle(Date.new(2026, 10, 19))
+    end
+    Reminder.run!(now: LA_8AM, pause: 0)
+    mail = ResendMail.deliveries.sole
+    assert_equal "Keep your 2-day Daily Deal and 1-day Puzzle streaks", mail[:subject]
+    assert_match "Keep your streaks\n2-day Daily Deal · 1-day Puzzle\nPlay both today to keep them.", mail[:text]
+  end
+
+  test "one game played today: its streak is safe, the other's leads" do
+    travel_to LA_8AM do
+      finish_daily(Date.new(2026, 10, 19)); finish_daily(Date.new(2026, 10, 20))
+      finish_puzzle(Date.new(2026, 10, 19))
+    end
+    Reminder.run!(now: LA_8AM, pause: 0)
+    mail = ResendMail.deliveries.sole
+    assert_equal "Keep your 1-day Puzzle streak", mail[:subject]
+    assert_match "Daily Deal streak: 2 days, done today.", mail[:text]
+  end
+
+  test "no streak: the plain subject and copy" do
+    Reminder.run!(now: LA_8AM, pause: 0)
+    mail = ResendMail.deliveries.sole
+    assert_match(/\ASet Daily Deal #\d+\z/, mail[:subject])
+    refute_match "streak", mail[:text]
+  end
+
+  test "the email says plainly how to turn it off, right under Play" do
+    Reminder.run!(now: LA_8AM, pause: 0)
+    mail = ResendMail.deliveries.sole
+    unsubscribe = mail[:headers]["List-Unsubscribe"][1..-2]
+    assert_includes mail[:html], %(Don’t want these? <a href="#{ERB::Util.html_escape(unsubscribe)}")
+    assert_includes mail[:html], "Turn off daily emails</a>"
+    assert_includes mail[:text], "Don't want these? Turn off daily emails: #{unsubscribe}"
+    assert_operator mail[:html].index("Turn off daily emails"), :>, mail[:html].index(">Play</a>")
+  end
+
+  test "turned on after today's time: nothing until tomorrow's, no catch-up" do
+    late = Account.create!(email: "late@example.com", player_id: SecureRandom.uuid, time_zone: "America/Los_Angeles")
+    travel_to(LA_8AM + 1.hour) { late.update!(reminder_enabled: true, reminder_minutes: 480) }
+    assert_nil Reminder.due(late, now: LA_8AM + 1.hour + 5.minutes)
+    assert_nil Reminder.due(late, now: LA_8AM + 2.hours)
+    assert_equal LA_8AM + 1.day, Reminder.next_at(late, now: LA_8AM + 1.hour)
+    assert Reminder.due(late, now: LA_8AM + 1.day)
+
+    # Moving the time later today still sends today.
+    travel_to(LA_8AM + 1.hour) { late.update!(reminder_minutes: 20 * 60) }
+    assert Reminder.due(late, now: LA_8AM + 12.hours)
+    assert_equal LA_8AM + 12.hours, Reminder.next_at(late, now: LA_8AM + 1.hour)
   end
 
   test "accounts with the reminder off get nothing" do

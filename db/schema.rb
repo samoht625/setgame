@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_26_233000) do
+ActiveRecord::Schema[8.0].define(version: 2026_10_27_050000) do
   create_table "account_sessions", force: :cascade do |t|
     t.integer "account_id", null: false
     t.string "token_digest", null: false
@@ -30,6 +30,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_26_233000) do
     t.datetime "updated_at", null: false
     t.boolean "reminder_enabled", default: false, null: false
     t.integer "reminder_minutes", default: 480, null: false
+    t.datetime "reminder_on_since"
     t.index ["email"], name: "index_accounts_on_email", unique: true
     t.index ["player_id"], name: "index_accounts_on_player_id", unique: true
     t.index ["reminder_enabled"], name: "index_accounts_on_reminder_enabled"

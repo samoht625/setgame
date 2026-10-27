@@ -211,4 +211,17 @@ class SignInFlowTest < ActionDispatch::IntegrationTest
     PuzzleRun.create!(id: SecureRandom.uuid, player_id: player_id, puzzle_on: date, cards: ClassicPuzzle.new(date).cards,
                       started_at: completed_at - 60.seconds, completed_at: completed_at, elapsed_ms: elapsed_ms)
   end
+
+  test "a new account starts with the daily reminder on at 8 AM in its zone; an existing one keeps its choice" do
+    account = AccountSignIn.call(email: "new@example.com", browser_player_id: nil, time_zone: "America/New_York")
+    assert account.reminder_enabled
+    assert_equal 480, account.reminder_minutes
+    assert_equal "America/New_York", account.time_zone
+    assert account.reminder_on_since
+
+    account.update!(reminder_enabled: false)
+    again = AccountSignIn.call(email: "new@example.com", browser_player_id: nil, time_zone: "America/New_York")
+    refute again.reminder_enabled, "turned off stays off"
+  end
+
 end

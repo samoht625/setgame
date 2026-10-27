@@ -14,18 +14,6 @@ module ApplicationHelper
     (@@prerendered[name.to_s] || "").html_safe
   end
 
-  PRERENDERED = Rails.root.join("app/assets/builds/prerendered.json")
-
-  # The game's header as HTML, rendered from the same React component at
-  # build time (script/prerender.tsx), so it paints with the page instead of
-  # popping in when the script runs. React replaces it with the live one in
-  # the same frame. Empty when the build hasn't made it (e.g. tests).
-  def prerendered(name)
-    @@prerendered = nil unless Rails.env.production?
-    @@prerendered ||= PRERENDERED.exist? ? JSON.parse(PRERENDERED.read) : {}
-    (@@prerendered[name.to_s] || "").html_safe
-  end
-
   def page_title
     content_for(:title).presence || DEFAULT_TITLE
   end

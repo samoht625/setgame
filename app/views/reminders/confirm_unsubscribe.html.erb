@@ -1,7 +1,8 @@
-<p>Turning off reminder emails…</p>
+<%# Mail scanners open links; only the POST (sent by the page, or by a mail app's one-click unsubscribe) turns it off. %>
+<p class="status" role="status"><span class="spinner" aria-hidden="true"></span>Turning off daily emails…</p>
 <%= form_with url: "/reminders/unsubscribe", method: :post, id: "unsubscribe", data: { turbo: false } do %>
   <%= hidden_field_tag :t, @token %>
-  <button type="submit" class="btn primary">Unsubscribe</button>
+  <noscript><button type="submit" class="btn primary">Turn off daily emails</button></noscript>
 <% end %>
 <%= javascript_tag nonce: true do %>
   var f = document.getElementById("unsubscribe"); f.requestSubmit ? f.requestSubmit() : f.submit();

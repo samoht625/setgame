@@ -89,7 +89,6 @@
   <h2>Fun facts</h2>
   <div class="facts">
     <% if s[:fastest_find] %><div class="fact">Fastest find ever: <b><%= secs(s[:fastest_find][:ms]) %></b><br><%= set_cards(s[:fastest_find][:cards]) %></div><% end %>
-    <% if s[:drought] %><div class="fact">Longest drought between finds: <b><%= secs(s[:drought][:ms]) %></b>, ended by<br><%= set_cards(s[:drought][:cards]) %></div><% end %>
     <div class="fact">
       Practice: <b><%= s[:modes]["solo"][:runs] %></b> finished, median <b><%= secs(s[:modes]["solo"][:median_ms]) %></b><br>
       Daily Deal: <b><%= s[:modes]["daily"][:runs] %></b> finished, median <b><%= secs(s[:modes]["daily"][:median_ms]) %></b>
