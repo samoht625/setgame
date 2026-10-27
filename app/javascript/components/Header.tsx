@@ -11,6 +11,7 @@ import { signOut } from '../lib/account'
 import { openReminderDialog } from './ReminderDialog'
 import { useReminder } from '../hooks/useReminder'
 import { reminderLabel } from '../lib/reminder'
+import { getSavedName, onNameChange } from '../lib/player_name'
 
 interface HeaderProps {
   mode: GameMode
@@ -23,6 +24,8 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
   const sound = useSound()
   const reminder = useReminder()
   const email = signedInEmail()
+  const [name, setName] = useState(getSavedName)
+  useEffect(() => onNameChange(next => setName(next || null)), [])
   const [showLogoSet, setShowLogoSet] = useState(false)
   const taps = useRef({ count: 0, lastAt: 0 })
   const logoTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -97,23 +100,30 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
             {mode === 'multiplayer' && segment('multiplayer', 'Multiplayer', 'Multi')}
           </nav>
           <MenuButton
-            modeItems={[
-              ...(mode === 'solo' ? [] : [{ label: 'Practice', onSelect: () => onSwitchMode('solo') }]),
-              ...(mode === 'multiplayer' ? [] : [{ label: 'Multiplayer', onSelect: () => onSwitchMode('multiplayer'), badge: othersOnline }])
-            ]}
-            appItems={[
-              { label: 'How to play', onSelect: openHowToPlay },
-              { label: 'Stats', onSelect: () => window.location.assign('/stats') },
-              { label: 'Your name', onSelect: openNameDialog },
-              { label: 'Sound', onSelect: sound.toggle, checked: sound.enabled }
-            ]}
-            account={email ? { email } : null}
-            accountItems={email
-              ? [
-                  { label: 'Reminder', detail: reminder?.enabled ? reminderLabel(reminder.minutes) : 'Off', onSelect: openReminderDialog },
-                  { label: 'Sign out', onSelect: () => void signOut() }
+            sections={[
+              {
+                items: [
+                  ...(mode === 'solo' ? [] : [{ label: 'Practice', onSelect: () => onSwitchMode('solo') }]),
+                  ...(mode === 'multiplayer' ? [] : [{ label: 'Multiplayer', onSelect: () => onSwitchMode('multiplayer'), badge: othersOnline, live: true }])
                 ]
-              : signInEnabled() ? [{ label: 'Sign in', onSelect: () => openSignInDialog({ source: 'menu' }) }] : []}
+              },
+              {
+                items: [
+                  { label: 'Stats', onSelect: () => window.location.assign('/stats') },
+                  { label: 'How to play', onSelect: openHowToPlay }
+                ]
+              },
+              {
+                items: [
+                  { label: 'Your name', detail: name ?? undefined, onSelect: openNameDialog },
+                  ...(email ? [{ label: 'Reminder', detail: reminder?.enabled ? reminderLabel(reminder.minutes) : 'Off', onSelect: openReminderDialog }] : []),
+                  { label: 'Sound', onSelect: sound.toggle, checked: sound.enabled }
+                ]
+              },
+              email
+                ? { note: email, items: [{ label: 'Sign out', onSelect: () => void signOut() }] }
+                : { items: signInEnabled() ? [{ label: 'Sign in', onSelect: () => openSignInDialog({ source: 'menu' }) }] : [] }
+            ]}
           />
         </div>
       </div>
