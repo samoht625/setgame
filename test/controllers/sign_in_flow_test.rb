@@ -45,7 +45,7 @@ class SignInFlowTest < ActionDispatch::IntegrationTest
     assert_equal SignInToken::PER_EMAIL_PER_HOUR, SignInMailer.deliveries.length
   end
 
-  test "opening the link doesn't spend it; posting it signs in once" do
+  test "opening the link doesn't sign in; posting it does, and works again on another browser until it expires" do
     phone = SecureRandom.uuid
     get "/api/daily", headers: { "X-Player-Id" => phone }
     token = request_link("rose@example.com", phone)
@@ -68,15 +68,24 @@ class SignInFlowTest < ActionDispatch::IntegrationTest
     assert_select "meta[name='setgame-account'][content='rose@example.com']"
     assert_select "meta[name='setgame-player-id'][content=?]", phone
 
+    # The same link on a second browser signs that one in too.
     reset!
     post "/signin", params: { token: token }
-    assert_response :unprocessable_entity
-    assert_match "expired", response.body
+    assert_redirected_to "/?signed_in=1"
+    assert_match(/setgame_session=/, response.headers["Set-Cookie"].to_s)
+    assert_equal 2, account.account_sessions.count
+
+    reset!
+    travel SignInToken::LIFETIME + 1.second do
+      post "/signin", params: { token: token }
+      assert_response :unprocessable_entity
+      assert_match "expired", response.body
+    end
   end
 
   test "an expired link doesn't sign in" do
     token = request_link("rose@example.com")
-    travel 21.minutes do
+    travel SignInToken::LIFETIME + 1.minute do
       post "/signin", params: { token: token }
       assert_response :unprocessable_entity
     end

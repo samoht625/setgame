@@ -13,7 +13,7 @@ class SignInController < ApplicationController
   end
 
   def create
-    record = SignInToken.consume(params[:token].to_s)
+    record = SignInToken.redeem(params[:token].to_s)
     return render :expired, status: :unprocessable_entity unless record
 
     cookie_player = cookies.signed[:player_id].to_s

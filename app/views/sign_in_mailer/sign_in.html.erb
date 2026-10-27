@@ -21,7 +21,7 @@
                 </div>
                 <p style="margin:18px 0 22px;font-size:15px;line-height:1.45;color:#404040;"><%= @reminder ? "Tap to sign in and get a reminder at #{@reminder} on days you haven’t played." : "Tap to sign in on this device." %></p>
                 <a href="<%= @url %>" style="display:inline-block;padding:12px 28px;border-radius:999px;background:#171717;color:#ffffff;font-size:15px;font-weight:500;text-decoration:none;">Sign in</a>
-                <p style="margin:22px 0 0;font-size:12px;line-height:1.45;color:#8a8a8a;">The link works once, for 20 minutes.<br>If you didn’t ask for it, ignore this email.</p>
+                <p style="margin:22px 0 0;font-size:12px;line-height:1.45;color:#8a8a8a;">The link works for <%= SignInToken::LIFETIME.inspect %>.<br>If you didn’t ask for it, ignore this email.</p>
               </td>
             </tr>
           </table>

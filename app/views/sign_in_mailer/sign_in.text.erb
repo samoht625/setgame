@@ -2,4 +2,4 @@
 
 <%= @url %>
 
-The link works once, for 20 minutes. If you didn't ask for it, ignore this email.
+The link works for <%= SignInToken::LIFETIME.inspect %>. If you didn't ask for it, ignore this email.
