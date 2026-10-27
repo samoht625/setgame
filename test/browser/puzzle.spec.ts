@@ -67,6 +67,13 @@ test('the Puzzle is 12 cards with exactly 6 sets; finding them all lands on a re
   await expect(card).toBeVisible()
   await expect(card.getByText(/^\d+(st|nd|rd|th) of \d+$/)).toBeVisible()
   await expect(card.getByRole('link', { name: 'Play Daily Deal' })).toHaveAttribute('href', '/')
+  // Once today's Daily Deal try is used too (here or on another device), it offers Practice instead; rechecked on focus.
+  await page.route('**/api/daily', route => route.fulfill({ json: { date: '', number: 1, next_at: new Date(Date.now() + 3600_000).toISOString(), total: 0, leaderboard: [], me: { attempted: true, streak: 0, result: null } } }))
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+  await expect(card.getByRole('link', { name: 'Play Practice', exact: true })).toHaveAttribute('href', '/practice')
+  await page.unroute('**/api/daily')
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+  await expect(card.getByRole('link', { name: 'Play Daily Deal' })).toHaveAttribute('href', '/')
   expect(events.filter(([name]) => name === 'game_complete').map(([, data]) => data?.mode)).toEqual(['puzzle'])
   await expect(card.locator('[data-share-grid]')).toHaveAttribute('data-share-grid', 'hmhhhhh')
   await expect(card.getByRole('img', { name: 'Your attempts: 6 found, 1 missed' })).toBeVisible()

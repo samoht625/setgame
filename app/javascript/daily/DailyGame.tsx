@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { useOtherDailyDone, PRACTICE_LINK } from '../hooks/useOtherDailyDone'
 import { secondaryButtonSmall } from '../lib/buttons'
 import Board from '../components/Board'
 import GameLayout from '../components/GameLayout'
@@ -445,6 +446,7 @@ const DailyGame: React.FC = () => {
   const showCard = !playing && Boolean(result || status?.me.attempted)
   // The card has the leaderboard in it already.
   useGameMenu(showCard ? [] : [{ label: 'Leaderboard', onSelect: panel.toggle }])
+  const puzzleDone = useOtherDailyDone('puzzle', showCard)
 
   // Once today's try is used, the Daily Deal is a result card, not a game.
   if (showCard) {
@@ -480,6 +482,7 @@ const DailyGame: React.FC = () => {
           onNextDeal={goToToday}
           stale={staleRun}
           onNameScore={namedRun && status?.me.result && !myScoreName ? nameScore : undefined}
+          next={puzzleDone ? PRACTICE_LINK : undefined}
         />
       </>
     )

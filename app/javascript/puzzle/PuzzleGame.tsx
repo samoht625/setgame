@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { useOtherDailyDone, PRACTICE_LINK } from '../hooks/useOtherDailyDone'
 import { secondaryButtonSmall } from '../lib/buttons'
 import Board from '../components/Board'
 import GameLayout from '../components/GameLayout'
@@ -370,6 +371,7 @@ const PuzzleGame: React.FC = () => {
   // An unfinished run (wiped browser, other device) resumes instead of showing a card.
   const showCard = !playing && Boolean(result)
   useGameMenu(showCard ? [] : [{ label: 'Leaderboard', onSelect: panel.toggle }])
+  const dailyDone = useOtherDailyDone('daily', showCard)
 
   if (showCard && result) {
     const submissionNote = finishedRun && (
@@ -405,7 +407,7 @@ const PuzzleGame: React.FC = () => {
           onNextDeal={goToToday}
           stale={staleRun}
           onNameScore={namedRun && status?.me.result && !myScoreName ? nameRun : undefined}
-          next={{ href: '/', label: 'Play Daily Deal' }}
+          next={dailyDone ? PRACTICE_LINK : { href: '/', label: 'Play Daily Deal' }}
           noun="puzzle"
           marksLabel="Your attempts"
           emptyText="No times yet — find all 6 sets to take the top spot."

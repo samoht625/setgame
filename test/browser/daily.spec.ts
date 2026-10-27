@@ -276,6 +276,39 @@ test('the daily fits every width from intro to result', async ({ page }) => {
   }
 })
 
+test('the result card offers the Puzzle until it is done, then Practice, and notices a finish in another tab', async ({ page, context }) => {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date())
+  const part = (type: string) => parts.find(p => p.type === type)!.value
+  const date = `${part('year')}-${part('month')}-${part('day')}`
+  const status = (result: object | null) => ({
+    date, number: 7, next_at: new Date(Date.now() + 3600_000).toISOString(), total: 1, leaderboard: [],
+    me: { attempted: Boolean(result), streak: 1, result }
+  })
+  const mine = { display_name: null, elapsed_ms: 132_000, misses: 2, rank: 1, total: 1, share_token: 'c-3gk0-abcdefghijkl', replay: true, streak: 1, marks: 'gggyyyrrrgy' }
+  let puzzleFinished = false
+  await page.route('**/api/daily', route => route.fulfill({ json: status(mine) }))
+  await page.route('**/api/puzzle', route => route.fulfill({ json: status(puzzleFinished ? { ...mine, elapsed_ms: 40_000 } : null) }))
+  await page.goto('/daily')
+  await seedFinishedRun(page, [4, 8, 12, 20, 28, 36, 48, 60, 72, 92, 112, 132].map(s => s * 1000), 2)
+  await page.reload()
+
+  const results = page.getByRole('region', { name: 'Daily Deal #7' })
+  await expect(results.getByRole('link', { name: 'Play Puzzle', exact: true })).toHaveAttribute('href', '/puzzle')
+
+  // The Puzzle gets finished in another tab: its save lands in shared storage.
+  puzzleFinished = true
+  const other = await context.newPage()
+  await other.goto('/stats')
+  await other.evaluate(() => localStorage.setItem('setgame_puzzle_v1', JSON.stringify({ finishedElsewhere: Date.now() })))
+  await expect(results.getByRole('link', { name: 'Play Practice', exact: true })).toHaveAttribute('href', '/practice')
+  await expect(results.getByRole('link', { name: 'Play Puzzle', exact: true })).toHaveCount(0)
+  await other.close()
+
+  // A fresh load (e.g. another device) knows straight from the server.
+  await page.reload()
+  await expect(results.getByRole('link', { name: 'Play Practice', exact: true })).toBeVisible()
+})
+
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
 
