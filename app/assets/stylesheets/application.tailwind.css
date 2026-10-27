@@ -14,6 +14,18 @@ html {
   color-scheme: light dark;
 }
 
+/* Tailwind v4 dropped the pointer cursor on buttons: bring it back for everything clickable. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role^="menuitem"]:not(:disabled),
+  select:not(:disabled),
+  summary,
+  label[for] {
+    cursor: pointer;
+  }
+}
+
 button:focus-visible,
 a:focus-visible,
 input:focus-visible {
