@@ -36,10 +36,10 @@ function modeFromPath(pathname: string): GameMode {
 
 // Must match the <title> each route renders in app/views/home.
 const TITLES: Record<GameMode, string> = {
-  daily: 'Set Daily Deal — Today’s deal, same for everyone',
-  puzzle: 'Set Puzzle — Find all 6 sets in today’s 12 cards',
-  solo: 'Set Practice — Timed solo games, free',
-  multiplayer: 'Set Multiplayer — Race friends to find sets'
+  daily: 'Set Daily Deal',
+  puzzle: 'Set Puzzle',
+  solo: 'Set Practice',
+  multiplayer: 'Set Multiplayer'
 }
 
 const App: React.FC = () => {

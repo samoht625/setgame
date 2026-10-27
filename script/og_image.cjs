@@ -76,11 +76,7 @@ function frame(content) {
 
 function staticSvg() {
   return frame(`
-    ${wordmark(88, 132, 46)}
-    <text x="84" y="300" font-size="84" font-weight="700" letter-spacing="-3.4" fill="${TEXT.strong}">Find the set.</text>
-    <text x="84" y="396" font-size="84" font-weight="700" letter-spacing="-3.4" fill="${TEXT.strong}">Beat the clock.</text>
-    <text x="88" y="462" font-size="28" font-weight="500" fill="${TEXT.body}">The classic card game, free in your browser.</text>
-    <text x="88" y="552" font-size="24" font-weight="500" fill="${TEXT.muted}">set.tido.site</text>
+    ${wordmark(88, 360, 120)}
     ${cardFan(940, 322, 1.05)}
   `)
 }

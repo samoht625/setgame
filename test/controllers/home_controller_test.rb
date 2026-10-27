@@ -18,11 +18,11 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
 
   test "each page has its own title, description, canonical URL and share preview" do
     {
-      "/" => ["Set Daily Deal — Today’s deal, same for everyone", "https://set.tido.site/"],
-      "/daily" => ["Set Daily Deal — Today’s deal, same for everyone", "https://set.tido.site/"],
-      "/puzzle" => ["Set Puzzle — Find all 6 sets in today’s 12 cards", "https://set.tido.site/puzzle"],
-      "/practice" => ["Set Practice — Timed solo games, free", "https://set.tido.site/practice"],
-      "/m" => ["Set Multiplayer — Race friends to find sets", "https://set.tido.site/m"]
+      "/" => ["Set Daily Deal", "https://set.tido.site/"],
+      "/daily" => ["Set Daily Deal", "https://set.tido.site/"],
+      "/puzzle" => ["Set Puzzle", "https://set.tido.site/puzzle"],
+      "/practice" => ["Set Practice", "https://set.tido.site/practice"],
+      "/m" => ["Set Multiplayer", "https://set.tido.site/m"]
     }.each do |path, (title, url)|
       get path
       assert_response :success
@@ -93,7 +93,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     PREVIEW_BOTS.values_at("Slack", "X").each do |user_agent|
       get "/daily", params: { r: token }, headers: { "User-Agent" => user_agent }
       assert_response :success
-      assert_select "title", text: "Set Daily Deal — Today’s deal, same for everyone"
+      assert_select "title", text: "Set Daily Deal"
       assert_select "link[rel=canonical][href=?]", "https://set.tido.site/"
       assert_select "meta[property='og:title'][content=?]", "Set Daily Deal #12 · 2:41"
       assert_select "meta[name='twitter:title'][content=?]", "Set Daily Deal #12 · 2:41"
@@ -104,7 +104,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     end
 
     get "/daily", params: { r: "c-3gk0-abcdefghijkl" }
-    assert_select "meta[property='og:title'][content=?]", "Set Daily Deal — Today’s deal, same for everyone"
+    assert_select "meta[property='og:title'][content=?]", "Set Daily Deal"
     assert_select "meta[property='og:image'][content=?]", "https://set.tido.site/og-image.png"
   end
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { ReminderLine } from './SignInForm'
 import { saveReminder, reminderLabel, DEFAULT_REMINDER_MINUTES } from '../lib/reminder'
-import { secondaryButton } from '../lib/buttons'
+import { secondaryButtonSmall } from '../lib/buttons'
 import { track } from '../lib/analytics'
 
 /** On a result card for a signed-in player with the reminder off: the time and Turn on. */
@@ -25,7 +25,7 @@ const ReminderOffer: React.FC<{ initialMinutes?: number }> = ({ initialMinutes =
           setState(ok ? 'on' : 'failed')
           track('reminder_on', { source: 'card', ok })
         }}
-        className={`${secondaryButton} w-full`}
+        className={secondaryButtonSmall}
       >
         Turn on
       </button>

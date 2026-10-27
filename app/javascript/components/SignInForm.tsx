@@ -84,11 +84,9 @@ const SignInForm: React.FC<SignInFormProps> = ({ source, quiet = false, autoFocu
 
 /** "Email me at [8:00 AM] if I haven't played" */
 export const ReminderLine: React.FC<{ minutes: number; onChange: (minutes: number) => void }> = ({ minutes, onChange }) => (
-  <div className="mb-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-neutral-500 dark:text-neutral-400">
-    <span>Email me at</span>
-    <TimeSelect value={minutes} onChange={onChange} />
-    <span>if I haven’t played</span>
-  </div>
+  <p className="mb-2 text-xs leading-6 text-neutral-500 dark:text-neutral-400">
+    Email me at <TimeSelect value={minutes} onChange={onChange} size="xs" /> if I haven’t played
+  </p>
 )
 
 export default SignInForm

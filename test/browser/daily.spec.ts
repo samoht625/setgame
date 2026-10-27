@@ -107,7 +107,7 @@ test('the daily is one shared deal: played once, clocked from first paint, then 
   await page.addInitScript(() => localStorage.setItem('setgame_name', 'Daily Tester'))
 
   await page.goto('/daily')
-  await expect(page).toHaveTitle('Set Daily Deal — Today’s deal, same for everyone')
+  await expect(page).toHaveTitle('Set Daily Deal')
   await expect(page.getByRole('button', { name: 'Daily Deal', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByText('Same deal for everyone today.')).toBeVisible()
   const label = await page.getByText(/^Daily Deal #\d+$/).first().innerText()

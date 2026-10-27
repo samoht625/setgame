@@ -35,7 +35,7 @@ test('the Puzzle is 12 cards with exactly 6 sets; finding them all lands on a re
   page.on('pageerror', error => errors.push(error.message))
   const events = await recordEvents(page)
   await page.goto('/puzzle')
-  await expect(page).toHaveTitle('Set Puzzle — Find all 6 sets in today’s 12 cards')
+  await expect(page).toHaveTitle('Set Puzzle')
   await expect(page.getByRole('button', { name: 'Puzzle', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await expect(page.locator('[data-card-id]')).toHaveCount(0)
   await page.getByRole('button', { name: 'Start', exact: true }).click()

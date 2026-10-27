@@ -1,5 +1,4 @@
-<% content_for :title, "Set Practice — Timed solo games, free" %>
-<% content_for :description, "Practice Set against the clock: clear the whole deck as fast as you can, with daily, weekly and monthly leaderboards. Free, no signup, works on phone and desktop." %>
+<% content_for :title, "Set Practice" %>
 <% content_for :head, render("home/identity") %>
 <%# Seed presence so the multiplayer count can render instantly, no extra request. %>
 <div id="root" data-online-ids="<%= GAME_ENGINE.online_player_ids_snapshot.to_json %>"></div>
