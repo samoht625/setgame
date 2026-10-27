@@ -121,7 +121,7 @@ const Header: React.FC<HeaderProps> = ({ mode, onSwitchMode, othersOnline = 0 })
                 ]
               },
               email
-                ? { note: email, items: [{ label: 'Sign out', onSelect: () => void signOut() }] }
+                ? { items: [{ label: 'Sign out', sublabel: email, onSelect: () => void signOut() }] }
                 : { items: signInEnabled() ? [{ label: 'Sign in', onSelect: () => openSignInDialog({ source: 'menu' }) }] : [] }
             ]}
           />
