@@ -64,7 +64,7 @@ const MarkGrid: React.FC<{ marks: string; label: string }> = ({ marks, label }) 
         onKeyDown={event => {
           if (event.key === 'Escape') setOpen(false)
         }}
-        className="flex cursor-help rounded-md p-1.5 transition-colors hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 dark:hover:bg-neutral-800"
+        className="flex rounded-md p-1.5 transition-colors hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 dark:hover:bg-neutral-800"
       >
         {grid}
       </button>
