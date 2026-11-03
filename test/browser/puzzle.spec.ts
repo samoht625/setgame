@@ -77,6 +77,9 @@ test('the Puzzle is 12 cards with exactly 6 sets; finding them all lands on a re
   expect(events.filter(([name]) => name === 'game_complete').map(([, data]) => data?.mode)).toEqual(['puzzle'])
   await expect(card.locator('[data-share-grid]')).toHaveAttribute('data-share-grid', 'hmhhhhh')
   await expect(card.getByRole('img', { name: 'Your attempts: 6 found, 1 missed' })).toBeVisible()
+  await expect(card.getByRole('tooltip')).toBeHidden()
+  await card.getByRole('button', { name: /Your attempts/ }).hover()
+  await expect(card.getByRole('tooltip')).toContainText('One square per guess')
 
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
   await card.getByRole('button', { name: 'Share', exact: true }).click()

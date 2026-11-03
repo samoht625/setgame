@@ -87,7 +87,7 @@ const DailyCard: React.FC<DailyCardProps> = ({
                 {streak > 0 && <span className="font-medium text-emerald-700 dark:text-emerald-300">{streak}-day streak</span>}
               </p>
               {result.marks && (
-                <div className="mt-3 flex justify-center">
+                <div className="mt-1.5 flex justify-center">
                   <MarkGrid marks={result.marks} label={marksLabel} />
                 </div>
               )}
