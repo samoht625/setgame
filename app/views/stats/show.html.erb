@@ -15,6 +15,30 @@
     <div class="tile"><b><%= s[:spread][:min][:n] %>× – <%= s[:spread][:max][:n] %>×</b><span>finds per set, min–max</span></div>
   </div>
 
+  <% days = s[:activity_by_day] %>
+  <section class="activity">
+    <input type="radio" name="activity" id="act-games" value="games" checked>
+    <input type="radio" name="activity" id="act-players" value="players">
+    <div class="act-head">
+      <h2>Per day</h2>
+      <div class="seg" role="radiogroup" aria-label="Show per day"><label for="act-games">Games</label><label for="act-players">Players</label></div>
+    </div>
+    <% { games: ["game", "Finished games, Practice + Daily Deal"], players: ["player", "Players who found at least one set"] }.each do |key, (noun, about)| %>
+      <% counts = days.map { |d| d[key] }; dmax = [counts.max, 1].max; peak = days.max_by { |d| d[key] } %>
+      <div class="act-series" data-series="<%= key %>">
+        <p class="muted"><%= about %>, last <%= days.length %> days.<% if peak[key].positive? %> Busiest: <%= peak[key] %> on <%= peak[:date].strftime("%b %-d") %> · about <%= (counts.sum / days.length.to_f).round %> a day.<% end %></p>
+        <div class="bars daychart">
+          <div class="days" role="img" aria-label="<%= noun.capitalize %>s per day, <%= days.first[:date].strftime("%b %-d") %> to today; busiest <%= peak[key] %> on <%= peak[:date].strftime("%b %-d") %>">
+            <% days.each_with_index do |d, i| n = d[key] %>
+              <span class="<%= "l" if i < days.length * 0.12 %><%= "r" if i >= days.length * 0.88 %><%= " now" if i == days.length - 1 %>"><i data-tip="<%= i == days.length - 1 ? "Today" : d[:date].strftime("%a, %b %-d") %> · <%= n %> <%= n == 1 ? noun : "#{noun}s" %>" style="height:<%= n.zero? ? 0 : [(n * 100.0 / dmax).round(1), 2].max %>%"></i></span>
+            <% end %>
+          </div>
+          <div class="hf-axis muted" aria-hidden="true"><span style="left:0"><%= days.first[:date].strftime("%b %-d") %></span><span style="left:100%">Today</span></div>
+        </div>
+      </div>
+    <% end %>
+  </section>
+
   <% if s[:most_games].present? %>
     <h2>Most games finished</h2>
     <p class="muted">Named players, Practice + Daily Deal.</p>

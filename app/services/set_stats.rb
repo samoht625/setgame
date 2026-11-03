@@ -11,9 +11,10 @@ class SetStats
   # A gap this long between finds is a tab left open, not someone looking:
   # it still counts as a find, but not toward any timing.
   IDLE_MS = 5 * 60 * 1000
+  CHART_DAYS = 90
 
   def self.cached
-    Rails.cache.fetch("set_stats/v9", expires_in: 5.minutes) { new.compute }
+    Rails.cache.fetch("set_stats/v10", expires_in: 5.minutes) { new.compute }
   end
 
   def self.all_sets
@@ -76,6 +77,7 @@ class SetStats
       busiest_day: hours.group_by(&:to_date).max_by { |_, v| v.length }&.then { |d, v| [d, v.length] },
       busiest_hour: hours.group_by(&:hour).max_by { |_, v| v.length }&.first,
       most_games: most_games,
+      activity_by_day: activity_by_day,
       modes: runs.transform_values { |v| { runs: v.length, median_ms: median(v) } }
     }
   end
@@ -139,6 +141,26 @@ class SetStats
     end
     tally.values.map { |h| h.merge(total: h[:solo] + h[:daily]) }
       .sort_by { |h| [-h[:total], h[:name].downcase] }.first(limit)
+  end
+
+  # Finished runs and distinct players (as the players tile counts them) for
+  # each of the last CHART_DAYS days, oldest first, with empty days kept so the
+  # bars stay evenly spaced in time.
+  def activity_by_day
+    today = Time.current.in_time_zone(ZONE).to_date
+    start = today - (CHART_DAYS - 1)
+    from = start.in_time_zone(ZONE)
+    games = Hash.new(0)
+    players = Hash.new { |h, k| h[k] = Set.new }
+    SoloScore.where(completed_at: from..).pluck(:completed_at, :player_id).each do |t, pid|
+      day = t.in_time_zone(ZONE).to_date
+      games[day] += 1
+      players[day] << pid
+    end
+    SoloGame.where(started_at: from..).where("sets_found > 0 OR status = 'completed'").pluck(:started_at, :player_id).each do |t, pid|
+      players[t.in_time_zone(ZONE).to_date] << pid
+    end
+    (start..today).map { |d| { date: d, games: games[d], players: players.fetch(d, Set.new).size } }
   end
 
   def add_claims(events, mode, finds)

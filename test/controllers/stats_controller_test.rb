@@ -34,6 +34,12 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     games = SetStats.new.compute[:most_games]
     assert_equal [{ name: "Ada", solo: 0, daily: 1, total: 1 }], games, "only named players are listed"
 
+    by_day = SetStats.new.compute[:activity_by_day]
+    assert_equal SetStats::CHART_DAYS, by_day.length, "empty days are kept"
+    assert_equal Time.current.in_time_zone(SetStats::ZONE).to_date, by_day.last[:date]
+    assert_equal 2, by_day.last[:games]
+    assert_equal 3, by_day.sum { |d| d[:players] }, "a finisher counts once; an unfinished game with a find counts too"
+
     get "/stats"
     assert_response :success
     assert_includes response.body, "<h1>Stats</h1>"
@@ -42,6 +48,8 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Most found"
     assert_includes response.body, "Most games finished"
     assert_includes response.body, "kind-iqr"
+    assert_includes response.body, %(for="act-players">Players</label>)
+    assert_includes response.body, %(data-tip="Today · 2 games")
     refute_includes response.body, "vs all"
     assert_includes response.body, "Least found"
     refute_includes response.body, "possible sets found at least once"
