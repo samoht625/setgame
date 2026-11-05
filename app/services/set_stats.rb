@@ -14,7 +14,7 @@ class SetStats
   CHART_DAYS = 90
 
   def self.cached
-    Rails.cache.fetch("set_stats/v10", expires_in: 5.minutes) { new.compute }
+    Rails.cache.fetch("set_stats/v11", expires_in: 5.minutes) { new.compute }
   end
 
   def self.all_sets
@@ -126,18 +126,27 @@ class SetStats
 
   # Named players by finished runs (solo + daily), grouped by the public name
   # (one person often plays on several devices). Unnamed runs of a device count
-  # toward the name that device used.
+  # toward the name that device used. Each also gets their fastest Daily Deal
+  # and fastest finished Puzzle (a device with no named run goes by the name on
+  # its Puzzle run).
   def most_games(limit = 10)
-    rows = SoloScore.order(:completed_at).pluck(:player_id, :display_name, :daily_on)
+    rows = SoloScore.order(:completed_at).pluck(:player_id, :display_name, :daily_on, :elapsed_ms)
     names = {}
-    rows.each { |pid, name, _| names[pid] = name.strip if name.present? }
-    tally = Hash.new { |h, k| h[k] = { name: k, solo: 0, daily: 0 } }
-    rows.each do |pid, _, daily|
+    rows.each { |pid, name, _, _| names[pid] = name.strip if name.present? }
+    tally = Hash.new { |h, k| h[k] = { name: k, solo: 0, daily: 0, best_daily_ms: nil, best_puzzle_ms: nil } }
+    rows.each do |pid, _, daily, ms|
       next unless (name = names[pid])
 
       entry = tally[name.downcase]
       entry[:name] = name
       entry[daily ? :daily : :solo] += 1
+      entry[:best_daily_ms] = [entry[:best_daily_ms], ms].compact.min if daily
+    end
+    PuzzleRun.finished.where.not(elapsed_ms: nil).pluck(:player_id, :display_name, :elapsed_ms).each do |pid, name, ms|
+      key = (names[pid] || name.presence)&.strip&.downcase
+      next unless key && tally.key?(key)
+
+      tally[key][:best_puzzle_ms] = [tally[key][:best_puzzle_ms], ms].compact.min
     end
     tally.values.map { |h| h.merge(total: h[:solo] + h[:daily]) }
       .sort_by { |h| [-h[:total], h[:name].downcase] }.first(limit)
