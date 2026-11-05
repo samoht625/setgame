@@ -4,9 +4,11 @@ require "test_helper"
 
 class StatsControllerTest < ActionDispatch::IntegrationTest
   test "stats page counts finished and unfinished finds" do
+    travel_to Time.find_zone(SetStats::ZONE).now.change(hour: 12)
     Rails.cache.clear
     SoloScore.delete_all
     SoloGame.delete_all
+    PuzzleRun.delete_all
     finished = SoloGame.create!(id: SecureRandom.uuid, player_id: "player-secret-xyz", seed: "1", started_at: 1.hour.ago, status: "completed", completed_at: Time.current)
     SoloScore.create!(solo_game: finished, player_id: "player-secret-xyz", elapsed_ms: 9000, completed_at: Time.current,
       events: [{ "type" => "claim", "cards" => [1, 2, 3], "t_ms" => 2000 }, { "type" => "claim", "cards" => [4, 5, 6], "t_ms" => 9000 }])
@@ -32,7 +34,16 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     named = SoloGame.create!(id: SecureRandom.uuid, player_id: "p3", seed: "3", started_at: 1.hour.ago, status: "completed", completed_at: Time.current, daily_on: Date.current)
     SoloScore.create!(solo_game: named, player_id: "p3", display_name: "Ada", elapsed_ms: 5000, completed_at: Time.current, daily_on: Date.current, events: [])
     games = SetStats.new.compute[:most_games]
-    assert_equal [{ name: "Ada", solo: 0, daily: 1, total: 1 }], games, "only named players are listed"
+    assert_equal [{ name: "Ada", solo: 0, daily: 1, best_daily_ms: 5000, best_puzzle_ms: nil, total: 1 }], games, "only named players are listed"
+
+    puzzle = { cards: [], started_at: 1.hour.ago, completed_at: Time.current }
+    PuzzleRun.create!(id: SecureRandom.uuid, player_id: "p3", puzzle_on: Date.current - 1, elapsed_ms: 41_000, **puzzle)
+    PuzzleRun.create!(id: SecureRandom.uuid, player_id: "ada-phone", display_name: " ada ", puzzle_on: Date.current, elapsed_ms: 38_000, **puzzle)
+    PuzzleRun.create!(id: SecureRandom.uuid, player_id: "p3", puzzle_on: Date.current, started_at: 1.hour.ago, cards: [])
+    PuzzleRun.create!(id: SecureRandom.uuid, player_id: "stranger", display_name: "Bo", puzzle_on: Date.current, elapsed_ms: 1000, **puzzle)
+    games = SetStats.new.compute[:most_games]
+    assert_equal 38_000, games.first[:best_puzzle_ms], "Puzzle runs join by device, or by name on another device; unfinished runs don't count"
+    assert_equal ["Ada"], games.map { |g| g[:name] }, "a Puzzle alone doesn't put someone on the list"
 
     by_day = SetStats.new.compute[:activity_by_day]
     assert_equal SetStats::CHART_DAYS, by_day.length, "empty days are kept"
@@ -47,6 +58,7 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, %(id="site-header")
     assert_includes response.body, "Most found"
     assert_includes response.body, "Most games finished"
+    assert_includes response.body, "<small>Best: Daily Deal 5.0s · Puzzle 38.0s</small>"
     assert_includes response.body, "kind-iqr"
     assert_includes response.body, %(for="act-players">Players</label>)
     assert_includes response.body, %(data-tip="Today · 2 games")
