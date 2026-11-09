@@ -97,8 +97,7 @@ test('the streak shows on the result card and in the menu, and the menu row goes
   await page.goto('/daily')
 
   const streak = page.locator('[data-streak]')
-  await expect(streak).toContainText('3-day streak')
-  await expect(streak).toContainText('back tomorrow for 4')
+  await expect(streak).toHaveText('🔥3-day streak')
 
   await page.getByRole('navigation', { name: 'Game mode' }).getByRole('button', { name: 'Puzzle' }).click()
   await page.getByRole('button', { name: 'Menu', exact: true }).click()

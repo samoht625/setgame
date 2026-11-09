@@ -109,7 +109,6 @@ const DailyCard: React.FC<DailyCardProps> = ({
                 <p data-streak className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-3 py-1 text-xs text-orange-900 dark:bg-orange-950/40 dark:text-orange-200">
                   <span aria-hidden="true">🔥</span>
                   <span className="font-semibold">{streak}-day streak</span>
-                  {!stale && <span className="text-orange-800/80 dark:text-orange-200/80">· back tomorrow for {streak + 1}</span>}
                 </p>
               )}
             </>
