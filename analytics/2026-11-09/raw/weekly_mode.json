@@ -1,0 +1,23 @@
+[
+  {"week": "2026-09-28", "mode": "daily", "starts": "8", "completes": "5", "start_sessions": "6"},
+  {"week": "2026-09-28", "mode": "solo", "starts": "37", "completes": "19", "start_sessions": "4"},
+  {"week": "2026-10-05", "mode": "daily", "starts": "21", "completes": "21", "start_sessions": "15"},
+  {"week": "2026-10-05", "mode": "solo", "starts": "106", "completes": "55", "start_sessions": "20"},
+  {"week": "2026-10-12", "mode": "daily", "starts": "18", "completes": "18", "start_sessions": "11"},
+  {"week": "2026-10-12", "mode": "solo", "starts": "51", "completes": "39", "start_sessions": "10"},
+  {"week": "2026-10-19", "mode": "daily", "starts": "25", "completes": "20", "start_sessions": "19"},
+  {"week": "2026-10-19", "mode": "multi", "starts": "3", "completes": "2", "start_sessions": "2"},
+  {"week": "2026-10-19", "mode": "puzzle", "starts": "4", "completes": "4", "start_sessions": "4"},
+  {"week": "2026-10-19", "mode": "solo", "starts": "93", "completes": "33", "start_sessions": "34"},
+  {"week": "2026-10-26", "mode": "daily", "starts": "148", "completes": "101", "start_sessions": "131"},
+  {"week": "2026-10-26", "mode": "multi", "starts": "8", "completes": "5", "start_sessions": "3"},
+  {"week": "2026-10-26", "mode": "puzzle", "starts": "91", "completes": "73", "start_sessions": "77"},
+  {"week": "2026-10-26", "mode": "solo", "starts": "180", "completes": "48", "start_sessions": "49"},
+  {"week": "2026-11-02", "mode": "daily", "starts": "131", "completes": "110", "start_sessions": "71"},
+  {"week": "2026-11-02", "mode": "multi", "starts": "2", "completes": "0", "start_sessions": "2"},
+  {"week": "2026-11-02", "mode": "puzzle", "starts": "119", "completes": "116", "start_sessions": "72"},
+  {"week": "2026-11-02", "mode": "solo", "starts": "257", "completes": "177", "start_sessions": "27"},
+  {"week": "2026-11-09", "mode": "daily", "starts": "1", "completes": "0", "start_sessions": "1"},
+  {"week": "2026-11-09", "mode": "puzzle", "starts": "1", "completes": "0", "start_sessions": "1"},
+  {"week": "2026-11-09", "mode": "solo", "starts": "3", "completes": "1", "start_sessions": "1"}
+]

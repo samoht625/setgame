@@ -1,0 +1,614 @@
+[
+  {
+    "day": "2026-08-22",
+    "pageviews": "4",
+    "sessions": "1",
+    "visits": "1",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-08-24",
+    "pageviews": "2",
+    "sessions": "1",
+    "visits": "2",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-08-25",
+    "pageviews": "3",
+    "sessions": "2",
+    "visits": "3",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-08-26",
+    "pageviews": "2",
+    "sessions": "2",
+    "visits": "2",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-08-27",
+    "pageviews": "11",
+    "sessions": "2",
+    "visits": "10",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-08-28",
+    "pageviews": "2",
+    "sessions": "1",
+    "visits": "2",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-01",
+    "pageviews": "1",
+    "sessions": "1",
+    "visits": "1",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-02",
+    "pageviews": "2",
+    "sessions": "1",
+    "visits": "2",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-03",
+    "pageviews": "2",
+    "sessions": "1",
+    "visits": "2",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-07",
+    "pageviews": "1",
+    "sessions": "1",
+    "visits": "1",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-08",
+    "pageviews": "14",
+    "sessions": "2",
+    "visits": "2",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-09",
+    "pageviews": "6",
+    "sessions": "2",
+    "visits": "3",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-10",
+    "pageviews": "10",
+    "sessions": "5",
+    "visits": "6",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-11",
+    "pageviews": "10",
+    "sessions": "3",
+    "visits": "7",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-12",
+    "pageviews": "6",
+    "sessions": "3",
+    "visits": "6",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-14",
+    "pageviews": "4",
+    "sessions": "2",
+    "visits": "4",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-15",
+    "pageviews": "4",
+    "sessions": "2",
+    "visits": "4",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-16",
+    "pageviews": "3",
+    "sessions": "2",
+    "visits": "2",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-17",
+    "pageviews": "10",
+    "sessions": "4",
+    "visits": "6",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-18",
+    "pageviews": "5",
+    "sessions": "3",
+    "visits": "4",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-19",
+    "pageviews": "16",
+    "sessions": "5",
+    "visits": "10",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-20",
+    "pageviews": "5",
+    "sessions": "3",
+    "visits": "5",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-21",
+    "pageviews": "1",
+    "sessions": "1",
+    "visits": "1",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-22",
+    "pageviews": "23",
+    "sessions": "13",
+    "visits": "15",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-23",
+    "pageviews": "1",
+    "sessions": "1",
+    "visits": "1",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-24",
+    "pageviews": "2",
+    "sessions": "2",
+    "visits": "2",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-25",
+    "pageviews": "1",
+    "sessions": "1",
+    "visits": "1",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-26",
+    "pageviews": "3",
+    "sessions": "3",
+    "visits": "3",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-27",
+    "pageviews": "11",
+    "sessions": "2",
+    "visits": "3",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-28",
+    "pageviews": "11",
+    "sessions": "10",
+    "visits": "10",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-29",
+    "pageviews": "4",
+    "sessions": "1",
+    "visits": "2",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-09-30",
+    "pageviews": "9",
+    "sessions": "3",
+    "visits": "6",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-10-01",
+    "pageviews": "2",
+    "sessions": "2",
+    "visits": "2",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-10-02",
+    "pageviews": "5",
+    "sessions": "4",
+    "visits": "5",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-10-03",
+    "pageviews": "2",
+    "sessions": "2",
+    "visits": "2",
+    "custom_events": "0",
+    "game_starts": "0",
+    "game_completes": "0"
+  },
+  {
+    "day": "2026-10-04",
+    "pageviews": "76",
+    "sessions": "11",
+    "visits": "21",
+    "custom_events": "183",
+    "game_starts": "45",
+    "game_completes": "24"
+  },
+  {
+    "day": "2026-10-05",
+    "pageviews": "53",
+    "sessions": "17",
+    "visits": "23",
+    "custom_events": "141",
+    "game_starts": "32",
+    "game_completes": "20"
+  },
+  {
+    "day": "2026-10-06",
+    "pageviews": "24",
+    "sessions": "5",
+    "visits": "5",
+    "custom_events": "62",
+    "game_starts": "13",
+    "game_completes": "6"
+  },
+  {
+    "day": "2026-10-07",
+    "pageviews": "17",
+    "sessions": "9",
+    "visits": "11",
+    "custom_events": "79",
+    "game_starts": "16",
+    "game_completes": "16"
+  },
+  {
+    "day": "2026-10-08",
+    "pageviews": "19",
+    "sessions": "11",
+    "visits": "13",
+    "custom_events": "117",
+    "game_starts": "33",
+    "game_completes": "12"
+  },
+  {
+    "day": "2026-10-09",
+    "pageviews": "19",
+    "sessions": "6",
+    "visits": "7",
+    "custom_events": "61",
+    "game_starts": "15",
+    "game_completes": "8"
+  },
+  {
+    "day": "2026-10-10",
+    "pageviews": "6",
+    "sessions": "4",
+    "visits": "5",
+    "custom_events": "41",
+    "game_starts": "9",
+    "game_completes": "8"
+  },
+  {
+    "day": "2026-10-11",
+    "pageviews": "12",
+    "sessions": "6",
+    "visits": "8",
+    "custom_events": "38",
+    "game_starts": "9",
+    "game_completes": "6"
+  },
+  {
+    "day": "2026-10-12",
+    "pageviews": "12",
+    "sessions": "6",
+    "visits": "9",
+    "custom_events": "42",
+    "game_starts": "9",
+    "game_completes": "8"
+  },
+  {
+    "day": "2026-10-13",
+    "pageviews": "9",
+    "sessions": "4",
+    "visits": "6",
+    "custom_events": "77",
+    "game_starts": "18",
+    "game_completes": "16"
+  },
+  {
+    "day": "2026-10-14",
+    "pageviews": "5",
+    "sessions": "4",
+    "visits": "4",
+    "custom_events": "20",
+    "game_starts": "5",
+    "game_completes": "2"
+  },
+  {
+    "day": "2026-10-15",
+    "pageviews": "7",
+    "sessions": "2",
+    "visits": "5",
+    "custom_events": "78",
+    "game_starts": "19",
+    "game_completes": "17"
+  },
+  {
+    "day": "2026-10-16",
+    "pageviews": "9",
+    "sessions": "4",
+    "visits": "4",
+    "custom_events": "32",
+    "game_starts": "7",
+    "game_completes": "6"
+  },
+  {
+    "day": "2026-10-17",
+    "pageviews": "9",
+    "sessions": "5",
+    "visits": "5",
+    "custom_events": "25",
+    "game_starts": "5",
+    "game_completes": "3"
+  },
+  {
+    "day": "2026-10-18",
+    "pageviews": "14",
+    "sessions": "5",
+    "visits": "7",
+    "custom_events": "29",
+    "game_starts": "6",
+    "game_completes": "5"
+  },
+  {
+    "day": "2026-10-19",
+    "pageviews": "13",
+    "sessions": "5",
+    "visits": "8",
+    "custom_events": "50",
+    "game_starts": "10",
+    "game_completes": "9"
+  },
+  {
+    "day": "2026-10-20",
+    "pageviews": "15",
+    "sessions": "7",
+    "visits": "8",
+    "custom_events": "48",
+    "game_starts": "15",
+    "game_completes": "5"
+  },
+  {
+    "day": "2026-10-21",
+    "pageviews": "10",
+    "sessions": "6",
+    "visits": "9",
+    "custom_events": "60",
+    "game_starts": "16",
+    "game_completes": "8"
+  },
+  {
+    "day": "2026-10-22",
+    "pageviews": "11",
+    "sessions": "6",
+    "visits": "7",
+    "custom_events": "27",
+    "game_starts": "7",
+    "game_completes": "4"
+  },
+  {
+    "day": "2026-10-23",
+    "pageviews": "38",
+    "sessions": "10",
+    "visits": "14",
+    "custom_events": "112",
+    "game_starts": "34",
+    "game_completes": "14"
+  },
+  {
+    "day": "2026-10-24",
+    "pageviews": "14",
+    "sessions": "5",
+    "visits": "7",
+    "custom_events": "15",
+    "game_starts": "4",
+    "game_completes": "2"
+  },
+  {
+    "day": "2026-10-25",
+    "pageviews": "78",
+    "sessions": "13",
+    "visits": "22",
+    "custom_events": "156",
+    "game_starts": "39",
+    "game_completes": "17"
+  },
+  {
+    "day": "2026-10-26",
+    "pageviews": "370",
+    "sessions": "94",
+    "visits": "131",
+    "custom_events": "720",
+    "game_starts": "160",
+    "game_completes": "94"
+  },
+  {
+    "day": "2026-10-27",
+    "pageviews": "468",
+    "sessions": "94",
+    "visits": "146",
+    "custom_events": "801",
+    "game_starts": "201",
+    "game_completes": "100"
+  },
+  {
+    "day": "2026-10-28",
+    "pageviews": "144",
+    "sessions": "36",
+    "visits": "53",
+    "custom_events": "277",
+    "game_starts": "66",
+    "game_completes": "33"
+  },
+  {
+    "day": "2026-11-02",
+    "pageviews": "74",
+    "sessions": "30",
+    "visits": "36",
+    "custom_events": "162",
+    "game_starts": "38",
+    "game_completes": "33"
+  },
+  {
+    "day": "2026-11-03",
+    "pageviews": "154",
+    "sessions": "38",
+    "visits": "60",
+    "custom_events": "408",
+    "game_starts": "97",
+    "game_completes": "74"
+  },
+  {
+    "day": "2026-11-04",
+    "pageviews": "108",
+    "sessions": "32",
+    "visits": "52",
+    "custom_events": "286",
+    "game_starts": "66",
+    "game_completes": "51"
+  },
+  {
+    "day": "2026-11-05",
+    "pageviews": "140",
+    "sessions": "46",
+    "visits": "55",
+    "custom_events": "311",
+    "game_starts": "66",
+    "game_completes": "60"
+  },
+  {
+    "day": "2026-11-06",
+    "pageviews": "124",
+    "sessions": "37",
+    "visits": "52",
+    "custom_events": "276",
+    "game_starts": "61",
+    "game_completes": "55"
+  },
+  {
+    "day": "2026-11-07",
+    "pageviews": "103",
+    "sessions": "29",
+    "visits": "47",
+    "custom_events": "378",
+    "game_starts": "89",
+    "game_completes": "63"
+  },
+  {
+    "day": "2026-11-08",
+    "pageviews": "127",
+    "sessions": "27",
+    "visits": "51",
+    "custom_events": "374",
+    "game_starts": "92",
+    "game_completes": "67"
+  },
+  {
+    "day": "2026-11-09",
+    "pageviews": "5",
+    "sessions": "3",
+    "visits": "3",
+    "custom_events": "16",
+    "game_starts": "5",
+    "game_completes": "1"
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "url_path": "/",
+    "sessions": "323",
+    "started_any": "244",
+    "started_daily": "185",
+    "started_puzzle": "104",
+    "started_solo": "102",
+    "started_multi": "6"
+  },
+  {
+    "url_path": "/puzzle",
+    "sessions": "50",
+    "started_any": "35",
+    "started_daily": "18",
+    "started_puzzle": "33",
+    "started_solo": "3",
+    "started_multi": "0"
+  },
+  {
+    "url_path": "/daily",
+    "sessions": "45",
+    "started_any": "29",
+    "started_daily": "29",
+    "started_puzzle": "6",
+    "started_solo": "4",
+    "started_multi": "0"
+  },
+  {
+    "url_path": "/practice",
+    "sessions": "14",
+    "started_any": "13",
+    "started_daily": "4",
+    "started_puzzle": "6",
+    "started_solo": "11",
+    "started_multi": "1"
+  },
+  {
+    "url_path": "/stats",
+    "sessions": "7",
+    "started_any": "5",
+    "started_daily": "4",
+    "started_puzzle": "3",
+    "started_solo": "3",
+    "started_multi": "0"
+  }
+]

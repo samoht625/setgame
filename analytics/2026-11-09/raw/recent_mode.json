@@ -1,0 +1,260 @@
+[
+  {
+    "label": "last_7d",
+    "event_name": "daily_share",
+    "mode": "(none)",
+    "n": "29"
+  },
+  {
+    "label": "last_7d",
+    "event_name": "first_set",
+    "mode": "solo",
+    "n": "232"
+  },
+  {
+    "label": "last_7d",
+    "event_name": "first_set",
+    "mode": "daily",
+    "n": "130"
+  },
+  {
+    "label": "last_7d",
+    "event_name": "first_set",
+    "mode": "puzzle",
+    "n": "118"
+  },
+  {
+    "label": "last_7d",
+    "event_name": "first_set",
+    "mode": "multi",
+    "n": "1"
+  },
+  {
+    "label": "last_7d",
+    "event_name": "game_complete",
+    "mode": "solo",
+    "n": "178"
+  },
+  {
+    "label": "last_7d",
+    "event_name": "game_complete",
+    "mode": "puzzle",
+    "n": "116"
+  },
+  {
+    "label": "last_7d",
+    "event_name": "game_complete",
+    "mode": "daily",
+    "n": "110"
+  },
+  {
+    "label": "last_7d",
+    "event_name": "game_quit",
+    "mode": "solo",
+    "n": "95"
+  },
+  {
+    "label": "last_7d",
+    "event_name": "game_quit",
+    "mode": "daily",
+    "n": "24"
+  },
+  {
+    "label": "last_7d",
+    "event_name": "game_quit",
+    "mode": "puzzle",
+    "n": "6"
+  },
+  {
+    "label": "last_7d",
+    "event_name": "game_quit",
+    "mode": "multi",
+    "n": "2"
+  },
+  {
+    "label": "last_7d",
+    "event_name": "game_start",
+    "mode": "solo",
+    "n": "260"
+  },
+  {
+    "label": "last_7d",
+    "event_name": "game_start",
+    "mode": "daily",
+    "n": "132"
+  },
+  {
+    "label": "last_7d",
+    "event_name": "game_start",
+    "mode": "puzzle",
+    "n": "120"
+  },
+  {
+    "label": "last_7d",
+    "event_name": "game_start",
+    "mode": "multi",
+    "n": "2"
+  },
+  {
+    "label": "last_7d",
+    "event_name": "multiplayer_join",
+    "mode": "(none)",
+    "n": "2"
+  },
+  {
+    "label": "last_7d",
+    "event_name": "puzzle_share",
+    "mode": "(none)",
+    "n": "45"
+  },
+  {
+    "label": "last_7d",
+    "event_name": "reminder_prompt",
+    "mode": "(none)",
+    "n": "138"
+  },
+  {
+    "label": "last_7d",
+    "event_name": "tour_complete",
+    "mode": "(none)",
+    "n": "21"
+  },
+  {
+    "label": "last_7d",
+    "event_name": "tour_start",
+    "mode": "(none)",
+    "n": "67"
+  },
+  {
+    "label": "prev_7d",
+    "event_name": "daily_share",
+    "mode": "(none)",
+    "n": "12"
+  },
+  {
+    "label": "prev_7d",
+    "event_name": "first_set",
+    "mode": "daily",
+    "n": "137"
+  },
+  {
+    "label": "prev_7d",
+    "event_name": "first_set",
+    "mode": "solo",
+    "n": "104"
+  },
+  {
+    "label": "prev_7d",
+    "event_name": "first_set",
+    "mode": "puzzle",
+    "n": "84"
+  },
+  {
+    "label": "prev_7d",
+    "event_name": "first_set",
+    "mode": "multi",
+    "n": "7"
+  },
+  {
+    "label": "prev_7d",
+    "event_name": "game_complete",
+    "mode": "daily",
+    "n": "97"
+  },
+  {
+    "label": "prev_7d",
+    "event_name": "game_complete",
+    "mode": "puzzle",
+    "n": "70"
+  },
+  {
+    "label": "prev_7d",
+    "event_name": "game_complete",
+    "mode": "solo",
+    "n": "46"
+  },
+  {
+    "label": "prev_7d",
+    "event_name": "game_complete",
+    "mode": "multi",
+    "n": "5"
+  },
+  {
+    "label": "prev_7d",
+    "event_name": "game_quit",
+    "mode": "solo",
+    "n": "126"
+  },
+  {
+    "label": "prev_7d",
+    "event_name": "game_quit",
+    "mode": "daily",
+    "n": "43"
+  },
+  {
+    "label": "prev_7d",
+    "event_name": "game_quit",
+    "mode": "puzzle",
+    "n": "8"
+  },
+  {
+    "label": "prev_7d",
+    "event_name": "game_quit",
+    "mode": "multi",
+    "n": "3"
+  },
+  {
+    "label": "prev_7d",
+    "event_name": "game_start",
+    "mode": "solo",
+    "n": "178"
+  },
+  {
+    "label": "prev_7d",
+    "event_name": "game_start",
+    "mode": "daily",
+    "n": "143"
+  },
+  {
+    "label": "prev_7d",
+    "event_name": "game_start",
+    "mode": "puzzle",
+    "n": "88"
+  },
+  {
+    "label": "prev_7d",
+    "event_name": "game_start",
+    "mode": "multi",
+    "n": "8"
+  },
+  {
+    "label": "prev_7d",
+    "event_name": "multiplayer_join",
+    "mode": "(none)",
+    "n": "22"
+  },
+  {
+    "label": "prev_7d",
+    "event_name": "puzzle_share",
+    "mode": "(none)",
+    "n": "31"
+  },
+  {
+    "label": "prev_7d",
+    "event_name": "reminder_prompt",
+    "mode": "(none)",
+    "n": "45"
+  },
+  {
+    "label": "prev_7d",
+    "event_name": "tour_complete",
+    "mode": "(none)",
+    "n": "80"
+  },
+  {
+    "label": "prev_7d",
+    "event_name": "tour_start",
+    "mode": "(none)",
+    "n": "135"
+  }
+]

@@ -1,0 +1,762 @@
+[
+  {
+    "device": "mobile",
+    "browser": "ios",
+    "os": "iOS",
+    "language": "en-US",
+    "country": "US",
+    "sessions": "98"
+  },
+  {
+    "device": "mobile",
+    "browser": "chrome",
+    "os": "Android OS",
+    "language": "en-US",
+    "country": "US",
+    "sessions": "45"
+  },
+  {
+    "device": "mobile",
+    "browser": "crios",
+    "os": "iOS",
+    "language": "en-US",
+    "country": "US",
+    "sessions": "44"
+  },
+  {
+    "device": "laptop",
+    "browser": "chrome",
+    "os": "Mac OS",
+    "language": "en-US",
+    "country": "US",
+    "sessions": "30"
+  },
+  {
+    "device": "mobile",
+    "browser": "samsung",
+    "os": "Android OS",
+    "language": "en-US",
+    "country": "US",
+    "sessions": "24"
+  },
+  {
+    "device": "mobile",
+    "browser": "firefox",
+    "os": "Android OS",
+    "language": "en-US",
+    "country": "US",
+    "sessions": "21"
+  },
+  {
+    "device": "laptop",
+    "browser": "chrome",
+    "os": "Windows 10",
+    "language": "en-US",
+    "country": "US",
+    "sessions": "18"
+  },
+  {
+    "device": "mobile",
+    "browser": "ios",
+    "os": "iOS",
+    "language": "en-GB",
+    "country": "NL",
+    "sessions": "18"
+  },
+  {
+    "device": "mobile",
+    "browser": "ios",
+    "os": "iOS",
+    "language": "en-GB",
+    "country": "IE",
+    "sessions": "13"
+  },
+  {
+    "device": "mobile",
+    "browser": "ios",
+    "os": "iOS",
+    "language": "nl-NL",
+    "country": "NL",
+    "sessions": "11"
+  },
+  {
+    "device": "mobile",
+    "browser": "ios",
+    "os": "iOS",
+    "language": "en-GB",
+    "country": "GB",
+    "sessions": "10"
+  },
+  {
+    "device": "laptop",
+    "browser": "firefox",
+    "os": "Windows 10",
+    "language": "en-US",
+    "country": "US",
+    "sessions": "7"
+  },
+  {
+    "device": "mobile",
+    "browser": "chrome",
+    "os": "Android OS",
+    "language": "pt-BR",
+    "country": "GB",
+    "sessions": "5"
+  },
+  {
+    "device": "mobile",
+    "browser": "ios",
+    "os": "iOS",
+    "language": "de-DE",
+    "country": "DE",
+    "sessions": "5"
+  },
+  {
+    "device": "mobile",
+    "browser": "crios",
+    "os": "iOS",
+    "language": "en-CA",
+    "country": "CA",
+    "sessions": "5"
+  },
+  {
+    "device": "mobile",
+    "browser": "ios",
+    "os": "iOS",
+    "language": "en-GB",
+    "country": "DE",
+    "sessions": "4"
+  },
+  {
+    "device": "desktop",
+    "browser": "chrome",
+    "os": "Windows 10",
+    "language": "en-US",
+    "country": "US",
+    "sessions": "4"
+  },
+  {
+    "device": "laptop",
+    "browser": "safari",
+    "os": "Mac OS",
+    "language": "en-US",
+    "country": "US",
+    "sessions": "4"
+  },
+  {
+    "device": "mobile",
+    "browser": "chrome",
+    "os": "Android OS",
+    "language": "de-DE",
+    "country": "DE",
+    "sessions": "3"
+  },
+  {
+    "device": "mobile",
+    "browser": "chrome",
+    "os": "Android OS",
+    "language": "en-US",
+    "country": "SE",
+    "sessions": "3"
+  },
+  {
+    "device": "mobile",
+    "browser": "ios",
+    "os": "iOS",
+    "language": "en-US@posix",
+    "country": "US",
+    "sessions": "3"
+  },
+  {
+    "device": "mobile",
+    "browser": "chrome",
+    "os": "Android OS",
+    "language": "en-GB",
+    "country": "GB",
+    "sessions": "3"
+  },
+  {
+    "device": "desktop",
+    "browser": "chrome",
+    "os": "Mac OS",
+    "language": "en-US",
+    "country": "US",
+    "sessions": "3"
+  },
+  {
+    "device": "mobile",
+    "browser": "firefox",
+    "os": "Android OS",
+    "language": "en-NZ",
+    "country": "NZ",
+    "sessions": "3"
+  },
+  {
+    "device": "laptop",
+    "browser": "chrome",
+    "os": "Linux",
+    "language": "en-US",
+    "country": "US",
+    "sessions": "3"
+  },
+  {
+    "device": "tablet",
+    "browser": "chrome",
+    "os": "Android OS",
+    "language": "en-US",
+    "country": "US",
+    "sessions": "2"
+  },
+  {
+    "device": "mobile",
+    "browser": "firefox",
+    "os": "Android OS",
+    "language": "en-GB",
+    "country": "SE",
+    "sessions": "2"
+  },
+  {
+    "device": "laptop",
+    "browser": "chrome",
+    "os": "Mac OS",
+    "language": "en-US",
+    "country": "DE",
+    "sessions": "2"
+  },
+  {
+    "device": "mobile",
+    "browser": "crios",
+    "os": "iOS",
+    "language": "en-US",
+    "country": "GB",
+    "sessions": "2"
+  },
+  {
+    "device": "mobile",
+    "browser": "chrome",
+    "os": "Android OS",
+    "language": "en-AU",
+    "country": "AU",
+    "sessions": "2"
+  },
+  {
+    "device": "laptop",
+    "browser": "firefox",
+    "os": "Mac OS",
+    "language": "en-GB",
+    "country": "GB",
+    "sessions": "2"
+  },
+  {
+    "device": "mobile",
+    "browser": "chrome",
+    "os": "Android OS",
+    "language": "en-GB",
+    "country": "CH",
+    "sessions": "2"
+  },
+  {
+    "device": "desktop",
+    "browser": "firefox",
+    "os": "Windows 10",
+    "language": "en-GB",
+    "country": "NL",
+    "sessions": "2"
+  },
+  {
+    "device": "desktop",
+    "browser": "chrome",
+    "os": "Windows 10",
+    "language": "en-US",
+    "country": "CA",
+    "sessions": "2"
+  },
+  {
+    "device": "mobile",
+    "browser": "chromium-webview",
+    "os": "Android OS",
+    "language": "de-DE",
+    "country": "DE",
+    "sessions": "2"
+  },
+  {
+    "device": "laptop",
+    "browser": "edge-chromium",
+    "os": "Windows 10",
+    "language": "en-GB",
+    "country": "GB",
+    "sessions": "1"
+  },
+  {
+    "device": "laptop",
+    "browser": "chrome",
+    "os": "Mac OS",
+    "language": "en-US",
+    "country": "NZ",
+    "sessions": "1"
+  },
+  {
+    "device": "laptop",
+    "browser": "chrome",
+    "os": "Windows 10",
+    "language": "en-US",
+    "country": "CA",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "firefox",
+    "os": "Android OS",
+    "language": "en-GB",
+    "country": "GB",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "firefox",
+    "os": "Android OS",
+    "language": "en-US",
+    "country": "CA",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "chrome",
+    "os": "Android OS",
+    "language": "en-GB",
+    "country": "ID",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "samsung",
+    "os": "Android OS",
+    "language": "de-DE",
+    "country": "DE",
+    "sessions": "1"
+  },
+  {
+    "device": "laptop",
+    "browser": "chrome",
+    "os": "Mac OS",
+    "language": "en-US",
+    "country": "NO",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "firefox",
+    "os": "Android OS",
+    "language": "en-GB",
+    "country": "NL",
+    "sessions": "1"
+  },
+  {
+    "device": "laptop",
+    "browser": "safari",
+    "os": "Mac OS",
+    "language": "de-DE",
+    "country": "DE",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "ios-webview",
+    "os": "iOS",
+    "language": "en-GB",
+    "country": "DE",
+    "sessions": "1"
+  },
+  {
+    "device": "laptop",
+    "browser": "firefox",
+    "os": "Windows 10",
+    "language": "en-CA",
+    "country": "CA",
+    "sessions": "1"
+  },
+  {
+    "device": "laptop",
+    "browser": "chrome",
+    "os": "Linux",
+    "language": "en-GB",
+    "country": "CH",
+    "sessions": "1"
+  },
+  {
+    "device": "laptop",
+    "browser": "edge-chromium",
+    "os": "Windows 10",
+    "language": "nl",
+    "country": "NL",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "firefox",
+    "os": "Android OS",
+    "language": "sv-SE",
+    "country": "SE",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "crios",
+    "os": "iOS",
+    "language": "en-US",
+    "country": "PA",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "samsung",
+    "os": "Android OS",
+    "language": "pl-PL",
+    "country": "PL",
+    "sessions": "1"
+  },
+  {
+    "device": "laptop",
+    "browser": "firefox",
+    "os": "Windows 10",
+    "language": "en-GB",
+    "country": "DE",
+    "sessions": "1"
+  },
+  {
+    "device": "desktop",
+    "browser": "chrome",
+    "os": "Windows 10",
+    "language": "en-US",
+    "country": "NO",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "chrome",
+    "os": "Android OS",
+    "language": "uk",
+    "country": "UA",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "firefox",
+    "os": "Android OS",
+    "language": "en-GB",
+    "country": "DE",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "ios-webview",
+    "os": "iOS",
+    "language": "da-DK",
+    "country": "DK",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "ios",
+    "os": "iOS",
+    "language": "en-GB",
+    "country": "PL",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "chromium-webview",
+    "os": "Android OS",
+    "language": "en-US",
+    "country": "US",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "firefox",
+    "os": "Android OS",
+    "language": "en-GB",
+    "country": "CH",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "chromium-webview",
+    "os": "Android OS",
+    "language": "sv-SE",
+    "country": "SE",
+    "sessions": "1"
+  },
+  {
+    "device": "laptop",
+    "browser": "opera",
+    "os": "Windows 10",
+    "language": "en-GB",
+    "country": "GB",
+    "sessions": "1"
+  },
+  {
+    "device": "laptop",
+    "browser": "chrome",
+    "os": "Mac OS",
+    "language": "en-US",
+    "country": "PT",
+    "sessions": "1"
+  },
+  {
+    "device": "laptop",
+    "browser": "chrome",
+    "os": "Mac OS",
+    "language": "en-US",
+    "country": "MX",
+    "sessions": "1"
+  },
+  {
+    "device": "laptop",
+    "browser": "chrome",
+    "os": "Mac OS",
+    "language": "en-GB",
+    "country": "GB",
+    "sessions": "1"
+  },
+  {
+    "device": "laptop",
+    "browser": "chrome",
+    "os": "Mac OS",
+    "language": "nl-NL",
+    "country": "NL",
+    "sessions": "1"
+  },
+  {
+    "device": "laptop",
+    "browser": "firefox",
+    "os": "Linux",
+    "language": "en-US",
+    "country": "SI",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "firefox",
+    "os": "Android OS",
+    "language": "en-GB",
+    "country": "IL",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "ios",
+    "os": "iOS",
+    "language": "en-GB",
+    "country": "US",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "firefox",
+    "os": "Android OS",
+    "language": "en-DE",
+    "country": "DE",
+    "sessions": "1"
+  },
+  {
+    "device": "laptop",
+    "browser": "firefox",
+    "os": "Linux",
+    "language": "en-US",
+    "country": "US",
+    "sessions": "1"
+  },
+  {
+    "device": "laptop",
+    "browser": "chrome",
+    "os": "Mac OS",
+    "language": "en-US",
+    "country": "NL",
+    "sessions": "1"
+  },
+  {
+    "device": "laptop",
+    "browser": "edge-chromium",
+    "os": "Windows 10",
+    "language": "en-IE",
+    "country": "IE",
+    "sessions": "1"
+  },
+  {
+    "device": "laptop",
+    "browser": "firefox",
+    "os": "Mac OS",
+    "language": "en-US",
+    "country": "CA",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "chrome",
+    "os": "Android OS",
+    "language": "it-IT",
+    "country": "IT",
+    "sessions": "1"
+  },
+  {
+    "device": "laptop",
+    "browser": "firefox",
+    "os": "Windows 10",
+    "language": "es-ES",
+    "country": "ES",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "ios",
+    "os": "iOS",
+    "language": "en-GB",
+    "country": "CZ",
+    "sessions": "1"
+  },
+  {
+    "device": "laptop",
+    "browser": "chrome",
+    "os": "Chrome OS",
+    "language": "en-GB",
+    "country": "GB",
+    "sessions": "1"
+  },
+  {
+    "device": "laptop",
+    "browser": "chrome",
+    "os": "Linux",
+    "language": "en-US",
+    "country": "NL",
+    "sessions": "1"
+  },
+  {
+    "device": "desktop",
+    "browser": "chrome",
+    "os": "Linux",
+    "language": "en-US",
+    "country": "US",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "chrome",
+    "os": "Android OS",
+    "language": "en-NL",
+    "country": "NL",
+    "sessions": "1"
+  },
+  {
+    "device": "laptop",
+    "browser": "chrome",
+    "os": "Windows 10",
+    "language": "en-NL",
+    "country": "NL",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "chromium-webview",
+    "os": "Android OS",
+    "language": "en-GB",
+    "country": "GB",
+    "sessions": "1"
+  },
+  {
+    "device": "desktop",
+    "browser": "firefox",
+    "os": "Mac OS",
+    "language": "en-US",
+    "country": "US",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "ios",
+    "os": "iOS",
+    "language": "en-US",
+    "country": "MX",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "ios",
+    "os": "iOS",
+    "language": "en-CA",
+    "country": "CA",
+    "sessions": "1"
+  },
+  {
+    "device": "laptop",
+    "browser": "chrome",
+    "os": "Mac OS",
+    "language": "en-US",
+    "country": "DK",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "samsung",
+    "os": "Android OS",
+    "language": "en-GB",
+    "country": "GB",
+    "sessions": "1"
+  },
+  {
+    "device": "laptop",
+    "browser": "firefox",
+    "os": "Windows 10",
+    "language": "en-US",
+    "country": "NL",
+    "sessions": "1"
+  },
+  {
+    "device": "desktop",
+    "browser": "firefox",
+    "os": "Mac OS",
+    "language": "en-US",
+    "country": "CZ",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "chrome",
+    "os": "Android OS",
+    "language": "nl-NL",
+    "country": "NL",
+    "sessions": "1"
+  },
+  {
+    "device": "desktop",
+    "browser": "firefox",
+    "os": "Windows 10",
+    "language": "en-US",
+    "country": "US",
+    "sessions": "1"
+  },
+  {
+    "device": "desktop",
+    "browser": "chrome",
+    "os": "Windows 10",
+    "language": "en-GB",
+    "country": "NZ",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "chrome",
+    "os": "Android OS",
+    "language": "fr-FR",
+    "country": "FR",
+    "sessions": "1"
+  },
+  {
+    "device": "mobile",
+    "browser": "ios-webview",
+    "os": "iOS",
+    "language": "en-US",
+    "country": "US",
+    "sessions": "1"
+  }
+]

@@ -1,0 +1,34 @@
+[
+  {
+    "mode": "daily",
+    "sessions_started": "240",
+    "found_a_set": "231",
+    "reached_10": "184",
+    "completed": "170",
+    "quit_at_least_once": "57"
+  },
+  {
+    "mode": "puzzle",
+    "sessions_started": "153",
+    "found_a_set": "148",
+    "reached_10": "0",
+    "completed": "130",
+    "quit_at_least_once": "11"
+  },
+  {
+    "mode": "solo",
+    "sessions_started": "132",
+    "found_a_set": "96",
+    "reached_10": "64",
+    "completed": "52",
+    "quit_at_least_once": "92"
+  },
+  {
+    "mode": "multi",
+    "sessions_started": "7",
+    "found_a_set": "6",
+    "reached_10": "3",
+    "completed": "4",
+    "quit_at_least_once": "5"
+  }
+]

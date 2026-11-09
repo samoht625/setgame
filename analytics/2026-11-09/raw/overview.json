@@ -1,0 +1,58 @@
+[
+  {
+    "label": "all_time",
+    "pageviews": "2485",
+    "sessions_with_pageview": "506",
+    "visits": "1031",
+    "custom_events": "5502",
+    "sessions_with_event": "410"
+  },
+  {
+    "label": "before_events",
+    "pageviews": "198",
+    "sessions_with_pageview": "68",
+    "visits": "138",
+    "custom_events": "0",
+    "sessions_with_event": "0"
+  },
+  {
+    "label": "last_24h",
+    "pageviews": "127",
+    "sessions_with_pageview": "27",
+    "visits": "51",
+    "custom_events": "351",
+    "sessions_with_event": "22"
+  },
+  {
+    "label": "last_30d",
+    "pageviews": "2079",
+    "sessions_with_pageview": "398",
+    "visits": "813",
+    "custom_events": "4859",
+    "sessions_with_event": "375"
+  },
+  {
+    "label": "last_7d",
+    "pageviews": "835",
+    "sessions_with_pageview": "148",
+    "visits": "356",
+    "custom_events": "2211",
+    "sessions_with_event": "120"
+  },
+  {
+    "label": "prev_7d",
+    "pageviews": "947",
+    "sessions_with_pageview": "185",
+    "visits": "317",
+    "custom_events": "1744",
+    "sessions_with_event": "171"
+  },
+  {
+    "label": "since_events",
+    "pageviews": "2287",
+    "sessions_with_pageview": "439",
+    "visits": "893",
+    "custom_events": "5502",
+    "sessions_with_event": "410"
+  }
+]

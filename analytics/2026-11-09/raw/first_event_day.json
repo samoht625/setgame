@@ -1,0 +1,98 @@
+[
+  {
+    "event_name": "daily_share",
+    "first_day": "2026-10-04",
+    "last_day": "2026-11-08",
+    "n": "88"
+  },
+  {
+    "event_name": "first_set",
+    "first_day": "2026-10-04",
+    "last_day": "2026-11-09",
+    "n": "1107"
+  },
+  {
+    "event_name": "game_complete",
+    "first_day": "2026-10-04",
+    "last_day": "2026-11-09",
+    "n": "847"
+  },
+  {
+    "event_name": "game_quit",
+    "first_day": "2026-10-04",
+    "last_day": "2026-11-09",
+    "n": "496"
+  },
+  {
+    "event_name": "game_start",
+    "first_day": "2026-10-04",
+    "last_day": "2026-11-09",
+    "n": "1307"
+  },
+  {
+    "event_name": "multiplayer_join",
+    "first_day": "2026-10-04",
+    "last_day": "2026-11-07",
+    "n": "44"
+  },
+  {
+    "event_name": "set_10",
+    "first_day": "2026-10-04",
+    "last_day": "2026-11-09",
+    "n": "736"
+  },
+  {
+    "event_name": "tour_complete",
+    "first_day": "2026-10-04",
+    "last_day": "2026-11-09",
+    "n": "141"
+  },
+  {
+    "event_name": "tour_start",
+    "first_day": "2026-10-04",
+    "last_day": "2026-11-09",
+    "n": "278"
+  },
+  {
+    "event_name": "daily_compare",
+    "first_day": "2026-10-05",
+    "last_day": "2026-11-07",
+    "n": "37"
+  },
+  {
+    "event_name": "daily_name",
+    "first_day": "2026-10-05",
+    "last_day": "2026-11-08",
+    "n": "48"
+  },
+  {
+    "event_name": "tour_skip",
+    "first_day": "2026-10-05",
+    "last_day": "2026-11-08",
+    "n": "87"
+  },
+  {
+    "event_name": "puzzle_name",
+    "first_day": "2026-10-25",
+    "last_day": "2026-11-07",
+    "n": "18"
+  },
+  {
+    "event_name": "puzzle_share",
+    "first_day": "2026-10-26",
+    "last_day": "2026-11-08",
+    "n": "76"
+  },
+  {
+    "event_name": "sign_in_request",
+    "first_day": "2026-10-26",
+    "last_day": "2026-11-06",
+    "n": "9"
+  },
+  {
+    "event_name": "reminder_prompt",
+    "first_day": "2026-10-27",
+    "last_day": "2026-11-08",
+    "n": "183"
+  }
+]

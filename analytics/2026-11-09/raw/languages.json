@@ -1,0 +1,62 @@
+[
+  {
+    "language": "en-US",
+    "sessions": "334"
+  },
+  {
+    "language": "en-GB",
+    "sessions": "75"
+  },
+  {
+    "language": "nl-NL",
+    "sessions": "13"
+  },
+  {
+    "language": "de-DE",
+    "sessions": "12"
+  },
+  {
+    "language": "en-CA",
+    "sessions": "7"
+  },
+  {
+    "language": "pt-BR",
+    "sessions": "5"
+  },
+  {
+    "language": "en-US@posix",
+    "sessions": "3"
+  },
+  {
+    "language": "en-NZ",
+    "sessions": "3"
+  },
+  {
+    "language": "sv-SE",
+    "sessions": "2"
+  },
+  {
+    "language": "en-AU",
+    "sessions": "2"
+  },
+  {
+    "language": "en-NL",
+    "sessions": "2"
+  },
+  {
+    "language": "nl",
+    "sessions": "1"
+  },
+  {
+    "language": "da-DK",
+    "sessions": "1"
+  },
+  {
+    "language": "uk",
+    "sessions": "1"
+  },
+  {
+    "language": "it-IT",
+    "sessions": "1"
+  }
+]

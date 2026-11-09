@@ -1,0 +1,18 @@
+[
+  {
+    "device": "mobile",
+    "sessions": "357"
+  },
+  {
+    "device": "laptop",
+    "sessions": "91"
+  },
+  {
+    "device": "desktop",
+    "sessions": "17"
+  },
+  {
+    "device": "tablet",
+    "sessions": "2"
+  }
+]

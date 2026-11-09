@@ -1,0 +1,22 @@
+[
+  {
+    "url_path": "/",
+    "sessions": "323"
+  },
+  {
+    "url_path": "/puzzle",
+    "sessions": "50"
+  },
+  {
+    "url_path": "/daily",
+    "sessions": "45"
+  },
+  {
+    "url_path": "/practice",
+    "sessions": "14"
+  },
+  {
+    "url_path": "/stats",
+    "sessions": "7"
+  }
+]

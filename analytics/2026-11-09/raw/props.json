@@ -1,0 +1,296 @@
+[
+  {
+    "event_name": "daily_name",
+    "data_key": "from",
+    "value": "card",
+    "n": "48"
+  },
+  {
+    "event_name": "daily_share",
+    "data_key": "outcome",
+    "value": "shared",
+    "n": "73"
+  },
+  {
+    "event_name": "daily_share",
+    "data_key": "outcome",
+    "value": "copied",
+    "n": "10"
+  },
+  {
+    "event_name": "daily_share",
+    "data_key": "outcome",
+    "value": "cancelled",
+    "n": "5"
+  },
+  {
+    "event_name": "first_set",
+    "data_key": "mode",
+    "value": "solo",
+    "n": "545"
+  },
+  {
+    "event_name": "first_set",
+    "data_key": "mode",
+    "value": "daily",
+    "n": "342"
+  },
+  {
+    "event_name": "first_set",
+    "data_key": "mode",
+    "value": "puzzle",
+    "n": "209"
+  },
+  {
+    "event_name": "first_set",
+    "data_key": "mode",
+    "value": "multi",
+    "n": "11"
+  },
+  {
+    "event_name": "game_complete",
+    "data_key": "mode",
+    "value": "solo",
+    "n": "372"
+  },
+  {
+    "event_name": "game_complete",
+    "data_key": "mode",
+    "value": "daily",
+    "n": "275"
+  },
+  {
+    "event_name": "game_complete",
+    "data_key": "mode",
+    "value": "puzzle",
+    "n": "193"
+  },
+  {
+    "event_name": "game_complete",
+    "data_key": "mode",
+    "value": "multi",
+    "n": "7"
+  },
+  {
+    "event_name": "game_complete",
+    "data_key": "ranked",
+    "value": "true",
+    "n": "829"
+  },
+  {
+    "event_name": "game_complete",
+    "data_key": "ranked",
+    "value": "false",
+    "n": "11"
+  },
+  {
+    "event_name": "game_quit",
+    "data_key": "mode",
+    "value": "solo",
+    "n": "402"
+  },
+  {
+    "event_name": "game_quit",
+    "data_key": "mode",
+    "value": "daily",
+    "n": "74"
+  },
+  {
+    "event_name": "game_quit",
+    "data_key": "mode",
+    "value": "puzzle",
+    "n": "14"
+  },
+  {
+    "event_name": "game_quit",
+    "data_key": "mode",
+    "value": "multi",
+    "n": "6"
+  },
+  {
+    "event_name": "game_quit",
+    "data_key": "reason",
+    "value": "page_hide",
+    "n": "193"
+  },
+  {
+    "event_name": "game_quit",
+    "data_key": "reason",
+    "value": "new_game",
+    "n": "164"
+  },
+  {
+    "event_name": "game_quit",
+    "data_key": "reason",
+    "value": "idle",
+    "n": "135"
+  },
+  {
+    "event_name": "game_quit",
+    "data_key": "reason",
+    "value": "leave",
+    "n": "4"
+  },
+  {
+    "event_name": "game_start",
+    "data_key": "mode",
+    "value": "solo",
+    "n": "727"
+  },
+  {
+    "event_name": "game_start",
+    "data_key": "mode",
+    "value": "daily",
+    "n": "352"
+  },
+  {
+    "event_name": "game_start",
+    "data_key": "mode",
+    "value": "puzzle",
+    "n": "215"
+  },
+  {
+    "event_name": "game_start",
+    "data_key": "mode",
+    "value": "multi",
+    "n": "13"
+  },
+  {
+    "event_name": "game_start",
+    "data_key": "ranked",
+    "value": "true",
+    "n": "1287"
+  },
+  {
+    "event_name": "game_start",
+    "data_key": "ranked",
+    "value": "false",
+    "n": "7"
+  },
+  {
+    "event_name": "game_start",
+    "data_key": "resumed",
+    "value": "false",
+    "n": "215"
+  },
+  {
+    "event_name": "puzzle_name",
+    "data_key": "from",
+    "value": "card",
+    "n": "18"
+  },
+  {
+    "event_name": "puzzle_share",
+    "data_key": "outcome",
+    "value": "shared",
+    "n": "51"
+  },
+  {
+    "event_name": "puzzle_share",
+    "data_key": "outcome",
+    "value": "copied",
+    "n": "20"
+  },
+  {
+    "event_name": "puzzle_share",
+    "data_key": "outcome",
+    "value": "cancelled",
+    "n": "5"
+  },
+  {
+    "event_name": "reminder_prompt",
+    "data_key": "action",
+    "value": "shown",
+    "n": "95"
+  },
+  {
+    "event_name": "reminder_prompt",
+    "data_key": "action",
+    "value": "not_now",
+    "n": "60"
+  },
+  {
+    "event_name": "reminder_prompt",
+    "data_key": "action",
+    "value": "outside",
+    "n": "23"
+  },
+  {
+    "event_name": "reminder_prompt",
+    "data_key": "action",
+    "value": "escape",
+    "n": "2"
+  },
+  {
+    "event_name": "reminder_prompt",
+    "data_key": "action",
+    "value": "close",
+    "n": "2"
+  },
+  {
+    "event_name": "reminder_prompt",
+    "data_key": "action",
+    "value": "swipe",
+    "n": "1"
+  },
+  {
+    "event_name": "set_10",
+    "data_key": "mode",
+    "value": "solo",
+    "n": "439"
+  },
+  {
+    "event_name": "set_10",
+    "data_key": "mode",
+    "value": "daily",
+    "n": "290"
+  },
+  {
+    "event_name": "set_10",
+    "data_key": "mode",
+    "value": "multi",
+    "n": "7"
+  },
+  {
+    "event_name": "sign_in_request",
+    "data_key": "outcome",
+    "value": "sent",
+    "n": "9"
+  },
+  {
+    "event_name": "sign_in_request",
+    "data_key": "reminder",
+    "value": "false",
+    "n": "7"
+  },
+  {
+    "event_name": "sign_in_request",
+    "data_key": "reminder",
+    "value": "true",
+    "n": "2"
+  },
+  {
+    "event_name": "sign_in_request",
+    "data_key": "resend",
+    "value": "false",
+    "n": "8"
+  },
+  {
+    "event_name": "sign_in_request",
+    "data_key": "source",
+    "value": "menu",
+    "n": "5"
+  },
+  {
+    "event_name": "sign_in_request",
+    "data_key": "source",
+    "value": "card",
+    "n": "2"
+  },
+  {
+    "event_name": "sign_in_request",
+    "data_key": "source",
+    "value": "expired",
+    "n": "2"
+  }
+]

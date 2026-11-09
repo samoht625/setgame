@@ -1,0 +1,164 @@
+[
+  {
+    "mode": "daily",
+    "reason": "page_hide",
+    "sets_bucket": "4-9",
+    "n": "23"
+  },
+  {
+    "mode": "daily",
+    "reason": "page_hide",
+    "sets_bucket": "1-3",
+    "n": "18"
+  },
+  {
+    "mode": "daily",
+    "reason": "page_hide",
+    "sets_bucket": "10-19",
+    "n": "17"
+  },
+  {
+    "mode": "daily",
+    "reason": "page_hide",
+    "sets_bucket": "0",
+    "n": "14"
+  },
+  {
+    "mode": "daily",
+    "reason": "page_hide",
+    "sets_bucket": "20+",
+    "n": "2"
+  },
+  {
+    "mode": "multi",
+    "reason": "leave",
+    "sets_bucket": "10-19",
+    "n": "2"
+  },
+  {
+    "mode": "multi",
+    "reason": "leave",
+    "sets_bucket": "1-3",
+    "n": "1"
+  },
+  {
+    "mode": "multi",
+    "reason": "leave",
+    "sets_bucket": "0",
+    "n": "1"
+  },
+  {
+    "mode": "multi",
+    "reason": "page_hide",
+    "sets_bucket": "4-9",
+    "n": "2"
+  },
+  {
+    "mode": "puzzle",
+    "reason": "page_hide",
+    "sets_bucket": "4-9",
+    "n": "5"
+  },
+  {
+    "mode": "puzzle",
+    "reason": "page_hide",
+    "sets_bucket": "0",
+    "n": "5"
+  },
+  {
+    "mode": "puzzle",
+    "reason": "page_hide",
+    "sets_bucket": "1-3",
+    "n": "4"
+  },
+  {
+    "mode": "solo",
+    "reason": "idle",
+    "sets_bucket": "0",
+    "n": "61"
+  },
+  {
+    "mode": "solo",
+    "reason": "idle",
+    "sets_bucket": "10-19",
+    "n": "25"
+  },
+  {
+    "mode": "solo",
+    "reason": "idle",
+    "sets_bucket": "1-3",
+    "n": "21"
+  },
+  {
+    "mode": "solo",
+    "reason": "idle",
+    "sets_bucket": "4-9",
+    "n": "19"
+  },
+  {
+    "mode": "solo",
+    "reason": "idle",
+    "sets_bucket": "20+",
+    "n": "9"
+  },
+  {
+    "mode": "solo",
+    "reason": "new_game",
+    "sets_bucket": "0",
+    "n": "87"
+  },
+  {
+    "mode": "solo",
+    "reason": "new_game",
+    "sets_bucket": "4-9",
+    "n": "26"
+  },
+  {
+    "mode": "solo",
+    "reason": "new_game",
+    "sets_bucket": "1-3",
+    "n": "26"
+  },
+  {
+    "mode": "solo",
+    "reason": "new_game",
+    "sets_bucket": "10-19",
+    "n": "19"
+  },
+  {
+    "mode": "solo",
+    "reason": "new_game",
+    "sets_bucket": "20+",
+    "n": "6"
+  },
+  {
+    "mode": "solo",
+    "reason": "page_hide",
+    "sets_bucket": "0",
+    "n": "66"
+  },
+  {
+    "mode": "solo",
+    "reason": "page_hide",
+    "sets_bucket": "1-3",
+    "n": "12"
+  },
+  {
+    "mode": "solo",
+    "reason": "page_hide",
+    "sets_bucket": "4-9",
+    "n": "11"
+  },
+  {
+    "mode": "solo",
+    "reason": "page_hide",
+    "sets_bucket": "10-19",
+    "n": "10"
+  },
+  {
+    "mode": "solo",
+    "reason": "page_hide",
+    "sets_bucket": "20+",
+    "n": "4"
+  }
+]

@@ -1,0 +1,26 @@
+[
+  {
+    "os": "iOS",
+    "sessions": "222"
+  },
+  {
+    "os": "Android OS",
+    "sessions": "137"
+  },
+  {
+    "os": "Mac OS",
+    "sessions": "53"
+  },
+  {
+    "os": "Windows 10",
+    "sessions": "46"
+  },
+  {
+    "os": "Linux",
+    "sessions": "8"
+  },
+  {
+    "os": "Chrome OS",
+    "sessions": "1"
+  }
+]

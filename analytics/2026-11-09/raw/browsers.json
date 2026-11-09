@@ -1,0 +1,42 @@
+[
+  {
+    "browser": "ios",
+    "sessions": "167"
+  },
+  {
+    "browser": "chrome",
+    "sessions": "149"
+  },
+  {
+    "browser": "firefox",
+    "sessions": "55"
+  },
+  {
+    "browser": "crios",
+    "sessions": "52"
+  },
+  {
+    "browser": "samsung",
+    "sessions": "27"
+  },
+  {
+    "browser": "chromium-webview",
+    "sessions": "5"
+  },
+  {
+    "browser": "safari",
+    "sessions": "5"
+  },
+  {
+    "browser": "edge-chromium",
+    "sessions": "3"
+  },
+  {
+    "browser": "ios-webview",
+    "sessions": "3"
+  },
+  {
+    "browser": "opera",
+    "sessions": "1"
+  }
+]

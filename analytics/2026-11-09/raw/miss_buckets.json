@@ -1,0 +1,82 @@
+[
+  {
+    "mode": "daily",
+    "misses": "0",
+    "n": "118"
+  },
+  {
+    "mode": "daily",
+    "misses": "1-2",
+    "n": "94"
+  },
+  {
+    "mode": "daily",
+    "misses": "11+",
+    "n": "19"
+  },
+  {
+    "mode": "daily",
+    "misses": "3-5",
+    "n": "27"
+  },
+  {
+    "mode": "daily",
+    "misses": "6-10",
+    "n": "17"
+  },
+  {
+    "mode": "multi",
+    "misses": "0",
+    "n": "5"
+  },
+  {
+    "mode": "multi",
+    "misses": "1-2",
+    "n": "2"
+  },
+  {
+    "mode": "puzzle",
+    "misses": "0",
+    "n": "133"
+  },
+  {
+    "mode": "puzzle",
+    "misses": "1-2",
+    "n": "41"
+  },
+  {
+    "mode": "puzzle",
+    "misses": "3-5",
+    "n": "16"
+  },
+  {
+    "mode": "puzzle",
+    "misses": "6-10",
+    "n": "3"
+  },
+  {
+    "mode": "solo",
+    "misses": "0",
+    "n": "196"
+  },
+  {
+    "mode": "solo",
+    "misses": "1-2",
+    "n": "152"
+  },
+  {
+    "mode": "solo",
+    "misses": "11+",
+    "n": "4"
+  },
+  {
+    "mode": "solo",
+    "misses": "3-5",
+    "n": "18"
+  },
+  {
+    "mode": "solo",
+    "misses": "6-10",
+    "n": "2"
+  }
+]

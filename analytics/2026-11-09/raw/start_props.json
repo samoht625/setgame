@@ -1,0 +1,44 @@
+[
+  {
+    "mode": "solo",
+    "ranked": "true",
+    "resumed": "(none)",
+    "starts": "721",
+    "sessions": "131"
+  },
+  {
+    "mode": "daily",
+    "ranked": "true",
+    "resumed": "(none)",
+    "starts": "351",
+    "sessions": "240"
+  },
+  {
+    "mode": "puzzle",
+    "ranked": "true",
+    "resumed": "false",
+    "starts": "215",
+    "sessions": "153"
+  },
+  {
+    "mode": "multi",
+    "ranked": "(none)",
+    "resumed": "(none)",
+    "starts": "13",
+    "sessions": "7"
+  },
+  {
+    "mode": "solo",
+    "ranked": "false",
+    "resumed": "(none)",
+    "starts": "6",
+    "sessions": "6"
+  },
+  {
+    "mode": "daily",
+    "ranked": "false",
+    "resumed": "(none)",
+    "starts": "1",
+    "sessions": "1"
+  }
+]

@@ -1,0 +1,127 @@
+[
+  {
+    "screen": "402x874",
+    "device": "mobile",
+    "sessions": "68"
+  },
+  {
+    "screen": "393x852",
+    "device": "mobile",
+    "sessions": "62"
+  },
+  {
+    "screen": "440x956",
+    "device": "mobile",
+    "sessions": "40"
+  },
+  {
+    "screen": "384x832",
+    "device": "mobile",
+    "sessions": "35"
+  },
+  {
+    "screen": "1728x1117",
+    "device": "laptop",
+    "sessions": "22"
+  },
+  {
+    "screen": "1920x1080",
+    "device": "laptop",
+    "sessions": "21"
+  },
+  {
+    "screen": "390x844",
+    "device": "mobile",
+    "sessions": "17"
+  },
+  {
+    "screen": "375x667",
+    "device": "mobile",
+    "sessions": "14"
+  },
+  {
+    "screen": "360x780",
+    "device": "mobile",
+    "sessions": "12"
+  },
+  {
+    "screen": "360x800",
+    "device": "mobile",
+    "sessions": "11"
+  },
+  {
+    "screen": "412x924",
+    "device": "mobile",
+    "sessions": "11"
+  },
+  {
+    "screen": "414x920",
+    "device": "mobile",
+    "sessions": "10"
+  },
+  {
+    "screen": "414x896",
+    "device": "mobile",
+    "sessions": "10"
+  },
+  {
+    "screen": "2560x1440",
+    "device": "desktop",
+    "sessions": "9"
+  },
+  {
+    "screen": "1512x982",
+    "device": "laptop",
+    "sessions": "7"
+  },
+  {
+    "screen": "412x915",
+    "device": "mobile",
+    "sessions": "7"
+  },
+  {
+    "screen": "800x600",
+    "device": "laptop",
+    "sessions": "6"
+  },
+  {
+    "screen": "448x998",
+    "device": "mobile",
+    "sessions": "5"
+  },
+  {
+    "screen": "1280x800",
+    "device": "laptop",
+    "sessions": "5"
+  },
+  {
+    "screen": "375x812",
+    "device": "mobile",
+    "sessions": "5"
+  },
+  {
+    "screen": "412x892",
+    "device": "mobile",
+    "sessions": "4"
+  },
+  {
+    "screen": "414x897",
+    "device": "mobile",
+    "sessions": "4"
+  },
+  {
+    "screen": "1470x956",
+    "device": "laptop",
+    "sessions": "4"
+  },
+  {
+    "screen": "454x1010",
+    "device": "mobile",
+    "sessions": "3"
+  },
+  {
+    "screen": "447x994",
+    "device": "mobile",
+    "sessions": "3"
+  }
+]

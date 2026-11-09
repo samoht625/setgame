@@ -1,0 +1,32 @@
+[
+  {
+    "url_path": "/",
+    "pageviews": "1176",
+    "sessions": "369"
+  },
+  {
+    "url_path": "/puzzle",
+    "pageviews": "597",
+    "sessions": "204"
+  },
+  {
+    "url_path": "/practice",
+    "pageviews": "181",
+    "sessions": "78"
+  },
+  {
+    "url_path": "/daily",
+    "pageviews": "162",
+    "sessions": "73"
+  },
+  {
+    "url_path": "/stats",
+    "pageviews": "129",
+    "sessions": "45"
+  },
+  {
+    "url_path": "/m",
+    "pageviews": "42",
+    "sessions": "22"
+  }
+]

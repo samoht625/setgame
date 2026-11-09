@@ -1,0 +1,119 @@
+[
+  {
+    "week": "2026-08-17",
+    "pageviews": "4",
+    "sessions": "1",
+    "starts": "0",
+    "completes": "0",
+    "tour_starts": "0",
+    "tour_completes": "0"
+  },
+  {
+    "week": "2026-08-24",
+    "pageviews": "20",
+    "sessions": "4",
+    "starts": "0",
+    "completes": "0",
+    "tour_starts": "0",
+    "tour_completes": "0"
+  },
+  {
+    "week": "2026-08-31",
+    "pageviews": "5",
+    "sessions": "2",
+    "starts": "0",
+    "completes": "0",
+    "tour_starts": "0",
+    "tour_completes": "0"
+  },
+  {
+    "week": "2026-09-07",
+    "pageviews": "47",
+    "sessions": "12",
+    "starts": "0",
+    "completes": "0",
+    "tour_starts": "0",
+    "tour_completes": "0"
+  },
+  {
+    "week": "2026-09-14",
+    "pageviews": "47",
+    "sessions": "13",
+    "starts": "0",
+    "completes": "0",
+    "tour_starts": "0",
+    "tour_completes": "0"
+  },
+  {
+    "week": "2026-09-21",
+    "pageviews": "42",
+    "sessions": "22",
+    "starts": "0",
+    "completes": "0",
+    "tour_starts": "0",
+    "tour_completes": "0"
+  },
+  {
+    "week": "2026-09-28",
+    "pageviews": "109",
+    "sessions": "30",
+    "starts": "45",
+    "completes": "24",
+    "tour_starts": "7",
+    "tour_completes": "6"
+  },
+  {
+    "week": "2026-10-05",
+    "pageviews": "150",
+    "sessions": "47",
+    "starts": "127",
+    "completes": "76",
+    "tour_starts": "27",
+    "tour_completes": "11"
+  },
+  {
+    "week": "2026-10-12",
+    "pageviews": "65",
+    "sessions": "22",
+    "starts": "69",
+    "completes": "57",
+    "tour_starts": "14",
+    "tour_completes": "8"
+  },
+  {
+    "week": "2026-10-19",
+    "pageviews": "179",
+    "sessions": "44",
+    "starts": "125",
+    "completes": "59",
+    "tour_starts": "19",
+    "tour_completes": "12"
+  },
+  {
+    "week": "2026-10-26",
+    "pageviews": "982",
+    "sessions": "191",
+    "starts": "427",
+    "completes": "227",
+    "tour_starts": "144",
+    "tour_completes": "83"
+  },
+  {
+    "week": "2026-11-02",
+    "pageviews": "830",
+    "sessions": "147",
+    "starts": "509",
+    "completes": "403",
+    "tour_starts": "66",
+    "tour_completes": "20"
+  },
+  {
+    "week": "2026-11-09",
+    "pageviews": "5",
+    "sessions": "3",
+    "starts": "5",
+    "completes": "1",
+    "tour_starts": "1",
+    "tour_completes": "1"
+  }
+]

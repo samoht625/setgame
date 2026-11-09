@@ -1,0 +1,13 @@
+[
+  {
+    "visitors": "1",
+    "missing_distinct_id": "1",
+    "one_session": "0",
+    "multi_session": "1",
+    "multi_day": "1",
+    "three_plus_days": "1",
+    "seven_plus_days": "1",
+    "median_sessions": "467.0",
+    "avg_sessions": "467.00"
+  }
+]

@@ -1,0 +1,10 @@
+[
+  {
+    "sessions_started": "215",
+    "then_completed": "115",
+    "then_skipped": "65",
+    "started_only": "38",
+    "complete_without_start": "2",
+    "skip_without_start": "1"
+  }
+]

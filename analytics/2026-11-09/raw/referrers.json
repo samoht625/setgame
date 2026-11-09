@@ -1,0 +1,38 @@
+[
+  {
+    "referrer": "(direct)",
+    "sessions": "345"
+  },
+  {
+    "referrer": "reddit.com",
+    "sessions": "44"
+  },
+  {
+    "referrer": "en.wikipedia.org",
+    "sessions": "23"
+  },
+  {
+    "referrer": "com.reddit.frontpage",
+    "sessions": "18"
+  },
+  {
+    "referrer": "tido.site",
+    "sessions": "4"
+  },
+  {
+    "referrer": "out.reddit.com",
+    "sessions": "2"
+  },
+  {
+    "referrer": "mail.google.com",
+    "sessions": "1"
+  },
+  {
+    "referrer": "duckduckgo.com",
+    "sessions": "1"
+  },
+  {
+    "referrer": "m.facebook.com",
+    "sessions": "1"
+  }
+]
