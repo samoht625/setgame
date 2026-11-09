@@ -1,3 +1,4 @@
-<% content_for :title, "Set Multiplayer" %>
+<% content_for :title, "Set Multiplayer · Play Set Online with Friends" %>
+<% content_for :description, "Play Set live with friends on one shared board: whoever finds the most sets wins the round. Free in your browser, no signup." %>
 <% content_for :head, render("home/identity") %>
 <div id="root" data-online-ids="<%= GAME_ENGINE.online_player_ids_snapshot.to_json %>"><%= prerendered(:multiplayer) %></div>

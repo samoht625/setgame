@@ -30,6 +30,7 @@ import {
 } from '../lib/solo_api'
 import { seconds, track, type GameModeEvent } from '../lib/analytics'
 import { afterNextPaint } from '../lib/after_paint'
+import { missMessage } from '../rules/Tour'
 
 const MODE: GameModeEvent = 'solo'
 const LOCAL_STORAGE_KEY = 'setgame_solo_state_v2'
@@ -120,12 +121,7 @@ function saveGame(state: Omit<SavedSoloState, 'savedAtMs'>): void {
   }
 }
 
-interface SolitaireGameProps {
-  /** Wait to restore or deal (and start the clock) until this turns false. */
-  holdDeal?: boolean
-}
-
-const SolitaireGame: React.FC<SolitaireGameProps> = ({ holdDeal = false }) => {
+const SolitaireGame: React.FC = () => {
   const { playSelection, playSet } = useSound()
   const [bestImprovementMs, setBestImprovementMs] = useState<number | null>(null)
   const [claimAnimationKey, setClaimAnimationKey] = useState(0)
@@ -445,7 +441,7 @@ const SolitaireGame: React.FC<SolitaireGameProps> = ({ holdDeal = false }) => {
         events: eventsRef.current,
         eligible: eligibleRef.current
       })
-      showToast(result.error, 'error')
+      showToast(missMessage(result.error), 'error')
       flashRejection(cardIds)
       setSelectedCards([])
       return
@@ -656,7 +652,6 @@ const SolitaireGame: React.FC<SolitaireGameProps> = ({ holdDeal = false }) => {
   }, [isStarting, status, startedAtMs, elapsedMs])
 
   useEffect(() => {
-    if (holdDeal) return
     const saved = loadSavedGame()
     const staleInProgress =
       saved !== null &&
@@ -696,7 +691,7 @@ const SolitaireGame: React.FC<SolitaireGameProps> = ({ holdDeal = false }) => {
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
       if (rejectTimeoutRef.current) clearTimeout(rejectTimeoutRef.current)
     }
-  }, [holdDeal])
+  }, [])
 
   const isFinished = !isStarting && status === 'round_over'
   const showResults = resultsOpen && isFinished

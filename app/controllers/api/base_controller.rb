@@ -38,5 +38,11 @@ module Api
     def current_player_id
       @player_id
     end
+
+    # Called when a game starts; only a browser that saw the player's first visit sends a source.
+    def record_player_source
+      source = request.headers["X-Player-Source"]
+      PlayerSource.record(current_player_id, source, request.headers["X-Player-Landing"]) if source.present?
+    end
   end
 end

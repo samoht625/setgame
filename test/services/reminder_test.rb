@@ -159,6 +159,9 @@ class ReminderTest < ActiveSupport::TestCase
   end
 
   test "every day's subject is new, and nothing ties the emails into a thread" do
+    # Deal numbers count from the first deal anyone played; with none, every day is #1.
+    SoloGame.create!(id: SecureRandom.uuid, player_id: SecureRandom.uuid, seed: "1", status: "completed",
+                     started_at: LA_8AM, completed_at: LA_8AM, daily_on: Date.new(2026, 10, 1))
     Reminder.run!(now: LA_8AM + 10.days, pause: 0)
     Reminder.run!(now: LA_8AM + 11.days, pause: 0)
     first, second = ResendMail.deliveries

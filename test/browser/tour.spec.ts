@@ -25,19 +25,25 @@ async function demoCards(scope: ReturnType<Page['locator']>) {
   })))
 }
 
-test('the first visit shows a two-step rules tour before the deal, then never again', async ({ page }) => {
+const RULE = 'Find 3 cards where each feature is all the same or all different.'
+
+test('a first visit plays straight away; the start card offers the two-step tour, then stops once it’s seen', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
   const events = await recordEvents(page)
-  await page.goto('/practice')
+  await page.goto('/daily')
 
+  // Nothing stands between a new player and Start; the rule is a line on the card.
+  await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeVisible()
+  await page.waitForTimeout(500)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.getByText(RULE)).toBeVisible()
+  expect(names(events)).toEqual([])
+
+  await page.getByRole('button', { name: 'How to play', exact: true }).click()
   const tour = page.getByRole('dialog', { name: 'Every card has 4 features' })
   await expect(tour).toBeVisible()
   await expect(tour.locator('[data-demo-card]')).toHaveCount(6)
-  // The deal, and its clock, wait for the tour.
-  await page.waitForTimeout(500)
-  await expect(page.locator('[data-card-id]')).toHaveCount(0)
-
   await tour.getByRole('button', { name: 'Next', exact: true }).click()
   const rule = page.getByRole('dialog', { name: /all same or all different/ })
   await expect(rule.locator('[data-revealed="true"]')).toBeVisible()
@@ -54,19 +60,32 @@ test('the first visit shows a two-step rules tour before the deal, then never ag
 
   await rule.getByRole('button', { name: 'Got it', exact: true }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
-  await expect(page.locator('[data-card-id]').first()).toBeVisible()
   expect(names(events)).toEqual(['tour_start', 'tour_complete'])
 
   await page.reload()
-  await expect(page.locator('[data-card-id]').first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeVisible()
+  await expect(page.getByText(RULE)).toHaveCount(0)
   await expect(page.getByRole('dialog')).toHaveCount(0)
-  expect(names(events)).toEqual(['tour_start', 'tour_complete'])
   expect(errors).toEqual([])
+})
+
+test('Practice deals at once on a first visit, and a new player’s miss says what a set is', async ({ page }) => {
+  await page.goto('/practice')
+  await expect(page.locator('[data-card-id]').first()).toBeEnabled()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  const board = await page.locator('[data-card-id]').evaluateAll(nodes => nodes.map(node => Number(node.getAttribute('data-card-id'))))
+  let miss: number[] | null = null
+  for (let i = 0; i < board.length && !miss; i++) for (let j = i + 1; j < board.length && !miss; j++) for (let k = j + 1; k < board.length && !miss; k++) {
+    if (!isSet(board[i]!, board[j]!, board[k]!)) miss = [board[i]!, board[j]!, board[k]!]
+  }
+  for (const id of miss!) await page.locator(`[data-card-id="${id}"]`).click()
+  await expect(page.getByRole('status').filter({ hasText: 'Not a set: each feature must be all the same or all different' })).toBeVisible()
 })
 
 test('the tour is modal, and skipping it is remembered too', async ({ page }) => {
   const events = await recordEvents(page)
   await page.goto('/daily')
+  await page.getByRole('button', { name: 'How to play', exact: true }).click()
   await expect(page.getByRole('dialog', { name: 'Every card has 4 features' })).toBeVisible()
   // The page behind is inert: the daily's Start can't even take focus from under the tour.
   const start = page.getByRole('button', { name: 'Start', exact: true })
@@ -81,18 +100,22 @@ test('the tour is modal, and skipping it is remembered too', async ({ page }) =>
   expect(events.filter(([name]) => name.startsWith('tour_'))).toEqual([['tour_start', undefined], ['tour_skip', { step: 1 }]])
   await page.reload()
   await expect(page.getByText('Same deal for everyone today.')).toBeVisible()
-  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.getByText(RULE)).toHaveCount(0)
 })
 
-test('Skip closes the tour and deals', async ({ page }) => {
-  await page.goto('/practice')
+test('Skip closes the tour, from the Puzzle’s start card too', async ({ page }) => {
+  await page.goto('/puzzle')
+  await page.getByRole('button', { name: 'How to play', exact: true }).click()
   await page.getByRole('button', { name: 'Skip', exact: true }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
-  await expect(page.locator('[data-card-id]').first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeVisible()
 })
 
-test('players from before the tour don’t see it', async ({ page }) => {
+test('players from before the tour aren’t offered it', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('setgame_player_id', '11111111-2222-4333-8444-555555555555'))
+  await page.goto('/daily')
+  await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeVisible()
+  await expect(page.getByText(RULE)).toHaveCount(0)
   await page.goto('/practice')
   await expect(page.locator('[data-card-id]').first()).toBeVisible()
   await expect(page.getByRole('dialog')).toHaveCount(0)
@@ -162,6 +185,8 @@ test.describe('on a phone', () => {
 
   test('the tour and How to play fit a small screen', async ({ page }) => {
     await page.goto('/')
+    await expect(page.getByText(RULE)).toBeInViewport()
+    await page.getByRole('button', { name: 'How to play', exact: true }).click()
     const tour = page.getByRole('dialog', { name: 'Every card has 4 features' })
     await expect(tour.getByRole('button', { name: 'Next', exact: true })).toBeInViewport({ ratio: 1 })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)

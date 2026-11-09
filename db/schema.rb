@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_10_27_050000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_09_010000) do
   create_table "account_sessions", force: :cascade do |t|
     t.integer "account_id", null: false
     t.string "token_digest", null: false
@@ -53,6 +53,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_10_27_050000) do
     t.datetime "created_at", null: false
     t.index ["account_id"], name: "index_player_merges_on_account_id"
     t.index ["from_player_id"], name: "index_player_merges_on_from_player_id"
+  end
+
+  create_table "player_sources", force: :cascade do |t|
+    t.string "player_id", null: false
+    t.string "source", null: false
+    t.string "landing"
+    t.datetime "created_at", null: false
+    t.index ["player_id"], name: "index_player_sources_on_player_id", unique: true
+    t.index ["source"], name: "index_player_sources_on_source"
   end
 
   create_table "puzzle_runs", id: :string, force: :cascade do |t|

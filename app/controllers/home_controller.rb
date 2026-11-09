@@ -32,6 +32,12 @@ class HomeController < ApplicationController
   # a brand-new player sees; the client only uses it for that player.
   def load_boot_statuses
     player_id = @known_player_id || SecureRandom.uuid
-    @boot_statuses = { player_id: @known_player_id, daily: DailyStatus.for(player_id), puzzle: PuzzleStatus.for(player_id) }
+    @boot_statuses = { player_id: @known_player_id, daily: DailyStatus.for(player_id), puzzle: PuzzleStatus.for(player_id), shared: shared_boot }
+  end
+
+  # The result a shared link (?r=) carries, so a friend who opens it is asked to beat it.
+  def shared_boot
+    result = @shared_result
+    result && { kind: result.kind, number: result.number, elapsed_ms: result.elapsed_ms, rank: result.rank, total: result.total }
   end
 end

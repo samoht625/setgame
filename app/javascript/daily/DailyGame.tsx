@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { knownStatus } from '../lib/boot'
+import { knownStatus, sharedResult } from '../lib/boot'
 import { useOtherDailyDone, PRACTICE_LINK } from '../hooks/useOtherDailyDone'
 import { secondaryButtonSmall } from '../lib/buttons'
 import Board from '../components/Board'
@@ -14,6 +14,8 @@ import { useSidePanel } from '../hooks/useSidePanel'
 import { SoloTimer } from '../solitaire/SolitaireHud'
 import DailyPanel from './DailyPanel'
 import DailyCard, { primaryButton } from './DailyCard'
+import { Challenge, RulesOffer } from './StartNotes'
+import { missMessage, newToRules } from '../rules/Tour'
 import { afterNextPaint } from '../lib/after_paint'
 import { seconds, track } from '../lib/analytics'
 import {
@@ -56,6 +58,8 @@ type DailyRun = {
   // Invalid claims; shown and shared, but the server can't check them.
   misses: number
   submission?: 'pending' | 'submitted' | 'rejected'
+  /** The friend's time on the shared link this run was started from. */
+  rivalMs?: number
 }
 
 // Today's one try. Stored under `ranked` so runs saved before practice was removed still load.
@@ -137,6 +141,8 @@ const DailyGame: React.FC = () => {
   const namedScoreRef = useRef<string | null>(null)
   const showingTimes = panel.open
   const showedTimesRef = useRef(showingTimes)
+  const [shared] = useState(() => sharedResult('daily'))
+  const [newPlayer] = useState(newToRules)
 
   const run = save.ranked
   const playerId = getPlayerId()
@@ -183,6 +189,10 @@ const DailyGame: React.FC = () => {
     if (showingTimes && !showedTimesRef.current) refreshStatus()
     showedTimesRef.current = showingTimes
   }, [showingTimes])
+
+  useEffect(() => {
+    if (shared) track('shared_landing', { mode: 'daily' })
+  }, [shared])
 
   useEffect(() => () => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
@@ -277,7 +287,8 @@ const DailyGame: React.FC = () => {
       startedAtMs: Date.now(),
       elapsedMs: 0,
       events: [],
-      misses: 0
+      misses: 0,
+      ...(shared?.number === started.number ? { rivalMs: shared.elapsed_ms } : {})
     }
     commit({ ranked: fresh })
     setClockPending(true)
@@ -317,7 +328,7 @@ const DailyGame: React.FC = () => {
     setSelectedCards([])
     if (!result.ok) {
       putRun({ ...current, misses: current.misses + 1 })
-      showToast(result.error, 'error')
+      showToast(missMessage(result.error), 'error')
       flashRejection(cardIds)
       return
     }
@@ -484,6 +495,7 @@ const DailyGame: React.FC = () => {
           stale={staleRun}
           onNameScore={namedRun && status?.me.result && !myScoreName ? nameScore : undefined}
           next={puzzleDone ? PRACTICE_LINK : undefined}
+          rivalMs={finishedRun && !staleRun ? finishedRun.rivalMs : undefined}
         />
       </>
     )
@@ -497,6 +509,7 @@ const DailyGame: React.FC = () => {
       label: `Daily Deal #${status.number}`,
       content: (
         <>
+          {shared && !status.me.attempted && <Challenge shared={shared} number={status.number} name="Daily Deal" />}
           <p className="mt-2 text-sm font-medium text-neutral-900 dark:text-neutral-100">Same deal for everyone today.</p>
           <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
             One try. The clock starts when the cards appear and runs until you clear the deck.
@@ -504,6 +517,7 @@ const DailyGame: React.FC = () => {
           <button type="button" onClick={() => void begin()} disabled={starting} className={`${primaryButton} mt-4 w-full`}>
             Start
           </button>
+          {newPlayer && <RulesOffer />}
           {streak > 0 && (
             <p className="mt-3 text-xs font-medium text-emerald-700 dark:text-emerald-300">{streak}-day streak — keep it going</p>
           )}

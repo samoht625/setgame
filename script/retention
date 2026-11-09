@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Retention from the game's own database: who comes back, by first-week cohort
+# and by first-touch source (player_sources, from ?ref= tags, shared links and
+# referrers). Read-only. Umami can't answer this: its sessions don't follow a
+# player from one day to the next.
+#
+#   script/retention                 # $DATABASE_PATH or ~/www/setgame-data/production.sqlite3
+#   script/retention path/to/db.sqlite3
+#
+# A player is active on a day they started a Daily Deal, Puzzle or Practice
+# game. Days are Pacific (UTC-8; an hour off during daylight time).
+#   next day   played again the day after their first
+#   week 1     played again within 7 days of their first
+#   day 7+     played on a day 7 or more days after their first
+#   last 7d    played in the last 7 days
+# Each rate is over the players old enough for it.
+set -euo pipefail
+
+DB="${1:-${DATABASE_PATH:-$HOME/www/setgame-data/production.sqlite3}}"
+[ -f "$DB" ] || { echo "no database at $DB" >&2; exit 1; }
+
+has_sources=$(sqlite3 -readonly "$DB" "select count(*) from sqlite_master where type = 'table' and name = 'player_sources'")
+source_expr="'(not recorded)'"
+source_join=""
+if [ "$has_sources" = "1" ]; then
+  source_expr="coalesce(ps.source, '(before tracking)')"
+  source_join="left join player_sources ps on ps.player_id = f.player_id"
+fi
+
+# A percentage, or a dash when no one in the group is old enough for it.
+rate() { echo "case when $2 > 0 then printf('%3d%%', round(100.0 * $1 / $2)) else '  –' end"; }
+
+# Per group: players, the returns, and how many are old enough for each.
+COUNTS="count(*) as players, sum(d1) as d1, sum(fd < date(t.d, '-1 day')) as d1_of,
+  sum(w1) as w1, sum(d7) as d7, sum(fd <= date(t.d, '-7 days')) as w7_of, sum(recent) as recent, sum(days >= 5) as regulars"
+
+sqlite3 -readonly -header -column "$DB" <<SQL
+create temp view act as
+  select distinct player_id, date(started_at, '-8 hours') as d from solo_games
+  union select player_id, date(started_at, '-8 hours') from puzzle_runs;
+create temp view today as select date('now', '-8 hours') as d;
+create temp view firsts as
+  select f.player_id, f.fd, $source_expr as source,
+    exists(select 1 from act a where a.player_id = f.player_id and a.d = date(f.fd, '+1 day')) as d1,
+    exists(select 1 from act a where a.player_id = f.player_id and a.d > f.fd and a.d <= date(f.fd, '+7 days')) as w1,
+    exists(select 1 from act a where a.player_id = f.player_id and a.d >= date(f.fd, '+7 days')) as d7,
+    exists(select 1 from act a, today t where a.player_id = f.player_id and a.d > date(t.d, '-7 days')) as recent,
+    (select count(*) from act a where a.player_id = f.player_id) as days
+  from (select player_id, min(d) as fd from act group by player_id) f
+  $source_join;
+
+.print '== Players per day, last 14 days'
+select a.d as day, count(*) as players, sum(a.d = f.fd) as new, sum(a.d > f.fd) as "returning"
+from act a join firsts f using (player_id), today t
+where a.d > date(t.d, '-14 days') group by a.d order by a.d;
+
+.print ''
+.print '== Cohorts by week of first game'
+select week, players, $(rate d1 d1_of) as "next day", $(rate w1 w7_of) as "week 1", $(rate d7 w7_of) as "day 7+", recent as "last 7d", regulars as "5+ days"
+from (select date(fd, 'weekday 0', '-6 days') as week, $COUNTS from firsts, today t group by week) order by week;
+
+.print ''
+.print '== By first-touch source'
+select source, players, $(rate d1 d1_of) as "next day", $(rate w1 w7_of) as "week 1", $(rate d7 w7_of) as "day 7+", recent as "last 7d", regulars as "5+ days"
+from (select source, $COUNTS from firsts, today t group by source) order by players desc;
+
+.print ''
+.print '== Days played in the last 7, among players active in them'
+select days_played, count(*) as players from (
+  select player_id, count(*) as days_played from act, today t where act.d > date(t.d, '-7 days') group by player_id
+) group by days_played order by days_played;
+SQL

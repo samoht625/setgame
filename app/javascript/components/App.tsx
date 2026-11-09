@@ -15,7 +15,7 @@ import AppToast from './AppToast'
 import { showToast } from '../lib/toast'
 import { signedInEmail } from '../lib/player_id'
 import ReminderDialog from './ReminderDialog'
-import Tour, { shouldShowTour } from '../rules/Tour'
+import Tour, { useTourOpener } from '../rules/Tour'
 import { REMINDER_TIMES, reminderLabel } from '../lib/reminder'
 
 // 'solo' is Practice: timed games against the clock.
@@ -40,10 +40,10 @@ function modeFromPath(pathname: string): GameMode {
 
 // Must match the <title> each route renders in app/views/home.
 const TITLES: Record<GameMode, string> = {
-  daily: 'Set Daily Deal',
-  puzzle: 'Set Puzzle',
-  solo: 'Set Practice',
-  multiplayer: 'Set Multiplayer'
+  daily: 'Set Daily Deal · Play the Set Card Game Online',
+  puzzle: 'Set Puzzle · The Daily Set Puzzle: Find All 6 Sets',
+  solo: 'Set Practice · Timed Set Card Game',
+  multiplayer: 'Set Multiplayer · Play Set Online with Friends'
 }
 
 /** The page behind every game; the prerendered header (script/prerender.tsx) sits in the same box. */
@@ -51,8 +51,7 @@ export const APP_SHELL = 'min-h-dvh bg-neutral-100 text-neutral-900 antialiased 
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<GameMode>(() => modeFromPath(window.location.pathname))
-  // First visit only; see shouldShowTour.
-  const [touring, setTouring] = useState(shouldShowTour)
+  const [touring, endTour] = useTourOpener()
   // Not polled in multiplayer, which already shows the live roster.
   const othersOnline = usePresence(mode !== 'multiplayer')
 
@@ -95,9 +94,8 @@ const App: React.FC = () => {
       <div className={APP_SHELL}>
         <CardSymbols />
         <Header mode={mode} onSwitchMode={switchMode} othersOnline={othersOnline} />
-        {/* A practice deal (and its clock) waits for the tour; the dailies' clocks only start on Start. */}
-        {mode === 'solo' ? <SolitaireGame holdDeal={touring} /> : mode === 'daily' ? <DailyGame /> : mode === 'puzzle' ? <PuzzleGame /> : <MultiplayerGame />}
-        {touring && <Tour onDone={() => setTouring(false)} />}
+        {mode === 'solo' ? <SolitaireGame /> : mode === 'daily' ? <DailyGame /> : mode === 'puzzle' ? <PuzzleGame /> : <MultiplayerGame />}
+        {touring && <Tour onDone={endTour} />}
         <HowToPlay />
         <NameDialog />
         <SignInDialog />

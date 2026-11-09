@@ -12,6 +12,7 @@ import { openReminderDialog } from './ReminderDialog'
 import { useReminder } from '../hooks/useReminder'
 import { reminderLabel } from '../lib/reminder'
 import { getSavedName, onNameChange } from '../lib/player_name'
+import { useStreak } from '../hooks/useStreak'
 
 interface HeaderProps {
   /** The game on screen; null on pages outside the game (/stats), where neither segment is selected. */
@@ -27,6 +28,7 @@ const Header: React.FC<HeaderProps> = ({ mode, page, onSwitchMode, othersOnline 
   const sound = useSound()
   const reminder = useReminder()
   const email = signedInEmail()
+  const streak = useStreak()
   const [name, setName] = useState(getSavedName)
   useEffect(() => onNameChange(next => setName(next || null)), [])
   const [showLogoSet, setShowLogoSet] = useState(false)
@@ -109,6 +111,7 @@ const Header: React.FC<HeaderProps> = ({ mode, page, onSwitchMode, othersOnline 
             sections={[
               {
                 items: [
+                  ...(streak > 0 ? [{ label: 'Streak', detail: `🔥 ${streak} ${streak === 1 ? 'day' : 'days'}`, onSelect: () => onSwitchMode('daily') }] : []),
                   ...(mode === 'solo' ? [] : [{ label: 'Practice', onSelect: () => onSwitchMode('solo') }]),
                   ...(mode === 'multiplayer' ? [] : [{ label: 'Multiplayer', onSelect: () => onSwitchMode('multiplayer'), badge: othersOnline, live: true }])
                 ]

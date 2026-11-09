@@ -2,6 +2,8 @@
 
 module Api
   class DailyController < BaseController
+    after_action :record_player_source, only: :create
+
     def show
       render json: DailyStatus.for(current_player_id)
     end

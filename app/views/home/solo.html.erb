@@ -1,4 +1,5 @@
-<% content_for :title, "Set Practice" %>
+<% content_for :title, "Set Practice · Timed Set Card Game" %>
+<% content_for :description, "Timed games of Set against the clock, as many as you like, with daily, weekly and monthly leaderboards. Free in your browser, no signup." %>
 <% content_for :head, render("home/identity") %>
 <%# Seed presence so the multiplayer count can render instantly, no extra request. %>
 <div id="root" data-online-ids="<%= GAME_ENGINE.online_player_ids_snapshot.to_json %>"><%= prerendered(:solo) %></div>

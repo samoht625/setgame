@@ -1,6 +1,7 @@
 import { adoptServerPlayer, getPlayerId, getPlayerKey, isNewPlayer } from './player_id'
 import { getSavedName } from './player_name'
 import { rememberStatus } from './boot'
+import { firstTouch } from './source'
 
 export function headers(json = true): HeadersInit {
   const h: Record<string, string> = {
@@ -12,6 +13,11 @@ export function headers(json = true): HeadersInit {
   if (key) h['X-Player-Key'] = key
   // Lets the server keep an existing player over an id this page just made up.
   if (isNewPlayer()) h['X-Player-New'] = '1'
+  const touch = firstTouch()
+  if (touch) {
+    h['X-Player-Source'] = touch.source
+    h['X-Player-Landing'] = touch.landing
+  }
   if (json) h['Content-Type'] = 'application/json'
   return h
 }

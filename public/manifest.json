@@ -2,7 +2,7 @@
   "id": "/",
   "name": "Set",
   "short_name": "Set",
-  "description": "Set",
+  "description": "The Set card game: a Daily Deal and a daily Puzzle, the same for everyone.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

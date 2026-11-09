@@ -1,0 +1,18 @@
+<%# What search engines show as the site's name and what it is. %>
+<script type="application/ld+json"><%= raw json_escape({
+  "@context": "https://schema.org",
+  "@graph": [
+    { "@type": "WebSite", name: "Set", url: "#{ApplicationHelper::SITE_URL}/" },
+    {
+      "@type": "WebApplication",
+      name: "Set",
+      url: "#{ApplicationHelper::SITE_URL}/",
+      description: page_description,
+      applicationCategory: "GameApplication",
+      operatingSystem: "Any",
+      browserRequirements: "Requires JavaScript",
+      isAccessibleForFree: true,
+      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" }
+    }
+  ]
+}.to_json) %></script>

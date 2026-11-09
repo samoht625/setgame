@@ -2,6 +2,8 @@
 
 module Api
   class SoloGamesController < BaseController
+    after_action :record_player_source, only: :create
+
     def create
       SoloGame.expire_stale!
 

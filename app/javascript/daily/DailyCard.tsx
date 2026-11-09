@@ -1,4 +1,4 @@
-import React, { useId, useState } from 'react'
+import React, { useEffect, useId, useState } from 'react'
 import { formatTime } from '../solitaire/time'
 import { track } from '../lib/analytics'
 import { formatCountdown, ordinal, type DailyShare } from '../lib/daily'
@@ -11,6 +11,8 @@ import { openReminderDialog } from '../components/ReminderDialog'
 import { signedInEmail, signInEnabled } from '../lib/player_id'
 import { useReminder } from '../hooks/useReminder'
 import ReminderPrompt from './ReminderPrompt'
+import InstallPrompt from './InstallPrompt'
+import { installDue, noteFinishDay, type InstallKind } from '../lib/install'
 export { primaryButton, secondaryButton }
 
 const LEADERBOARD_SIZE = 10
@@ -43,12 +45,14 @@ interface DailyCardProps {
   emptyText?: string
   /** What the grid of squares under the time shows, for screen readers. */
   marksLabel?: string
+  /** The time on the shared link this deal was started from. */
+  rivalMs?: number
 }
 
 /** What the Daily Deal (and the Puzzle) show once today's try is used: the result, today's leaderboard and what's next. */
 const DailyCard: React.FC<DailyCardProps> = ({
   number, result, streak, note, status, statusError, onRetryStatus, playerId, nowMs, onShare, shareNote, onNextDeal, stale = false, onNameScore,
-  title, next = { href: '/puzzle', label: 'Puzzle' }, noun = 'deal', emptyText, marksLabel = 'Your pace on each set'
+  title, next = { href: '/puzzle', label: 'Puzzle' }, noun = 'deal', emptyText, marksLabel = 'Your pace on each set', rivalMs
 }) => {
   const titleId = useId()
   const reminder = useReminder()
@@ -56,6 +60,17 @@ const DailyCard: React.FC<DailyCardProps> = ({
   const signedIn = Boolean(signedInEmail())
   const promptReminder = signInEnabled() && !signedIn && Boolean(result) && !stale
   const offerReminder = signedIn && !reminder?.enabled
+  // On a phone that can install, from the second day with a finish, the home screen beats an email.
+  const finished = Boolean(result) && !stale
+  const [install, setInstall] = useState<InstallKind | null>(null)
+  const [sheet, setSheet] = useState<'install' | 'reminder' | null>(null)
+  useEffect(() => {
+    if (!finished || sheet) return
+    noteFinishDay()
+    const due = installDue()
+    setInstall(due)
+    setSheet(due ? 'install' : promptReminder ? 'reminder' : null)
+  }, [finished, promptReminder])
   const [comparing, setComparing] = useState<DailyEntry | null>(null)
   const msLeft = status ? Date.parse(status.next_at) - nowMs : null
   // Other finishers' runs are only for a player who has finished this deal too.
@@ -83,13 +98,19 @@ const DailyCard: React.FC<DailyCardProps> = ({
               </div>
               <p className="mt-0.5 min-h-5 text-sm text-neutral-500 dark:text-neutral-400">
                 {rank && <span>{rank}</span>}
-                {rank && streak > 0 && <span aria-hidden="true"> · </span>}
-                {streak > 0 && <span className="font-medium text-emerald-700 dark:text-emerald-300">{streak}-day streak</span>}
               </p>
               {result.marks && (
                 <div className="mt-1.5 flex justify-center">
                   <MarkGrid marks={result.marks} label={marksLabel} />
                 </div>
+              )}
+              {rivalMs !== undefined && <RivalLine mine={result.elapsedMs} theirs={rivalMs} />}
+              {streak > 0 && (
+                <p data-streak className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-3 py-1 text-xs text-orange-900 dark:bg-orange-950/40 dark:text-orange-200">
+                  <span aria-hidden="true">🔥</span>
+                  <span className="font-semibold">{streak}-day streak</span>
+                  {!stale && <span className="text-orange-800/80 dark:text-orange-200/80">· back tomorrow for {streak + 1}</span>}
+                </p>
               )}
             </>
           ) : (
@@ -143,13 +164,20 @@ const DailyCard: React.FC<DailyCardProps> = ({
             )}
           />
         </div>
-        {promptReminder && <ReminderPrompt />}
+        {sheet === 'install' && install ? <InstallPrompt kind={install} /> : sheet === 'reminder' && promptReminder && <ReminderPrompt />}
         {comparing && status && (
           <DailyCompare date={status.date} number={status.number} opponent={comparing} onClose={() => setComparing(null)} />
         )}
       </section>
     </main>
   )
+}
+
+/** How this result did against the shared one the player came in on. */
+const RivalLine: React.FC<{ mine: number; theirs: number }> = ({ mine, theirs }) => {
+  const gap = formatTime(Math.abs(theirs - mine))
+  const text = mine < theirs ? `You beat your friend’s ${formatTime(theirs)} by ${gap}` : mine === theirs ? `A tie with your friend’s ${formatTime(theirs)}` : `Your friend’s ${formatTime(theirs)} holds, by ${gap}`
+  return <p data-rival className="mt-2 text-sm font-medium text-neutral-800 dark:text-neutral-100">{text}</p>
 }
 
 const BellIcon: React.FC = () => (

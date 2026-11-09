@@ -4,6 +4,7 @@ require "test_helper"
 require "minitest/mock"
 
 class HomeControllerTest < ActionDispatch::IntegrationTest
+  DAILY_TITLE = "Set Daily Deal · Play the Set Card Game Online"
   PREVIEW_BOTS = {
     "Slack" => "Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)",
     "iMessage / Facebook" => "facebookexternalhit/1.1 Facebot Twitterbot/1.0",
@@ -31,17 +32,18 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
 
   test "each page has its own title, description, canonical URL and share preview" do
     {
-      "/" => ["Set Daily Deal", "https://set.tido.site/"],
-      "/daily" => ["Set Daily Deal", "https://set.tido.site/"],
-      "/puzzle" => ["Set Puzzle", "https://set.tido.site/puzzle"],
-      "/practice" => ["Set Practice", "https://set.tido.site/practice"],
-      "/m" => ["Set Multiplayer", "https://set.tido.site/m"]
+      "/" => [DAILY_TITLE, "https://set.tido.site/"],
+      "/daily" => [DAILY_TITLE, "https://set.tido.site/"],
+      "/puzzle" => ["Set Puzzle · The Daily Set Puzzle: Find All 6 Sets", "https://set.tido.site/puzzle"],
+      "/practice" => ["Set Practice · Timed Set Card Game", "https://set.tido.site/practice"],
+      "/m" => ["Set Multiplayer · Play Set Online with Friends", "https://set.tido.site/m"]
     }.each do |path, (title, url)|
       get path
       assert_response :success
       assert_select "html[lang=en]"
       assert_select "title", text: title
-      assert_select "meta[name=description][content]"
+      description = css_select("meta[name=description]").first["content"]
+      assert_operator description.length, :>, 80, "#{path} says what the page is, not just its title"
       assert_select "link[rel=canonical][href=?]", url
       assert_select "meta[property='og:title'][content=?]", title
       assert_select "meta[property='og:url'][content=?]", url
@@ -108,7 +110,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     PREVIEW_BOTS.values_at("Slack", "X").each do |user_agent|
       get "/daily", params: { r: token }, headers: { "User-Agent" => user_agent }
       assert_response :success
-      assert_select "title", text: "Set Daily Deal"
+      assert_select "title", text: DAILY_TITLE
       assert_select "link[rel=canonical][href=?]", "https://set.tido.site/"
       assert_select "meta[property='og:title'][content=?]", "Set Daily Deal #12 · 2:41"
       assert_select "meta[name='twitter:title'][content=?]", "Set Daily Deal #12 · 2:41"
@@ -119,7 +121,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     end
 
     get "/daily", params: { r: "c-3gk0-abcdefghijkl" }
-    assert_select "meta[property='og:title'][content=?]", "Set Daily Deal"
+    assert_select "meta[property='og:title'][content=?]", DAILY_TITLE
     assert_select "meta[property='og:image'][content=?]", "https://set.tido.site/og-image.png"
   end
 
@@ -133,7 +135,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "the Umami tracker is on production pages, exactly once" do
-    tracker = "script[defer][src='https://analytics.tido.site/script.js'][data-website-id='b4235c8a-975d-4920-85d3-0a87a4af920c']"
+    tracker = "script[async][src='https://analytics.tido.site/script.js'][data-website-id='b4235c8a-975d-4920-85d3-0a87a4af920c']"
     get "/"
     assert_select tracker, count: 0
 
@@ -155,7 +157,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
 
     sitemap = Nokogiri::XML(Rails.root.join("public/sitemap.xml").read)
     locations = sitemap.remove_namespaces!.xpath("//url/loc").map(&:text)
-    assert_equal %w[https://set.tido.site/ https://set.tido.site/puzzle https://set.tido.site/practice https://set.tido.site/m], locations
+    assert_equal %w[https://set.tido.site/ https://set.tido.site/puzzle https://set.tido.site/practice https://set.tido.site/m https://set.tido.site/stats], locations
 
     manifest = JSON.parse(Rails.root.join("public/manifest.json").read)
     assert_equal "Set", manifest.fetch("name")
@@ -172,5 +174,33 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     end
     assert Rails.root.join("public/og-image.png").file?
     assert_not Rails.root.join("public/cards").exist?, "original card art must not be served"
+  end
+  test "a shared link puts the friend's result in the page, so the start card can ask to beat it" do
+    boot = ->(body) { JSON.parse(body[%r{<script type="application/json" id="setgame-boot">(.*?)</script>}m, 1]) }
+    get "/daily", params: { r: DailyShare.token(number: 12, elapsed_ms: 161_400, rank: 2, total: 9, streak: 3, marks: "ggy") }
+    assert_equal({ "kind" => "daily", "number" => 12, "elapsed_ms" => 161_400, "rank" => 2, "total" => 9 }, boot.(response.body)["shared"])
+
+    get "/puzzle", params: { r: DailyShare.token(kind: "puzzle", number: 5, elapsed_ms: 70_000) }
+    assert_equal({ "kind" => "puzzle", "number" => 5, "elapsed_ms" => 70_000, "rank" => nil, "total" => nil }, boot.(response.body)["shared"])
+
+    # A daily token doesn't verify as a puzzle one, and a made-up one is nothing.
+    get "/puzzle", params: { r: DailyShare.token(number: 12, elapsed_ms: 161_400) }
+    assert_nil boot.(response.body)["shared"]
+    get "/daily", params: { r: "c-3gk0-abcdefghijkl" }
+    assert_nil boot.(response.body)["shared"]
+  end
+
+  test "the front door tells search engines the site's name and that it's a free web game" do
+    get "/"
+    data = JSON.parse(css_select("script[type='application/ld+json']").first.text)
+    site, app = data.fetch("@graph")
+    assert_equal({ "@type" => "WebSite", "name" => "Set", "url" => "https://set.tido.site/" }, site)
+    assert_equal "WebApplication", app.fetch("@type")
+    assert_equal "GameApplication", app.fetch("applicationCategory")
+    assert_equal "0", app.dig("offers", "price")
+    assert_equal css_select("meta[name=description]").first["content"], app.fetch("description")
+
+    get "/puzzle"
+    assert_select "script[type='application/ld+json']", count: 0
   end
 end

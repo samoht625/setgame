@@ -4,30 +4,62 @@ import { isNewPlayer } from '../lib/player_id'
 import RulesDemo from './RulesDemo'
 
 const TOUR_KEY = 'setgame_tour_v1'
+const OPEN_EVENT = 'setgame:tour'
+/** How long a first-time player is offered the rules on the start cards and shown them on a miss. */
+const NEW_FOR_MS = 24 * 60 * 60 * 1000
+const MISS_HINTS = 3
 
 const STEPS = [
   { demo: 'features', title: 'Every card has 4 features' },
   { demo: 'set', title: 'A set: each feature all same or all different' }
 ] as const
 
+export const RULE_LINE = 'Find 3 cards where each feature is all the same or all different.'
+
+export function openTour(): void {
+  window.dispatchEvent(new Event(OPEN_EVENT))
+}
+
+/** Opens the tour whenever openTour() is called (the start cards' How to play). */
+export function useTourOpener(): [boolean, () => void] {
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    const onOpen = () => setOpen(true)
+    window.addEventListener(OPEN_EVENT, onOpen)
+    return () => window.removeEventListener(OPEN_EVENT, onOpen)
+  }, [])
+  return [open, () => setOpen(false)]
+}
+
 /**
- * Whether to show the tour: first visit only. Players who were here before the
- * tour existed already had a player id, so they skip it too.
+ * A first-time player, for their first day, until they've opened the tour.
+ * They play straight away; the start cards offer the tour and a miss says
+ * what a set is. Players from before this have a player id, so they aren't.
  */
-export function shouldShowTour(): boolean {
+export function newToRules(): boolean {
   try {
     const seen = localStorage.getItem(TOUR_KEY)
-    // 'pending': shown but not dismissed yet (say, the page was reloaded mid-tour).
-    if (seen) return seen === 'pending'
-    if (!isNewPlayer()) {
-      localStorage.setItem(TOUR_KEY, 'returning')
-      return false
+    if (seen) {
+      // 'pending': the tour used to open by itself and was never closed.
+      if (seen === 'pending') return true
+      const since = Number(seen.match(/^new:(\d+)$/)?.[1])
+      return Number.isFinite(since) && Date.now() - since < NEW_FOR_MS
     }
-    localStorage.setItem(TOUR_KEY, 'pending')
-    return true
+    localStorage.setItem(TOUR_KEY, isNewPlayer() ? `new:${Date.now()}` : 'returning')
+    return isNewPlayer()
   } catch {
     return false
   }
+}
+
+let missHints = 0
+
+/** What a miss says: for a player new to the rules, their first few misses also say what a set is. */
+export function missMessage(error: string): string {
+  if (error !== 'Not a valid set' && error !== 'Not a set') return error
+  if (missHints >= MISS_HINTS || !newToRules()) return error
+  missHints += 1
+  return 'Not a set: each feature must be all the same or all different'
 }
 
 function markTourSeen(): void {
@@ -38,7 +70,7 @@ function markTourSeen(): void {
   }
 }
 
-/** A short first-visit walkthrough of the rules. The game waits until it's dismissed. */
+/** A short walkthrough of the rules, opened from a new player's start card. */
 const Tour: React.FC<{ onDone: () => void }> = ({ onDone }) => {
   const [step, setStep] = useState(0)
   const titleId = useId()
@@ -63,8 +95,7 @@ const Tour: React.FC<{ onDone: () => void }> = ({ onDone }) => {
     onDone()
   }
 
-  // A native modal dialog: focus stays inside and the page behind is inert, so
-  // nothing (like Start on the daily) can be reached until the tour is closed.
+  // A native modal dialog: focus stays inside and the page behind is inert until it's closed.
   return (
     <dialog
       ref={dialogRef}

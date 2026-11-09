@@ -3,6 +3,8 @@
 module Api
   # The daily classic Puzzle: 12 cards, find all 6 sets. One try a day.
   class PuzzleController < BaseController
+    after_action :record_player_source, only: :create
+
     def show
       render json: PuzzleStatus.for(current_player_id)
     end

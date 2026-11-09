@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { knownStatus } from '../lib/boot'
+import { knownStatus, sharedResult } from '../lib/boot'
 import { useOtherDailyDone, PRACTICE_LINK } from '../hooks/useOtherDailyDone'
 import { secondaryButtonSmall } from '../lib/buttons'
 import Board from '../components/Board'
@@ -14,6 +14,8 @@ import { useSidePanel } from '../hooks/useSidePanel'
 import { SoloTimer } from '../solitaire/SolitaireHud'
 import DailyPanel from '../daily/DailyPanel'
 import DailyCard, { primaryButton } from '../daily/DailyCard'
+import { Challenge, RulesOffer } from '../daily/StartNotes'
+import { missMessage, newToRules } from '../rules/Tour'
 import FoundSets from './FoundSets'
 import { afterNextPaint } from '../lib/after_paint'
 import { seconds, track } from '../lib/analytics'
@@ -49,6 +51,8 @@ type PuzzleRun = {
   /** Every attempt in order: h(it) or m(iss), for the share grid. */
   attempts?: string
   submission?: 'pending' | 'submitted' | 'rejected'
+  /** The friend's time on the shared link this run was started from. */
+  rivalMs?: number
 }
 
 const sameSet = (a: number[], b: number[]) => a.length === b.length && a.every((card, index) => card === b[index])
@@ -118,6 +122,8 @@ const PuzzleGame: React.FC = () => {
   const shareNoteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const namedRef = useRef<string | null>(null)
   const playerId = getPlayerId()
+  const [shared] = useState(() => sharedResult('puzzle'))
+  const [newPlayer] = useState(newToRules)
 
   const putRun = (next: PuzzleRun | null) => {
     runRef.current = next
@@ -156,6 +162,10 @@ const PuzzleGame: React.FC = () => {
   useEffect(() => {
     if (panel.open) refreshStatus()
   }, [panel.open])
+
+  useEffect(() => {
+    if (shared) track('shared_landing', { mode: MODE })
+  }, [shared])
 
   useEffect(() => () => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
@@ -226,7 +236,8 @@ const PuzzleGame: React.FC = () => {
       elapsedMs: 0,
       found: sameRun && local!.found.length >= started.found.length ? local!.found : started.found,
       misses: sameRun ? local!.misses : 0,
-      attempts: sameRun ? local!.attempts : undefined
+      attempts: sameRun ? local!.attempts : undefined,
+      rivalMs: sameRun ? local!.rivalMs : shared?.number === started.number ? shared.elapsed_ms : undefined
     })
     if (!resumed) setClockPending(true)
     track('game_start', { mode: MODE, ranked: true, resumed })
@@ -259,7 +270,7 @@ const PuzzleGame: React.FC = () => {
 
     if (!isSet(sorted[0]!, sorted[1]!, sorted[2]!)) {
       putRun({ ...current, misses: current.misses + 1, attempts: `${current.attempts ?? ''}m` })
-      showToast('Not a set', 'error')
+      showToast(missMessage('Not a set'), 'error')
       flashRejection(cards)
       return
     }
@@ -412,6 +423,7 @@ const PuzzleGame: React.FC = () => {
           noun="puzzle"
           marksLabel="Your attempts"
           emptyText="No times yet — find all 6 sets to take the top spot."
+          rivalMs={finishedRun && !staleRun ? finishedRun.rivalMs : undefined}
         />
       </>
     )
@@ -424,6 +436,7 @@ const PuzzleGame: React.FC = () => {
       label: `Puzzle #${status.number}`,
       content: (
         <>
+          {shared && !resuming && <Challenge shared={shared} number={status.number} name="Puzzle" />}
           <p className="mt-2 text-sm font-medium text-neutral-900 dark:text-neutral-100">12 cards. 6 sets. Find them all.</p>
           <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
             {resuming
@@ -433,6 +446,7 @@ const PuzzleGame: React.FC = () => {
           <button type="button" onClick={() => void begin()} disabled={starting} className={`${primaryButton} mt-4 w-full`}>
             {resuming ? 'Continue' : 'Start'}
           </button>
+          {newPlayer && !resuming && <RulesOffer />}
           {streak > 0 && <p className="mt-3 text-xs font-medium text-emerald-700 dark:text-emerald-300">{streak}-day streak — keep it going</p>}
         </>
       )

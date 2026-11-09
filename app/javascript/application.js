@@ -2,8 +2,13 @@
 import { createRoot } from 'react-dom/client'
 import App from './components/App'
 import SiteHeader from './components/SiteHeader'
+import { captureFirstTouch } from './lib/source'
+import { listenForInstall } from './lib/install'
+
+listenForInstall()
 
 document.addEventListener('DOMContentLoaded', () => {
+  captureFirstTouch()
   // Both / (solo) and /m (multiplayer) render the same shell;
   // the App decides which mode to show based on the current path.
   const rootElement = document.getElementById('root') || document.getElementById('solitaire-root')
