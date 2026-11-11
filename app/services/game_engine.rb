@@ -12,6 +12,9 @@ class GameEngine
   RECENT_CLAIMS_LIMIT = 10
   SET_REVEAL_SECONDS = 2
   RESET_SECONDS = 5
+  # How long a player waits between reset requests, so nobody can keep the
+  # table in a permanent countdown.
+  RESET_COOLDOWN_SECONDS = 30
 
   def initialize(
     reveal_seconds: SET_REVEAL_SECONDS,
@@ -53,6 +56,7 @@ class GameEngine
     @reset_request_token = nil
     @reset_request_sequence = 0
     @reset_deadline = nil
+    @reset_requested_at = {} # player_id => monotonic time of their last request
     @reset_seconds = reset_seconds.to_f
     raise ArgumentError, 'reset_seconds must be positive' unless @reset_seconds.positive?
 
@@ -168,6 +172,13 @@ class GameEngine
         return { success: false, message: 'A game reset is already scheduled' }
       end
 
+      now = monotonic_time
+      @reset_requested_at.delete_if { |_, at| now - at >= RESET_COOLDOWN_SECONDS }
+      if @reset_requested_at.key?(player_id)
+        return { success: false, message: 'Wait a moment before asking for a new game again' }
+      end
+
+      @reset_requested_at[player_id] = now
       @reset_request_sequence += 1
       @reset_request_token = @reset_request_sequence
       @reset_requested_by = player_id
@@ -252,6 +263,7 @@ class GameEngine
 
       # Update online set and broadcast if changed
       update_online_set!
+      prune_names_locked!
     end
   end
 
@@ -459,6 +471,7 @@ class GameEngine
     @active_claim = nil
     @active_claim_token = nil
     clear_reset_request!
+    prune_names_locked!
     enqueue_snapshot_locked!
   end
 
@@ -484,13 +497,30 @@ class GameEngine
   end
 
   def current_names
+    @names.slice(*named_player_ids.to_a)
+  end
+
+  # Everyone the game still shows a name for.
+  def named_player_ids
     player_ids = @online_player_ids.dup
+    player_ids.merge(@active_connections.keys)
     player_ids.merge(@scores.keys)
     @recent_claims.each { |claim| player_ids.add(claim[:player_id]) }
     player_ids.add(@active_claim[:player_id]) if @active_claim
     @placements.each { |placement| player_ids.add(placement[:player_id]) }
     player_ids.add(@reset_requested_by) if @reset_requested_by
-    @names.slice(*player_ids.to_a)
+    player_ids
+  end
+
+  # Forgets the names nobody can see any more (players who left without
+  # scoring), so connecting with new ids can't grow memory and every
+  # snapshot without bound. A returning player's browser sends its saved
+  # name again (see MultiplayerGame).
+  def prune_names_locked!
+    keep = named_player_ids
+    before = @names.size
+    @names.select! { |player_id, _| keep.include?(player_id) }
+    enqueue_snapshot_locked! if @names.size != before
   end
 
   def schedule_reset(reset_token)

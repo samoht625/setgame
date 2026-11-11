@@ -25,6 +25,8 @@ module ActiveSupport
     # SQLite + WAL: keep tests in a single process to avoid lock contention.
     parallelize(workers: 1)
 
+    setup { RateLimit.reset! }
+
     # Plays the whole deal with the server-side simulator, claiming the first
     # available set each turn, and returns the claim events a client would send.
     def play_to_completion(seed)
