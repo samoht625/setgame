@@ -42,7 +42,7 @@ const THIRD_CARDS = Array.from({ length: 81 }, (_, first) => {
   return row
 })
 
-function thirdCard(card1: number, card2: number): number | undefined {
+export function thirdCard(card1: number, card2: number): number | undefined {
   return THIRD_CARDS[card1 - 1]?.[card2 - 1]
 }
 

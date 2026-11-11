@@ -12,6 +12,7 @@ import PersonalBestCelebration from '../components/PersonalBestCelebration'
 import { useSound } from '../components/SoundProvider'
 import { useSoloScores } from '../hooks/useSoloScores'
 import { useSidePanel } from '../hooks/useSidePanel'
+import { useAutoCompleteReveal } from '../hooks/useAutoCompleteReveal'
 import {
   applySoloClaim,
   isRoundOver,
@@ -31,6 +32,7 @@ import {
 import { seconds, track, type GameModeEvent } from '../lib/analytics'
 import { afterNextPaint } from '../lib/after_paint'
 import { missMessage } from '../rules/Tour'
+import { autoCompletePick, inTwoCardMode, THIRD_CARD_MISSING } from '../lib/two_card_mode'
 
 const MODE: GameModeEvent = 'solo'
 const LOCAL_STORAGE_KEY = 'setgame_solo_state_v2'
@@ -129,6 +131,7 @@ const SolitaireGame: React.FC = () => {
   const [deck, setDeck] = useState<number[]>([])
   const [status, setStatus] = useState<SoloStatus>('playing')
   const [selectedCards, setSelectedCards] = useState<number[]>([])
+  const autoReveal = useAutoCompleteReveal()
   const [rejectedCards, setRejectedCards] = useState<number[]>([])
   const [toast, setToast] = useState<ToastMessage | null>(null)
   const [elapsedMs, setElapsedMs] = useState(0)
@@ -303,6 +306,7 @@ const SolitaireGame: React.FC = () => {
   }
 
   const startNewGame = async (quitReason: QuitReason = 'new_game') => {
+    autoReveal.cancel()
     reportQuit(quitReason)
     startRequestRef.current?.abort()
     const request = new AbortController()
@@ -418,7 +422,7 @@ const SolitaireGame: React.FC = () => {
     }
   }
 
-  const claimSet = (cardIds: number[]) => {
+  const claimSet = (cardIds: number[], thirdCardMissing = false, atMs = Date.now()) => {
     const deal = dealStateRef.current
     if (!deal || status !== 'playing') return
 
@@ -428,7 +432,7 @@ const SolitaireGame: React.FC = () => {
     // full-board reshuffle, so applying in selection order could desync the
     // replay and get a legitimate run rejected.
     const sortedCards = [...cardIds].sort((a, b) => a - b)
-    const result = applySoloClaim(deal, sortedCards)
+    const result = thirdCardMissing ? { ok: false as const, error: THIRD_CARD_MISSING } : applySoloClaim(deal, sortedCards)
     if (!result.ok) {
       missesRef.current += 1
       writeSave(deal, {
@@ -447,7 +451,7 @@ const SolitaireGame: React.FC = () => {
       return
     }
 
-    const tMs = Date.now() - startedAtMs
+    const tMs = atMs - startedAtMs
     const event: ClaimEvent = {
       type: 'claim',
       cards: sortedCards,
@@ -510,28 +514,37 @@ const SolitaireGame: React.FC = () => {
     })
   }
 
+  // The reveal's timer claims with whatever state is current by then.
+  const claimSetRef = useRef(claimSet)
+  claimSetRef.current = claimSet
+
   const handleCardClick = (cardId: number) => {
-    if (isStarting || clockPending || status !== 'playing') return
+    if (isStarting || clockPending || status !== 'playing' || autoReveal.revealing) return
     if (Date.now() - lastActivityAtRef.current >= IDLE_RESET_MS) {
       startFreshAfterIdle()
       return
     }
 
-    const nextSelected = selectedCards.includes(cardId)
+    const picked = selectedCards.includes(cardId)
       ? selectedCards.filter(id => id !== cardId)
       : selectedCards.length < 3
         ? [...selectedCards, cardId]
         : selectedCards
+    const pick = autoCompletePick(picked, board, inTwoCardMode(getPlayerDisplayName()))
 
-    if (nextSelected.length > selectedCards.length && nextSelected.length < 3) playSelection()
-    setSelectedCards(nextSelected)
-    if (nextSelected.length === 3) {
-      claimSet(nextSelected)
+    if (pick.cards.length > selectedCards.length && pick.cards.length < 3 && !pick.missing) playSelection()
+    setSelectedCards(pick.cards)
+    if (pick.filled !== null) {
+      const atMs = Date.now()
+      autoReveal.reveal(pick.cards, pick.filled, () => claimSetRef.current(pick.cards, false, atMs), true)
+    } else if (pick.cards.length === 3 || pick.missing) {
+      claimSet(pick.cards, pick.missing)
     }
   }
 
   const togglePause = () => {
     if (isStarting) return
+    autoReveal.cancel()
     if (status === 'playing') {
       const nowElapsed = Date.now() - startedAtMs
       setElapsedMs(nowElapsed)
@@ -796,6 +809,9 @@ const SolitaireGame: React.FC = () => {
             cards={board}
             selectedCards={selectedCards}
             rejectedCards={rejectedCards}
+            completedCards={autoReveal.cards}
+            autoFilledCard={autoReveal.filled}
+            completedLeaving={autoReveal.leaving}
             onCardClick={handleCardClick}
             claiming={isStarting || clockPending}
             loading={isStarting}

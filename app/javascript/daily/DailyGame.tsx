@@ -11,12 +11,14 @@ import { useGameMenu } from '../components/GameMenu'
 import ScoreValue from '../components/ScoreValue'
 import { useSound } from '../components/SoundProvider'
 import { useSidePanel } from '../hooks/useSidePanel'
+import { useAutoCompleteReveal } from '../hooks/useAutoCompleteReveal'
 import { SoloTimer } from '../solitaire/SolitaireHud'
 import DailyPanel from './DailyPanel'
 import DailyCard, { primaryButton } from './DailyCard'
 import { Challenge, RulesOffer } from './StartNotes'
 import StreakPill from './StreakPill'
 import { missMessage, newToRules } from '../rules/Tour'
+import { autoCompletePick, inTwoCardMode, THIRD_CARD_MISSING } from '../lib/two_card_mode'
 import { afterNextPaint } from '../lib/after_paint'
 import { seconds, track } from '../lib/analytics'
 import {
@@ -131,6 +133,7 @@ const DailyGame: React.FC = () => {
   const [clockPending, setClockPending] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [selectedCards, setSelectedCards] = useState<number[]>([])
+  const autoReveal = useAutoCompleteReveal()
   const [rejectedCards, setRejectedCards] = useState<number[]>([])
   const [claimAnimationKey, setClaimAnimationKey] = useState(0)
   const [toast, setToast] = useState<ToastMessage | null>(null)
@@ -318,14 +321,14 @@ const DailyGame: React.FC = () => {
     }
   }
 
-  const claimSet = (cardIds: number[]) => {
+  const claimSet = (cardIds: number[], thirdCardMissing = false, atMs = Date.now()) => {
     const current = currentRun()
     if (!current || current.status !== 'playing') return
 
     // Sorted, like the solo game: the server replays claims in this order.
     const sortedCards = [...cardIds].sort((a, b) => a - b)
     const deal = restoreSoloDeal(current.board, current.deck, current.rngState)
-    const result = applySoloClaim(deal, sortedCards)
+    const result = thirdCardMissing ? { ok: false as const, error: THIRD_CARD_MISSING } : applySoloClaim(deal, sortedCards)
     setSelectedCards([])
     if (!result.ok) {
       putRun({ ...current, misses: current.misses + 1 })
@@ -334,7 +337,7 @@ const DailyGame: React.FC = () => {
       return
     }
 
-    const tMs = Date.now() - current.startedAtMs
+    const tMs = atMs - current.startedAtMs
     const events: ClaimEvent[] = [...current.events, { type: 'claim', cards: sortedCards, t_ms: tMs }]
     const finished = isRoundOver(deal)
     const next: DailyRun = {
@@ -369,16 +372,24 @@ const DailyGame: React.FC = () => {
     void submit(next)
   }
 
+  // The reveal's timer claims with whatever state is current by then.
+  const claimRef = useRef(claimSet)
+  claimRef.current = claimSet
+
   const handleCardClick = (cardId: number) => {
-    if (!run || run.status !== 'playing' || clockPending || starting) return
-    const nextSelected = selectedCards.includes(cardId)
+    if (!run || run.status !== 'playing' || clockPending || starting || autoReveal.revealing) return
+    const picked = selectedCards.includes(cardId)
       ? selectedCards.filter(id => id !== cardId)
       : selectedCards.length < 3
         ? [...selectedCards, cardId]
         : selectedCards
-    if (nextSelected.length > selectedCards.length && nextSelected.length < 3) playSelection()
-    setSelectedCards(nextSelected)
-    if (nextSelected.length === 3) claimSet(nextSelected)
+    const pick = autoCompletePick(picked, run.board, inTwoCardMode(getPlayerDisplayName()))
+    if (pick.cards.length > selectedCards.length && pick.cards.length < 3 && !pick.missing) playSelection()
+    setSelectedCards(pick.cards)
+    if (pick.filled !== null) {
+      const atMs = Date.now()
+      autoReveal.reveal(pick.cards, pick.filled, () => claimRef.current(pick.cards, false, atMs), true)
+    } else if (pick.cards.length === 3 || pick.missing) claimSet(pick.cards, pick.missing)
   }
 
   const share = async (result: DailyShare) => {
@@ -391,6 +402,7 @@ const DailyGame: React.FC = () => {
   }
 
   const goToToday = () => {
+    autoReveal.cancel()
     commit(loadSave(dailyDate()))
     setStatus(null)
     refreshStatus()
@@ -575,6 +587,9 @@ const DailyGame: React.FC = () => {
             cards={run && !starting ? run.board : []}
             selectedCards={selectedCards}
             rejectedCards={rejectedCards}
+            completedCards={autoReveal.cards}
+            autoFilledCard={autoReveal.filled}
+            completedLeaving={autoReveal.leaving}
             onCardClick={handleCardClick}
             claiming={clockPending}
             loading={starting}

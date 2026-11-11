@@ -9,8 +9,10 @@ import Toast, { ToastMessage } from './Toast'
 import { useHeartbeat } from '../hooks/useHeartbeat'
 import { useMultiplayerFunnel } from '../hooks/useMultiplayerFunnel'
 import { useSidePanel } from '../hooks/useSidePanel'
+import { useAutoCompleteReveal } from '../hooks/useAutoCompleteReveal'
 import { useSound } from './SoundProvider'
 import { onNameChange } from '../lib/player_name'
+import { inTwoCardMode, THIRD_CARD_MISSING } from '../lib/two_card_mode'
 
 interface Placement {
   player_id: string
@@ -78,6 +80,8 @@ const MultiplayerGame: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false)
   const [scoreAnimationKeys, setScoreAnimationKeys] = useState<Record<string, string>>({})
   const panel = useSidePanel()
+  const autoReveal = useAutoCompleteReveal()
+  const { reveal: revealAutoComplete, cancel: cancelAutoComplete } = autoReveal
   const { noteAttempt, noteMiss } = useMultiplayerFunnel(
     playerId,
     gameState.status,
@@ -90,6 +94,9 @@ const MultiplayerGame: React.FC = () => {
   const rejectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const selectedCardsRef = useRef<number[]>([])
+  // The pair behind our claim in flight, when the server is to pick the third card.
+  const pairClaimRef = useRef<number[] | null>(null)
+  const playerIdRef = useRef('')
   const pushedStoredNameRef = useRef(false)
   const previousScoresRef = useRef<Record<string, number> | null>(null)
 
@@ -126,12 +133,14 @@ const MultiplayerGame: React.FC = () => {
         previousScoresRef.current = null
         setIsConnected(false)
         clearClaimTimeout()
+        pairClaimRef.current = null
         setSelectedCards([])
         setClaiming(false)
       },
 
       received(data: ServerMessage) {
         if ('your_id' in data) {
+          playerIdRef.current = data.your_id
           setPlayerId(data.your_id)
           return
         }
@@ -140,8 +149,9 @@ const MultiplayerGame: React.FC = () => {
           showToast(data.error, 'error')
           if (data.action !== 'reset') {
             // Response to one of our own claims failed
-            if (data.error === 'Not a valid set') noteMiss()
+            if (data.error === 'Not a valid set' || data.error === THIRD_CARD_MISSING) noteMiss()
             clearClaimTimeout()
+            pairClaimRef.current = null
             flashRejection(selectedCardsRef.current)
             setSelectedCards([])
             setClaiming(false)
@@ -159,10 +169,22 @@ const MultiplayerGame: React.FC = () => {
         previousScoresRef.current = current.scores
         if (Object.keys(current.scores).length === 0) setScoreAnimationKeys({})
 
+        // Display only: the server already holds the claim. Whichever message
+        // shows our pair's set first (the broadcast or our reply) starts the
+        // highlight, so the usual found style never shows before it.
+        const pair = pairClaimRef.current
+        const claim = current.active_claim
+        if (pair && claim && claim.player_id === playerIdRef.current && pair.every(id => claim.cards.includes(id))) {
+          pairClaimRef.current = null
+          const filled = claim.cards.find(id => !pair.includes(id))
+          if (filled) revealAutoComplete(claim.cards, filled)
+        }
+
         if ('success' in data && data.success) {
           // Our own claim succeeded
           playSet()
           clearClaimTimeout()
+          pairClaimRef.current = null
           setGameState(data)
           setSelectedCards([])
           setClaiming(false)
@@ -173,6 +195,7 @@ const MultiplayerGame: React.FC = () => {
         // Keep our pending claim/timeout untouched; only drop selected cards
         // that are no longer on the board.
         const state = data as GameState
+        if (!state.active_claim) cancelAutoComplete()
         setGameState(state)
         setSelectedCards(prev => (
           state.active_claim ? [] : prev.filter(id => state.board.includes(id))
@@ -191,7 +214,7 @@ const MultiplayerGame: React.FC = () => {
       // Close the socket so we don't appear online while playing solo
       consumer.disconnect()
     }
-  }, [playSet, noteMiss])
+  }, [playSet, noteMiss, revealAutoComplete, cancelAutoComplete])
 
   useEffect(() => {
     const onOffline = () => {
@@ -266,7 +289,7 @@ const MultiplayerGame: React.FC = () => {
   const cancelReset = useCallback(() => performResetAction('cancel_reset'), [performResetAction])
 
   const handleClaimSet = (cardIds: number[]) => {
-    if (cardIds.length !== 3 || claiming || gameState.active_claim) return
+    if (cardIds.length < 2 || claiming || gameState.active_claim) return
 
     if (!isConnected || !subscriptionRef.current || typeof subscriptionRef.current.perform !== 'function') {
       showToast('Not connected to the game. Trying to reconnect…', 'error')
@@ -281,15 +304,18 @@ const MultiplayerGame: React.FC = () => {
     clearClaimTimeout()
     claimTimeoutRef.current = setTimeout(() => {
       claimTimeoutRef.current = null
+      pairClaimRef.current = null
       showToast('Request timed out. Please try again.', 'error')
       setClaiming(false)
       setSelectedCards([])
     }, 5000)
 
+    pairClaimRef.current = cardIds.length === 2 ? cardIds : null
     try {
       subscriptionRef.current.perform('claim_set', { card_ids: cardIds })
     } catch (error) {
       clearClaimTimeout()
+      pairClaimRef.current = null
       showToast('Failed to send claim. Please try again.', 'error')
       setClaiming(false)
     }
@@ -304,11 +330,14 @@ const MultiplayerGame: React.FC = () => {
         ? [...selectedCards, cardId]
         : selectedCards
 
-    if (nextSelected.length > selectedCards.length && nextSelected.length < 3) playSelection()
+    // Players in the two-card experiment claim with two cards; the server picks the third.
+    const pairClaim = nextSelected.length === 2 && inTwoCardMode(gameState.names[playerId])
+
+    if (nextSelected.length > selectedCards.length && nextSelected.length < 3 && !pairClaim) playSelection()
     setSelectedCards(nextSelected)
 
     // Auto-claim when the third card is selected
-    if (nextSelected.length === 3) {
+    if (nextSelected.length === 3 || pairClaim) {
       handleClaimSet(nextSelected)
     }
   }
@@ -375,6 +404,8 @@ const MultiplayerGame: React.FC = () => {
             selectedCards={selectedCards}
             rejectedCards={rejectedCards}
             foundCards={activeClaim?.cards || []}
+            completedCards={autoReveal.cards}
+            autoFilledCard={autoReveal.filled}
             onCardClick={handleCardClick}
             claiming={claiming || !isConnected}
             loading={gameState.board.length === 0 && gameState.status === 'playing'}

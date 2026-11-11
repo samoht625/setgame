@@ -203,4 +203,11 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     get "/puzzle"
     assert_select "script[type='application/ld+json']", count: 0
   end
+
+  test "every game page carries the two-card experiment's names from TwoCardMode" do
+    %w[/ /practice /puzzle /m].each do |path|
+      get path
+      assert_select "meta[name='setgame-two-card-names'][content=?]", TwoCardMode::PLAYER_NAMES.join(","), true, path
+    end
+  end
 end

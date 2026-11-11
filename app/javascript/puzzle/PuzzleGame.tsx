@@ -11,6 +11,7 @@ import { useGameMenu } from '../components/GameMenu'
 import ScoreValue from '../components/ScoreValue'
 import { useSound } from '../components/SoundProvider'
 import { useSidePanel } from '../hooks/useSidePanel'
+import { useAutoCompleteReveal } from '../hooks/useAutoCompleteReveal'
 import { SoloTimer } from '../solitaire/SolitaireHud'
 import DailyPanel from '../daily/DailyPanel'
 import DailyCard, { primaryButton } from '../daily/DailyCard'
@@ -24,6 +25,7 @@ import { dailyDate, puzzleShareLink, shareLink, type DailyShare } from '../lib/d
 import { getPlayerId } from '../lib/player_id'
 import { getSavedName, onNameChange, saveName } from '../lib/player_name'
 import { isSet } from '../lib/rules'
+import { autoCompletePick, inTwoCardMode, THIRD_CARD_MISSING } from '../lib/two_card_mode'
 import {
   fetchPuzzleStatus,
   finishPuzzle,
@@ -114,6 +116,7 @@ const PuzzleGame: React.FC = () => {
   const [clockPending, setClockPending] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [selectedCards, setSelectedCards] = useState<number[]>([])
+  const autoReveal = useAutoCompleteReveal()
   const [rejectedCards, setRejectedCards] = useState<number[]>([])
   const [claimAnimationKey, setClaimAnimationKey] = useState(0)
   const [toast, setToast] = useState<ToastMessage | null>(null)
@@ -263,15 +266,15 @@ const PuzzleGame: React.FC = () => {
     else if (!res.retryable) showToast('This run couldn’t be verified', 'error')
   }
 
-  const claim = (cards: number[]) => {
+  const claim = (cards: number[], thirdCardMissing = false, atMs = Date.now()) => {
     const current = runRef.current
     if (!current || current.status !== 'playing') return
     const sorted = [...cards].sort((a, b) => a - b)
     setSelectedCards([])
 
-    if (!isSet(sorted[0]!, sorted[1]!, sorted[2]!)) {
+    if (thirdCardMissing || !isSet(sorted[0]!, sorted[1]!, sorted[2]!)) {
       putRun({ ...current, misses: current.misses + 1, attempts: `${current.attempts ?? ''}m` })
-      showToast(missMessage('Not a set'), 'error')
+      showToast(thirdCardMissing ? THIRD_CARD_MISSING : missMessage('Not a set'), 'error')
       flashRejection(cards)
       return
     }
@@ -281,7 +284,7 @@ const PuzzleGame: React.FC = () => {
       return
     }
 
-    const tMs = Date.now() - current.startedAtMs
+    const tMs = atMs - current.startedAtMs
     const found = [...current.found, { cards: sorted, t_ms: tMs }]
     const finished = found.length === SET_COUNT
     const next: PuzzleRun = {
@@ -306,14 +309,22 @@ const PuzzleGame: React.FC = () => {
     void submit(next)
   }
 
+  // The reveal's timer claims with whatever state is current by then.
+  const claimRef = useRef(claim)
+  claimRef.current = claim
+
   const handleCardClick = (cardId: number) => {
-    if (!run || run.status !== 'playing' || clockPending || starting) return
-    const nextSelected = selectedCards.includes(cardId)
+    if (!run || run.status !== 'playing' || clockPending || starting || autoReveal.revealing) return
+    const picked = selectedCards.includes(cardId)
       ? selectedCards.filter(id => id !== cardId)
       : selectedCards.length < 3 ? [...selectedCards, cardId] : selectedCards
-    if (nextSelected.length > selectedCards.length && nextSelected.length < 3) playSelection()
-    setSelectedCards(nextSelected)
-    if (nextSelected.length === 3) claim(nextSelected)
+    const pick = autoCompletePick(picked, run.cards, inTwoCardMode(getSavedName()))
+    if (pick.cards.length > selectedCards.length && pick.cards.length < 3 && !pick.missing) playSelection()
+    setSelectedCards(pick.cards)
+    if (pick.filled !== null) {
+      const atMs = Date.now()
+      autoReveal.reveal(pick.cards, pick.filled, () => claimRef.current(pick.cards, false, atMs))
+    } else if (pick.cards.length === 3 || pick.missing) claim(pick.cards, pick.missing)
   }
 
   const share = async (result: DailyShare) => {
@@ -326,6 +337,7 @@ const PuzzleGame: React.FC = () => {
   }
 
   const goToToday = () => {
+    autoReveal.cancel()
     putRun(null)
     setStatus(null)
     refreshStatus()
@@ -501,6 +513,8 @@ const PuzzleGame: React.FC = () => {
                 cards={run && !starting && playing ? run.cards : []}
                 selectedCards={selectedCards}
                 rejectedCards={rejectedCards}
+                completedCards={autoReveal.cards}
+                autoFilledCard={autoReveal.filled}
                 onCardClick={handleCardClick}
                 claiming={clockPending}
                 loading={starting}

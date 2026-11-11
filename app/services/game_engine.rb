@@ -116,7 +116,10 @@ class GameEngine
       # Normalize input: ints, no nils, no duplicates
       card_ids = Array(card_ids).map { |id| Integer(id, exception: false) }.compact.uniq
 
-      if card_ids.length != 3
+      # Players in the two-card experiment send a pair; the server picks the third.
+      auto_complete = card_ids.length == 2 && TwoCardMode.enabled_for?(@names[player_id])
+
+      if card_ids.length != 3 && !auto_complete
         return { success: false, message: 'Must select exactly 3 different cards' }
       end
 
@@ -131,6 +134,13 @@ class GameEngine
       # Check if cards are still on board
       unless card_ids.all? { |id| @board.include?(id) }
         return { success: false, message: 'One or more cards are no longer on the board' }
+      end
+
+      if auto_complete
+        third = Rules.third_card(*card_ids)
+        return { success: false, message: TwoCardMode::THIRD_CARD_MISSING } unless @board.include?(third)
+
+        card_ids << third
       end
 
       # Check if it's a valid set
