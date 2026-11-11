@@ -35,12 +35,19 @@ test('Puzzle, in the two-card experiment: a pair finds its set, or misses when t
   const board = await startPuzzle(page)
   const { complete, missing } = pairs(board)
 
-  for (const id of complete[0]!) await card(page, id).click()
+  const [a, b] = complete[0]!
+  await card(page, a!).click()
+  await card(page, b!).click()
+  // The completed set shows briefly, with the filled-in card marked, before it's claimed.
+  await expect(page.locator('[data-completed]')).toHaveCount(3)
+  await expect(card(page, thirdCard(a!, b!)!)).toHaveAttribute('data-completed', 'filled')
   await expect(page.locator('[data-found-set]')).toHaveCount(1)
+  await expect(page.locator('[data-completed]')).toHaveCount(0)
   await expect(page.getByText(`1 of 6`)).toBeVisible()
 
   for (const id of missing[0]!) await card(page, id).click()
   await expect(page.getByText("The third card isn't on the board")).toBeVisible()
+  await expect(page.locator('[data-completed]')).toHaveCount(0)
   await expect(page.locator('[data-found-set]')).toHaveCount(1)
   await expect(page.locator('[data-card-id][aria-pressed="true"]')).toHaveCount(0)
 })
@@ -57,6 +64,37 @@ test('Puzzle, outside the experiment: two cards stay picked until the third', as
   const third = board.find(id => !pair.includes(id) && isSet(pair[0]!, pair[1]!, id))!
   await card(page, third).click()
   await expect(page.locator('[data-found-set]')).toHaveCount(1)
+  await expect(page.locator('[data-completed]')).toHaveCount(0)
+})
+
+test('Practice, in the two-card experiment: the completed set shows, then is claimed', async ({ page }) => {
+  await playAs(page, 'Yaniv')
+  await page.goto('/practice')
+  await expect(page.locator('[data-card-id]').first()).toBeEnabled()
+  const [a, b] = pairs(await cards(page)).complete[0]!
+
+  await card(page, a!).click()
+  await card(page, b!).click()
+  await expect(page.locator('[data-completed]')).toHaveCount(3)
+  await expect(card(page, thirdCard(a!, b!)!)).toHaveAttribute('data-completed', 'filled')
+  await expect(page.getByText('Set found!')).toBeVisible()
+  await expect(page.locator('[data-completed]')).toHaveCount(0)
+  await expect(card(page, a!)).toHaveCount(0)
+})
+
+test('Daily Deal, in the two-card experiment: the completed set shows, then is claimed', async ({ page }) => {
+  await playAs(page, 'Rose')
+  await page.goto('/daily')
+  await page.getByRole('button', { name: 'Start', exact: true }).click()
+  await expect(page.locator('[data-card-id]').first()).toBeEnabled()
+  const [a, b] = pairs(await cards(page)).complete[0]!
+
+  await card(page, a!).click()
+  await card(page, b!).click()
+  await expect(page.locator('[data-completed]')).toHaveCount(3)
+  await expect(page.getByText('Set found!')).toBeVisible()
+  await expect(page.locator('[data-completed]')).toHaveCount(0)
+  await expect(card(page, a!)).toHaveCount(0)
 })
 
 test('Multiplayer, in the two-card experiment: the server completes the pair or calls it a miss', async ({ page }) => {
@@ -69,6 +107,12 @@ test('Multiplayer, in the two-card experiment: the server completes the pair or 
   for (const id of missing[0]!) await card(page, id).click()
   await expect(page.getByText("The third card isn't on the board")).toBeVisible()
 
-  for (const id of complete[0]!) await card(page, id).click()
+  const [a, b] = complete[0]!
+  await card(page, a!).click()
+  await card(page, b!).click()
+  await expect(card(page, thirdCard(a!, b!)!)).toHaveAttribute('data-completed', 'filled')
+  await expect(page.getByText('You found a set!')).toBeVisible()
+  // The highlight gives way to the server's usual found reveal.
+  await expect(page.locator('[data-completed]')).toHaveCount(0)
   await expect(page.getByText('You found a set!')).toBeVisible()
 })

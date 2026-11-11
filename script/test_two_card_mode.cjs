@@ -40,21 +40,21 @@ try {
   })
 
   check('flag on: the second card brings the third along when it is on the board', () => {
-    assert.deepEqual(autoCompletePick(pair, [1, 2, 3, 10, 20], true), { cards: [1, 2, 3], missing: false })
+    assert.deepEqual(autoCompletePick(pair, [1, 2, 3, 10, 20], true), { cards: [1, 2, 3], filled: 3, missing: false })
   })
 
   check('flag on: a pair whose third card is not on the board is a miss', () => {
-    assert.deepEqual(autoCompletePick(pair, [1, 2, 10, 20], true), { cards: [1, 2], missing: true })
+    assert.deepEqual(autoCompletePick(pair, [1, 2, 10, 20], true), { cards: [1, 2], filled: null, missing: true })
   })
 
   check('flag on: one or three cards pick as usual', () => {
-    assert.deepEqual(autoCompletePick([1], [1, 2, 3], true), { cards: [1], missing: false })
-    assert.deepEqual(autoCompletePick([1, 2, 10], [1, 2, 3, 10], true), { cards: [1, 2, 10], missing: false })
+    assert.deepEqual(autoCompletePick([1], [1, 2, 3], true), { cards: [1], filled: null, missing: false })
+    assert.deepEqual(autoCompletePick([1, 2, 10], [1, 2, 3, 10], true), { cards: [1, 2, 10], filled: null, missing: false })
   })
 
   check('flag off: a pair stays a pair', () => {
-    assert.deepEqual(autoCompletePick(pair, [1, 2, 3], false), { cards: [1, 2], missing: false })
-    assert.deepEqual(autoCompletePick(pair, [1, 2, 10], false), { cards: [1, 2], missing: false })
+    assert.deepEqual(autoCompletePick(pair, [1, 2, 3], false), { cards: [1, 2], filled: null, missing: false })
+    assert.deepEqual(autoCompletePick(pair, [1, 2, 10], false), { cards: [1, 2], filled: null, missing: false })
   })
 
   console.log('\nAll checks passed.')

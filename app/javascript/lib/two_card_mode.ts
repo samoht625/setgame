@@ -21,13 +21,13 @@ export function inTwoCardMode(name: string | null | undefined, names: string[] =
 
 /**
  * The cards a click leaves picked. For a player in the experiment, a second
- * card brings its set's third card along; `missing` means that card isn't on
- * the board, which counts as a miss.
+ * card brings its set's third card along (`filled`); `missing` means that
+ * card isn't on the board, which counts as a miss.
  */
-export function autoCompletePick(picked: number[], board: number[], enabled: boolean): { cards: number[]; missing: boolean } {
-  if (!enabled || picked.length !== 2) return { cards: picked, missing: false }
+export function autoCompletePick(picked: number[], board: number[], enabled: boolean): { cards: number[]; filled: number | null; missing: boolean } {
+  if (!enabled || picked.length !== 2) return { cards: picked, filled: null, missing: false }
   const third = thirdCard(picked[0]!, picked[1]!)
   return third !== undefined && board.includes(third)
-    ? { cards: [...picked, third], missing: false }
-    : { cards: picked, missing: true }
+    ? { cards: [...picked, third], filled: third, missing: false }
+    : { cards: picked, filled: null, missing: true }
 }

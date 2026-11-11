@@ -173,6 +173,17 @@ dialog::backdrop {
   animation: card-in 0.22s ease-out;
 }
 
+/* Two-card experiment: the card the game filled in joins the picked pair */
+@keyframes auto-fill {
+  0% { transform: scale(0.96); }
+  50% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+.animate-auto-fill {
+  animation: auto-fill 0.28s ease-out;
+}
+
 /* Invalid set feedback */
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
