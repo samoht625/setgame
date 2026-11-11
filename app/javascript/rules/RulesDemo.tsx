@@ -24,11 +24,10 @@ const FADE_MS = 150
 /** A tiny symbol for one value of a feature, drawn with the card artwork's shapes. */
 const Glyph: React.FC<{ shape?: number; color?: number; shading?: number }> = ({ shape = 2, color = 0, shading = 0 }) => {
   const ink = INKS[color]
-  const name = ['red', 'purple', 'green'][color]
   const shapeId = ['squiggle', 'diamond', 'oval'][shape]
   return (
-    <svg aria-hidden="true" viewBox="-34 -62 68 124" className="h-4 w-2.5" fill={shading === 0 ? ink : shading === 1 ? `url(#set-card-stripes-${name})` : 'none'} stroke={ink} strokeWidth={shading === 2 ? 9 : 6}>
-      <use href={`#set-card-${shapeId}`} />
+    <svg aria-hidden="true" viewBox="-34 -62 68 124" className="h-4 w-2.5" fill={shading === 0 ? ink : 'none'} stroke={ink} strokeWidth={shading === 2 ? 9 : 6}>
+      <use href={`#set-card-${shapeId}${shading === 1 ? '-striped' : ''}`} />
     </svg>
   )
 }

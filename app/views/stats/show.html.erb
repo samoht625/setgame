@@ -1,9 +1,10 @@
 <% s = @stats %>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-  <path id="st-squiggle" d="M-10-54 C7-54 22.5-41 22.5-19 C22.5-4.5 15 2.5 15 11.5 C15 23.5 25.5 32.5 25.5 39.5 C25.5 46.5 15 50.5 6 50.5 C-13 50.5-23.5 39.5-23.5 22.5 C-23.5 6.5-13.5-6.5-13.5-18 C-13.5-30.5-24.5-40-24.5-45.5 C-24.5-51-17-54-10-54 Z"/>
+  <path id="st-squiggle" d="M-8-52.25 C10-52.25 23-40.25 23-20.75 C23-5.5 14.25 4.5 14.25 14.75 C14.25 27 25 36.25 25 42.5 C25 48.75 16 52.25 8 52.25 C-10 52.25-23 40.25-23 20.75 C-23 5.5-14.25-4.5-14.25-14.75 C-14.25-27-25-36.25-25-42.5 C-25-48.75-16-52.25-8-52.25 Z"/>
   <path id="st-diamond" d="M0-59 28 0 0 59-28 0Z"/>
   <rect id="st-oval" x="-26.5" y="-55" width="53" height="110" rx="26.5"/>
-  <% StatsHelper::INKS.each do |name, ink| %><pattern id="st-<%= name %>" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M0 3H12" fill="none" stroke="<%= ink %>" stroke-width="3.5"/></pattern><% end %>
+  <path id="st-stripes" d="M-32-42H32M-32-30H32M-32-18H32M-32-6H32M-32 6H32M-32 18H32M-32 30H32M-32 42H32" fill="none" stroke-width="3.5"/>
+  <% StatsHelper::SHAPES.each do |shape| %><clipPath id="st-<%= shape %>-clip"><use href="#st-<%= shape %>"/></clipPath><g id="st-<%= shape %>-striped"><use href="#st-stripes" clip-path="url(#st-<%= shape %>-clip)"/><use href="#st-<%= shape %>"/></g><% end %>
 </defs></svg>
 <main>
   <h1>Stats</h1>
