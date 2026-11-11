@@ -18,6 +18,7 @@
     "test:daily": "node script/test_daily.cjs",
     "test:cards": "node script/test_card_artwork.cjs",
     "test:demo": "node script/test_rules_demo.cjs",
+    "test:two-card": "node script/test_two_card_mode.cjs",
     "assets:brand": "node script/generate_brand_assets.cjs"
   },
   "dependencies": {

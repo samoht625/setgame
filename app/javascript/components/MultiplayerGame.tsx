@@ -11,6 +11,7 @@ import { useMultiplayerFunnel } from '../hooks/useMultiplayerFunnel'
 import { useSidePanel } from '../hooks/useSidePanel'
 import { useSound } from './SoundProvider'
 import { onNameChange } from '../lib/player_name'
+import { inTwoCardMode, THIRD_CARD_MISSING } from '../lib/two_card_mode'
 
 interface Placement {
   player_id: string
@@ -140,7 +141,7 @@ const MultiplayerGame: React.FC = () => {
           showToast(data.error, 'error')
           if (data.action !== 'reset') {
             // Response to one of our own claims failed
-            if (data.error === 'Not a valid set') noteMiss()
+            if (data.error === 'Not a valid set' || data.error === THIRD_CARD_MISSING) noteMiss()
             clearClaimTimeout()
             flashRejection(selectedCardsRef.current)
             setSelectedCards([])
@@ -266,7 +267,7 @@ const MultiplayerGame: React.FC = () => {
   const cancelReset = useCallback(() => performResetAction('cancel_reset'), [performResetAction])
 
   const handleClaimSet = (cardIds: number[]) => {
-    if (cardIds.length !== 3 || claiming || gameState.active_claim) return
+    if (cardIds.length < 2 || claiming || gameState.active_claim) return
 
     if (!isConnected || !subscriptionRef.current || typeof subscriptionRef.current.perform !== 'function') {
       showToast('Not connected to the game. Trying to reconnect…', 'error')
@@ -304,11 +305,14 @@ const MultiplayerGame: React.FC = () => {
         ? [...selectedCards, cardId]
         : selectedCards
 
-    if (nextSelected.length > selectedCards.length && nextSelected.length < 3) playSelection()
+    // Players in the two-card experiment claim with two cards; the server picks the third.
+    const pairClaim = nextSelected.length === 2 && inTwoCardMode(gameState.names[playerId])
+
+    if (nextSelected.length > selectedCards.length && nextSelected.length < 3 && !pairClaim) playSelection()
     setSelectedCards(nextSelected)
 
     // Auto-claim when the third card is selected
-    if (nextSelected.length === 3) {
+    if (nextSelected.length === 3 || pairClaim) {
       handleClaimSet(nextSelected)
     }
   }

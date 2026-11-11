@@ -7,3 +7,5 @@
 <% end %>
 <% if @account_email %><%= tag.meta name: "setgame-account", content: @account_email %><%= tag.meta name: "setgame-reminder", content: @reminder %><% end %>
 <% if @sign_in_enabled %><meta name="setgame-sign-in" content="1"><% end %>
+<%# The two-card experiment's names (TwoCardMode, see two_card_mode.ts). %>
+<%= tag.meta name: "setgame-two-card-names", content: TwoCardMode::PLAYER_NAMES.join(",") %>

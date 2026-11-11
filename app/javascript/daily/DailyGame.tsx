@@ -17,6 +17,7 @@ import DailyCard, { primaryButton } from './DailyCard'
 import { Challenge, RulesOffer } from './StartNotes'
 import StreakPill from './StreakPill'
 import { missMessage, newToRules } from '../rules/Tour'
+import { autoCompletePick, inTwoCardMode, THIRD_CARD_MISSING } from '../lib/two_card_mode'
 import { afterNextPaint } from '../lib/after_paint'
 import { seconds, track } from '../lib/analytics'
 import {
@@ -318,14 +319,14 @@ const DailyGame: React.FC = () => {
     }
   }
 
-  const claimSet = (cardIds: number[]) => {
+  const claimSet = (cardIds: number[], thirdCardMissing = false) => {
     const current = currentRun()
     if (!current || current.status !== 'playing') return
 
     // Sorted, like the solo game: the server replays claims in this order.
     const sortedCards = [...cardIds].sort((a, b) => a - b)
     const deal = restoreSoloDeal(current.board, current.deck, current.rngState)
-    const result = applySoloClaim(deal, sortedCards)
+    const result = thirdCardMissing ? { ok: false as const, error: THIRD_CARD_MISSING } : applySoloClaim(deal, sortedCards)
     setSelectedCards([])
     if (!result.ok) {
       putRun({ ...current, misses: current.misses + 1 })
@@ -371,14 +372,15 @@ const DailyGame: React.FC = () => {
 
   const handleCardClick = (cardId: number) => {
     if (!run || run.status !== 'playing' || clockPending || starting) return
-    const nextSelected = selectedCards.includes(cardId)
+    const picked = selectedCards.includes(cardId)
       ? selectedCards.filter(id => id !== cardId)
       : selectedCards.length < 3
         ? [...selectedCards, cardId]
         : selectedCards
-    if (nextSelected.length > selectedCards.length && nextSelected.length < 3) playSelection()
-    setSelectedCards(nextSelected)
-    if (nextSelected.length === 3) claimSet(nextSelected)
+    const pick = autoCompletePick(picked, run.board, inTwoCardMode(getPlayerDisplayName()))
+    if (pick.cards.length > selectedCards.length && pick.cards.length < 3 && !pick.missing) playSelection()
+    setSelectedCards(pick.cards)
+    if (pick.cards.length === 3 || pick.missing) claimSet(pick.cards, pick.missing)
   }
 
   const share = async (result: DailyShare) => {
