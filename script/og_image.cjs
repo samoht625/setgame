@@ -122,7 +122,7 @@ function dailySvg({ number, title, time, standing = '', marks = '' }) {
 // left and right of its origin, its height, and how far its center sits below
 // its origin.
 const SHAPES = {
-  squiggle: { d: 'M-10-54 C7-54 22.5-41 22.5-19 C22.5-4.5 15 2.5 15 11.5 C15 23.5 25.5 32.5 25.5 39.5 C25.5 46.5 15 50.5 6 50.5 C-13 50.5-23.5 39.5-23.5 22.5 C-23.5 6.5-13.5-6.5-13.5-18 C-13.5-30.5-24.5-40-24.5-45.5 C-24.5-51-17-54-10-54 Z', left: 24.5, right: 25.5, height: 104.5, middle: -1.75 },
+  squiggle: { d: 'M-8-52.25 C10-52.25 23-40.25 23-20.75 C23-5.5 14.25 4.5 14.25 14.75 C14.25 27 25 36.25 25 42.5 C25 48.75 16 52.25 8 52.25 C-10 52.25-23 40.25-23 20.75 C-23 5.5-14.25-4.5-14.25-14.75 C-14.25-27-25-36.25-25-42.5 C-25-48.75-16-52.25-8-52.25 Z', left: 25, right: 25, height: 104.5, middle: 0 },
   diamond: { d: 'M0-59 28 0 0 59-28 0Z', left: 28, right: 28, height: 118, middle: 0 },
   oval: { d: 'M-26.5-28.5 A26.5 26.5 0 0 1 26.5-28.5 V28.5 A26.5 26.5 0 0 1-26.5 28.5 Z', left: 26.5, right: 26.5, height: 110, middle: 0 }
 }
