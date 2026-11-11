@@ -48,7 +48,7 @@ const SidePanel: React.FC<SidePanelProps> = ({ open, onClose, title, isDesktop, 
       <div
         aria-hidden="true"
         onClick={onClose}
-        className="fixed inset-0 z-30 bg-neutral-900/30 backdrop-blur-[2px] lg:hidden dark:bg-black/50"
+        className="fixed inset-0 z-30 bg-neutral-900/40 backdrop-blur-[2px] lg:hidden dark:bg-black/60"
       />
       <aside
         ref={panelRef}

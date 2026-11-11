@@ -44,8 +44,8 @@
     <p class="muted">Named players, Practice + Daily Deal, with each one's best Daily Deal and Puzzle times.</p>
     <div class="list">
       <% s[:most_games].each_with_index do |p, i| %>
-        <% bests = { "Daily Deal" => p[:best_daily_ms], "Puzzle" => p[:best_puzzle_ms] }.compact.map { |label, ms| "#{label} #{secs(ms)}" } %>
-        <div class="row"><span class="k"><%= i + 1 %></span><span class="who"><%= p[:name] %><% if bests.any? %><small>Best: <%= bests.join(" · ") %></small><% end %></span><span class="v"><%= p[:total] %><small><%= p[:solo] %> practice · <%= p[:daily] %> daily deal</small></span></div>
+        <% bests = { "Daily Deal" => p[:best_daily_ms], "Puzzle" => p[:best_puzzle_ms] }.compact.map { |label, ms| tag.span("#{label} #{secs(ms)}") } %>
+        <div class="row"><span class="k"><%= i + 1 %></span><span class="who"><%= p[:name] %><% if bests.any? %><small>Best: <%= safe_join(bests, " · ") %></small><% end %></span><span class="v"><%= p[:total] %><small><%= p[:solo] %> practice · <%= p[:daily] %> daily deal</small></span></div>
       <% end %>
     </div>
   <% end %>

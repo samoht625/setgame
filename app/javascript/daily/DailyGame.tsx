@@ -15,6 +15,7 @@ import { SoloTimer } from '../solitaire/SolitaireHud'
 import DailyPanel from './DailyPanel'
 import DailyCard, { primaryButton } from './DailyCard'
 import { Challenge, RulesOffer } from './StartNotes'
+import StreakPill from './StreakPill'
 import { missMessage, newToRules } from '../rules/Tour'
 import { afterNextPaint } from '../lib/after_paint'
 import { seconds, track } from '../lib/analytics'
@@ -312,7 +313,7 @@ const DailyGame: React.FC = () => {
     if (res.ok) {
       refreshStatus()
     } else if (!res.retryable) {
-      showToast(res.error || 'Submit failed', 'error')
+      showToast('This run couldn’t be verified', 'error')
       syncProgress(latest)
     }
   }
@@ -464,7 +465,7 @@ const DailyGame: React.FC = () => {
   if (showCard) {
     const submissionNote = finishedRun && (
       submitting ? (
-        <p role="status" className="mt-2 text-xs text-blue-600 dark:text-blue-400">Submitting…</p>
+        <p role="status" className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">Submitting…</p>
       ) : finishedRun.submission === 'pending' ? (
         <div className="mt-3 rounded-xl bg-amber-50 p-2.5 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
           <p role="status">Your time is saved. Retry when you’re connected.</p>
@@ -518,9 +519,7 @@ const DailyGame: React.FC = () => {
             Start
           </button>
           {newPlayer && <RulesOffer />}
-          {streak > 0 && (
-            <p className="mt-3 text-xs font-medium text-emerald-700 dark:text-emerald-300">{streak}-day streak — keep it going</p>
-          )}
+          {streak > 0 && <StreakPill streak={streak} className="mt-3">· keep it going</StreakPill>}
         </>
       )
     }

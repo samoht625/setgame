@@ -64,7 +64,7 @@ const InstallPrompt: React.FC<{ kind: InstallKind }> = ({ kind }) => {
         const end = event.changedTouches[0]?.clientY
         if (start !== null && end !== undefined && end - start > 48) close('swipe')
       }}
-      className="animate-sheet-in m-0 mt-auto w-full max-w-none rounded-t-2xl border-0 border-t border-neutral-200 bg-white p-0 text-center text-neutral-900 shadow-2xl outline-none backdrop:bg-neutral-900/30 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:backdrop:bg-black/55 sm:m-auto sm:w-[min(24rem,calc(100vw-2rem))] sm:rounded-2xl sm:border"
+      className="animate-sheet-in m-0 mt-auto w-full max-w-none rounded-t-2xl border-0 border-t border-neutral-200 bg-white p-0 text-center text-neutral-900 shadow-2xl outline-none dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 sm:m-auto sm:w-[min(24rem,calc(100vw-2rem))] sm:rounded-2xl sm:border"
     >
       <div className="px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:pb-5 sm:pt-6">
         <div aria-hidden="true" className="mx-auto mb-4 h-1 w-9 rounded-full bg-neutral-300 dark:bg-neutral-700 sm:hidden" />

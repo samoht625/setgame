@@ -15,6 +15,7 @@ import { SoloTimer } from '../solitaire/SolitaireHud'
 import DailyPanel from '../daily/DailyPanel'
 import DailyCard, { primaryButton } from '../daily/DailyCard'
 import { Challenge, RulesOffer } from '../daily/StartNotes'
+import StreakPill from '../daily/StreakPill'
 import { missMessage, newToRules } from '../rules/Tour'
 import FoundSets from './FoundSets'
 import { afterNextPaint } from '../lib/after_paint'
@@ -388,7 +389,7 @@ const PuzzleGame: React.FC = () => {
   if (showCard && result) {
     const submissionNote = finishedRun && (
       submitting ? (
-        <p role="status" className="mt-2 text-xs text-blue-600 dark:text-blue-400">Submitting…</p>
+        <p role="status" className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">Submitting…</p>
       ) : finishedRun.submission === 'pending' ? (
         <div className="mt-3 rounded-xl bg-amber-50 p-2.5 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
           <p role="status">Your time is saved. Retry when you’re connected.</p>
@@ -447,7 +448,7 @@ const PuzzleGame: React.FC = () => {
             {resuming ? 'Continue' : 'Start'}
           </button>
           {newPlayer && !resuming && <RulesOffer />}
-          {streak > 0 && <p className="mt-3 text-xs font-medium text-emerald-700 dark:text-emerald-300">{streak}-day streak — keep it going</p>}
+          {streak > 0 && <StreakPill streak={streak} className="mt-3">· keep it going</StreakPill>}
         </>
       )
     }

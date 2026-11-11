@@ -63,16 +63,16 @@ const NameEditor: React.FC<NameEditorProps> = ({ initial, onSave, onCancel, comp
           spellCheck={false}
           enterKeyHint="done"
           // 16px text so phones don't zoom in on focus.
-          className={`min-w-0 flex-1 rounded-md border bg-white px-2 text-base text-neutral-900 focus:outline-none dark:bg-neutral-800 dark:text-neutral-100 ${
-            compact ? 'h-8' : stacked ? 'h-11' : 'h-10'
+          className={`text-field min-w-0 flex-1 rounded-full border bg-white text-base text-neutral-900 placeholder:text-neutral-400 focus:outline-none dark:bg-neutral-900 dark:text-neutral-100 ${
+            compact ? 'h-9 px-3.5' : stacked ? 'h-11 px-4' : 'h-10 px-4'
           } ${invalid ? 'border-rose-400 focus:border-rose-500' : 'border-neutral-300 focus:border-neutral-500 dark:border-neutral-600 dark:focus:border-neutral-400'}`}
         />
         {!stacked && (
           <button
             type="submit"
             disabled={!canSave}
-            className={`shrink-0 rounded-md bg-neutral-900 px-3 text-sm font-semibold text-white transition-colors hover:bg-neutral-700 disabled:opacity-40 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300 ${
-              compact ? 'h-8' : 'h-10'
+            className={`shrink-0 rounded-full bg-neutral-900 font-medium text-white transition-colors hover:bg-neutral-700 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300 ${
+              compact ? 'h-9 px-3.5 text-xs' : 'h-10 px-4 text-sm'
             }`}
           >
             {saving ? 'Saving…' : 'Save'}

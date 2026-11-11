@@ -204,7 +204,7 @@ test('successful submission refreshes cached personal bests and the selected lea
   // The results show the top five, then where this game landed.
   await expect(results.getByText('leader 5', { exact: true })).toBeVisible()
   await expect(results.getByText('leader 6', { exact: true })).toHaveCount(0)
-  await expect(results.locator('[aria-current="true"]')).toHaveText(/^8submitted leader0:31/)
+  await expect(results.locator('[aria-current="true"]')).toHaveText(/^8submitted leader.*0:31$/)
   await expect(page.getByRole('complementary', { name: 'Leaderboard' }).getByText('leader 7', { exact: true })).toBeVisible()
   expect(submissions).toBe(1)
   expect(personalRequests).toBe(previousPersonalRequests + 1)

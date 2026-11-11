@@ -104,7 +104,7 @@ const Tour: React.FC<{ onDone: () => void }> = ({ onDone }) => {
         event.preventDefault()
         finish(false)
       }}
-      className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none items-end justify-center overflow-hidden border-0 bg-transparent p-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] open:flex backdrop:bg-neutral-900/35 backdrop:backdrop-blur-[1px] sm:items-start sm:pt-24 dark:backdrop:bg-black/55"
+      className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none items-end justify-center overflow-hidden border-0 bg-transparent p-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] open:flex sm:items-start sm:pt-24"
     >
       <div className="animate-dialog-in w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-4 shadow-2xl dark:border-neutral-700 dark:bg-neutral-900">
         <h2 id={titleId} className="mb-3 text-center text-sm font-semibold text-neutral-900 dark:text-neutral-100">

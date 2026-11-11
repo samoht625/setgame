@@ -11,7 +11,7 @@ const RANK_BADGES: string[] = [
 
 interface LeaderboardListProps<T extends LeaderboardEntry> {
   entries: T[]
-  /** The small line under each time. */
+  /** A quiet note before each time (e.g. when it was set). */
   detail?: (entry: T) => string
   /** Marks the player's own entry. */
   highlight?: (entry: T) => boolean
@@ -52,11 +52,9 @@ function LeaderboardList<T extends LeaderboardEntry>({ entries, detail, highligh
             <span className="min-w-0 flex-1 truncate text-sm font-medium text-neutral-900 dark:text-neutral-100">
               {entry.display_name || 'Anonymous'}
             </span>
-            <span className="flex shrink-0 flex-col items-end">
-              <span className="text-sm font-semibold tabular-nums text-neutral-900 dark:text-neutral-100">
-                {formatTime(entry.elapsed_ms)}
-              </span>
-              {detail && <span className="text-[10px] text-neutral-600 dark:text-neutral-300">{detail(entry)}</span>}
+            {detail && <span className="shrink-0 text-[11px] tabular-nums text-neutral-600 dark:text-neutral-300">{detail(entry)}</span>}
+            <span data-time className="shrink-0 text-sm font-semibold tabular-nums text-neutral-900 dark:text-neutral-100">
+              {formatTime(entry.elapsed_ms)}
             </span>
             {renderAction?.(entry, isMine)}
           </li>

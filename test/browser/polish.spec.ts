@@ -106,6 +106,33 @@ test('score feedback runs only for a new claim, not restoration or selecting a c
   await expect(page.locator('.animate-score-pop')).toHaveCount(0)
 })
 
+test('a toast rises where it lands, and a multiplayer announcement leaves the name and score in place', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/practice')
+  await ready(page)
+  await claim(page, await validTriple(page))
+  // Only the rise is animated: the toast's first frame is already where it settles, side to side.
+  const drift = await page.locator('.animate-fade-in-up').evaluate(node => {
+    const [animation] = node.getAnimations()
+    animation!.pause()
+    animation!.currentTime = 0
+    const start = node.getBoundingClientRect().left
+    animation!.finish()
+    return Math.abs(node.getBoundingClientRect().left - start)
+  })
+  expect(drift).toBeLessThan(0.5)
+
+  await page.getByRole('button', { name: 'Menu' }).click()
+  await page.getByRole('menuitem', { name: /^Multiplayer/ }).click()
+  await ready(page)
+  const name = page.getByTitle('Click to edit your name')
+  const before = await name.boundingBox()
+  await claim(page, await validTriple(page))
+  await expect(page.getByRole('status')).toContainText('You found a set!')
+  expect(await name.boundingBox()).toEqual(before)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+})
+
 test('logo secret works by keyboard and touch without affecting either game', async ({ page }) => {
   await page.goto('/practice')
   await ready(page)

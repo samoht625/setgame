@@ -377,7 +377,7 @@ const SolitaireGame: React.FC = () => {
 
     if (!eligibleRef.current || !gameIdRef.current) {
       if (!eligibleRef.current) {
-        showToast('Finished — not submitted (ineligible)', 'error')
+        showToast('Not ranked — this game was paused or offline', 'error')
         syncProgress()
       }
       return
@@ -413,7 +413,7 @@ const SolitaireGame: React.FC = () => {
     } else if (res.retryable) {
       setSubmissionError('Your time is saved. Retry when you’re connected.')
     } else {
-      showToast(res.error || 'Submit failed', 'error')
+      showToast('This run couldn’t be verified', 'error')
       syncProgress()
     }
   }
@@ -530,12 +530,6 @@ const SolitaireGame: React.FC = () => {
     }
   }
 
-  const markIneligible = (reason: string) => {
-    if (!eligibleRef.current) return
-    eligibleRef.current = false
-    showToast(reason, 'error')
-  }
-
   const togglePause = () => {
     if (isStarting) return
     if (status === 'playing') {
@@ -543,7 +537,8 @@ const SolitaireGame: React.FC = () => {
       setElapsedMs(nowElapsed)
       setStatus('paused')
       setSelectedCards([])
-      markIneligible('Paused — this run will not count for the leaderboard')
+      // The paused card says so; no toast on top of it.
+      eligibleRef.current = false
       if (dealStateRef.current) {
         writeSave(dealStateRef.current, {
           status: 'paused',
@@ -709,7 +704,7 @@ const SolitaireGame: React.FC = () => {
   const submissionNote = (
     <>
       {submitting && (
-        <p role="status" className="mt-2 text-xs text-blue-600 dark:text-blue-400">Submitting…</p>
+        <p role="status" className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">Submitting…</p>
       )}
       {submissionError && !submitting && (
         <div className="mt-3 rounded-xl bg-amber-50 p-2.5 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
@@ -808,6 +803,7 @@ const SolitaireGame: React.FC = () => {
             gameOverContent={showResults ? undefined : finishCard}
             paused={!isStarting && status === 'paused'}
             onResume={togglePause}
+            pausedNote="This game won’t count for the leaderboard."
           />
         }
         panel={

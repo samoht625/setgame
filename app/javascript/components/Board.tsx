@@ -14,6 +14,8 @@ interface BoardProps {
   /** Small heading on that card. */
   gameOverLabel?: string
   paused?: boolean
+  /** A quiet line under "Paused" on the paused card. */
+  pausedNote?: string
   loading?: boolean
   onResume?: () => void
 }
@@ -29,6 +31,7 @@ const Board: React.FC<BoardProps> = ({
   gameOverContent,
   gameOverLabel = 'Round over',
   paused = false,
+  pausedNote,
   loading = false,
   onResume
 }) => {
@@ -46,7 +49,7 @@ const Board: React.FC<BoardProps> = ({
       {gameOver && gameOverContent != null && (
         <div className="pointer-events-none z-10 col-start-1 row-start-1 flex items-start justify-center py-6 sm:items-center">
           <div className="pointer-events-auto w-full max-w-xs rounded-2xl border border-neutral-200 bg-white/95 p-5 text-center shadow-lg backdrop-blur dark:border-neutral-700 dark:bg-neutral-900/95">
-            <div className="text-xs font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-500">{gameOverLabel}</div>
+            <div className="text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">{gameOverLabel}</div>
             {gameOverContent}
           </div>
         </div>
@@ -55,8 +58,11 @@ const Board: React.FC<BoardProps> = ({
       {/* Paused overlay hides the board and blocks interaction */}
       {paused && !gameOver && (
         <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-neutral-100/70 backdrop-blur-md dark:bg-[#111214]/70">
-          <div className="flex flex-col items-center gap-3 rounded-2xl border border-neutral-200 bg-white/95 px-6 py-5 shadow-sm dark:border-neutral-700 dark:bg-neutral-900/95">
-            <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Paused</span>
+          <div className="mx-3 flex flex-col items-center gap-3 rounded-2xl border border-neutral-200 bg-white/95 px-6 py-5 text-center shadow-sm dark:border-neutral-700 dark:bg-neutral-900/95">
+            <div>
+              <div className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Paused</div>
+              {pausedNote && <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{pausedNote}</p>}
+            </div>
             {onResume && <button type="button" onClick={onResume} className="min-h-11 rounded-full bg-neutral-900 px-5 text-sm font-medium text-white transition-colors hover:bg-neutral-700 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300">Resume game</button>}
           </div>
         </div>

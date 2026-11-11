@@ -43,15 +43,17 @@ export const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children
   <div className="text-xs font-medium uppercase tracking-wide text-neutral-600 dark:text-neutral-300">{children}</div>
 )
 
+const DAY_FORMAT = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' })
+const TIME_FORMAT = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+
 function formatDate(isoString: string): string {
   const date = new Date(isoString)
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  }).format(date)
+  return `${DAY_FORMAT.format(date)}, ${TIME_FORMAT.format(date)}`
+}
+
+/** Short enough to sit beside a time: the time of day on today's list, the day on longer ones. */
+function formatWhen(isoString: string, period: LeaderboardPeriod): string {
+  return (period === 'daily' ? TIME_FORMAT : DAY_FORMAT).format(new Date(isoString))
 }
 
 function loadBestTimes(): BestTime[] {
@@ -84,14 +86,14 @@ export const SoloLeaderboard: React.FC<SoloLeaderboardProps> = ({
   highlight
 }) => (
   <div>
-    <div className="flex rounded-lg bg-neutral-100 p-0.5 dark:bg-neutral-800">
+    <div className="flex rounded-full bg-neutral-100 p-0.5 dark:bg-neutral-800">
       {PERIODS.map(p => (
         <button
           key={p}
           type="button"
           onClick={() => onPeriodChange(p)}
           aria-pressed={period === p}
-          className={`min-h-9 flex-1 rounded-md px-2.5 text-xs font-medium capitalize transition-colors ${
+          className={`min-h-9 flex-1 rounded-full px-2.5 text-xs font-medium capitalize transition-colors ${
             period === p
               ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-600 dark:text-neutral-100'
               : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-neutral-100'
@@ -134,7 +136,7 @@ export const SoloLeaderboard: React.FC<SoloLeaderboardProps> = ({
     ) : (
       <LeaderboardList
         entries={leaderboard}
-        detail={entry => formatDate(entry.completed_at)}
+        detail={entry => formatWhen(entry.completed_at, period)}
         highlight={highlight}
         limit={limit}
       />

@@ -142,11 +142,11 @@ const DailyPanel: React.FC<DailyPanelProps> = ({ status, error, onRetry, playerI
   return (
     <div>
       <div className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 ${
-        streak > 0 ? 'bg-emerald-50 dark:bg-emerald-950/40' : 'bg-neutral-50 dark:bg-neutral-800/50'
+        streak > 0 ? 'bg-orange-50 text-orange-900 dark:bg-orange-950/40 dark:text-orange-200' : 'bg-neutral-50 text-neutral-600 dark:bg-neutral-800/50 dark:text-neutral-300'
       }`}>
-        <span className={`text-xs font-medium ${streak > 0 ? 'text-emerald-800 dark:text-emerald-200' : 'text-neutral-600 dark:text-neutral-300'}`}>Your streak</span>
-        <span className={`text-sm font-semibold tabular-nums ${streak > 0 ? 'text-emerald-800 dark:text-emerald-200' : 'text-neutral-600 dark:text-neutral-300'}`}>
-          {streak} {streak === 1 ? 'day' : 'days'}
+        <span className="text-xs font-medium">Your streak</span>
+        <span className="text-sm font-semibold tabular-nums">
+          {streak > 0 && <span aria-hidden="true">🔥 </span>}{streak} {streak === 1 ? 'day' : 'days'}
         </span>
       </div>
 

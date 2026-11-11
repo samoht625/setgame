@@ -55,7 +55,7 @@ const ResultDialog: React.FC<ResultDialogProps> = ({ open, onClose, label, actio
       onKeyDown={event => {
         if (event.key === 'Escape') event.stopPropagation()
       }}
-      className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none items-center justify-center overflow-hidden border-0 bg-transparent p-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] open:flex backdrop:bg-neutral-900/40 backdrop:backdrop-blur-[2px] sm:p-6 dark:backdrop:bg-black/60"
+      className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none items-center justify-center overflow-hidden border-0 bg-transparent p-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] open:flex sm:p-6"
     >
       {open && (
         <>

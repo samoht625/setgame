@@ -58,7 +58,7 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, %(id="site-header")
     assert_includes response.body, "Most found"
     assert_includes response.body, "Most games finished"
-    assert_includes response.body, "<small>Best: Daily Deal 5.0s · Puzzle 38.0s</small>"
+    assert_includes response.body, "<small>Best: <span>Daily Deal 5.0s</span> · <span>Puzzle 38.0s</span></small>"
     assert_includes response.body, "kind-iqr"
     assert_includes response.body, %(for="act-players">Players</label>)
     assert_includes response.body, %(data-tip="Today · 2 games")

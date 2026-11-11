@@ -36,7 +36,8 @@ const TimeSelect: React.FC<TimeSelectProps> = ({ value, onChange, label = 'Remin
       data-bwignore="true"
       data-form-type="other"
       autoComplete="off"
-      className="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0 focus:outline-none disabled:cursor-default"
+      // Invisible, so its 16px text only keeps phones from zooming in on focus.
+      className="absolute inset-0 h-full w-full cursor-pointer appearance-none text-base opacity-0 focus:outline-none disabled:cursor-default"
     >
       {REMINDER_TIMES.map(minutes => (
         <option key={minutes} value={minutes}>{reminderLabel(minutes)}</option>

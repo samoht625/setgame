@@ -12,6 +12,7 @@ import { signedInEmail, signInEnabled } from '../lib/player_id'
 import { useReminder } from '../hooks/useReminder'
 import ReminderPrompt from './ReminderPrompt'
 import InstallPrompt from './InstallPrompt'
+import StreakPill from './StreakPill'
 import { installDue, noteFinishDay, type InstallKind } from '../lib/install'
 export { primaryButton, secondaryButton }
 
@@ -105,18 +106,13 @@ const DailyCard: React.FC<DailyCardProps> = ({
                 </div>
               )}
               {rivalMs !== undefined && <RivalLine mine={result.elapsedMs} theirs={rivalMs} />}
-              {streak > 0 && (
-                <p data-streak className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-3 py-1 text-xs text-orange-900 dark:bg-orange-950/40 dark:text-orange-200">
-                  <span aria-hidden="true">🔥</span>
-                  <span className="font-semibold">{streak}-day streak</span>
-                </p>
-              )}
+              {streak > 0 && <StreakPill streak={streak} className="mt-3" />}
             </>
           ) : (
             <>
               <p className="mt-2 text-sm font-medium text-neutral-900 dark:text-neutral-100">You’ve used today’s try.</p>
               <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">It wasn’t finished, so it isn’t on the leaderboard.</p>
-              {streak > 0 && <p className="mt-2 text-xs font-medium text-emerald-700 dark:text-emerald-300">{streak}-day streak</p>}
+              {streak > 0 && <StreakPill streak={streak} className="mt-3" />}
             </>
           )}
           {note}

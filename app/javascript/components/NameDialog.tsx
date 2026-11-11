@@ -29,7 +29,7 @@ const NameDialog: React.FC = () => {
       ref={ref}
       aria-labelledby="name-dialog-title"
       onClick={event => { if (event.target === ref.current) close() }}
-      className="m-auto w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-neutral-200 bg-white p-0 text-neutral-900 shadow-xl backdrop:bg-black/40 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+      className="animate-dialog-in m-auto w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-neutral-200 bg-white p-0 text-neutral-900 shadow-xl dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
     >
       {openCount > 0 && (
         <div className="p-5">

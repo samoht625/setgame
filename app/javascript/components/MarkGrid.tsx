@@ -25,8 +25,8 @@ const LEGENDS: { marks: string; intro: string; rows: Record<string, string> }[] 
   }
 ]
 
-/** Squares to a row, so rows line up; a short last row fills from the left. */
-const COLUMNS = 12
+/** Squares to a row, as in the shared text (shareGrid in lib/daily.ts); a short last row fills from the left. */
+const COLUMNS = 9
 
 /** g/y/r per set found (Daily Deal) or h/m per attempt (Puzzle), as a quiet grid of squares with a legend on hover or tap. */
 const MarkGrid: React.FC<{ marks: string; label: string }> = ({ marks, label }) => {

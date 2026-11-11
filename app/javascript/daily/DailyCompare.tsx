@@ -261,10 +261,10 @@ const ReplayView: React.FC<{ replay: Replay; name: string }> = ({ replay, name }
 
       <div className="mt-5" data-testid="replay-timeline">
         <div className="flex gap-2">
-          <div className="flex w-11 shrink-0 flex-col text-[11px] font-medium text-neutral-600 dark:text-neutral-300">
+          <div className="flex w-16 shrink-0 flex-col text-[11px] font-medium text-neutral-600 dark:text-neutral-300">
             <span className="flex h-5 items-center">You</span>
             <span className="my-1 h-1" />
-            <span className="flex h-5 items-center truncate">{name}</span>
+            <span className="flex h-5 items-center"><span className="truncate">{name}</span></span>
           </div>
           <div className="relative min-w-0 flex-1 rounded-sm has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-4 has-[:focus-visible]:outline-neutral-900 dark:has-[:focus-visible]:outline-neutral-100">
             <Lane side="me" timing={timing.me} t={t} end={end} />
@@ -296,7 +296,7 @@ const ReplayView: React.FC<{ replay: Replay; name: string }> = ({ replay, name }
             />
           </div>
         </div>
-        <div className="ml-13 mt-1 flex justify-between text-[10px] tabular-nums text-neutral-500 dark:text-neutral-400">
+        <div className="ml-18 mt-1 flex justify-between text-[10px] tabular-nums text-neutral-500 dark:text-neutral-400">
           <span>0:00</span>
           <span>{formatTime(end)}</span>
         </div>
@@ -368,7 +368,7 @@ const DailyCompare: React.FC<DailyCompareProps> = ({ date, number, opponent, onC
       onClick={event => {
         if (event.target === dialogRef.current) onClose()
       }}
-      className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none items-end justify-center overflow-hidden border-0 bg-transparent p-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] open:flex backdrop:bg-neutral-900/35 backdrop:backdrop-blur-[1px] sm:items-center sm:p-6 dark:backdrop:bg-black/55"
+      className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none items-end justify-center overflow-hidden border-0 bg-transparent p-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] open:flex sm:items-center sm:p-6"
     >
       <div className="animate-dialog-in max-h-full w-full max-w-2xl overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-3 text-neutral-900 shadow-2xl sm:p-6 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100">
         <div className="flex items-center justify-between">

@@ -140,7 +140,7 @@ test('other finishers get a small vs control; the player’s own row and rows wi
 
   // Times stay in one column with or without the control, and rows don't grow.
   const rows = card.locator('ol > li:not([aria-hidden])')
-  const rights = await rows.evaluateAll(items => items.map(item => item.querySelector('.flex-col > span')!.getBoundingClientRect().right))
+  const rights = await rows.evaluateAll(items => items.map(item => item.querySelector('[data-time]')!.getBoundingClientRect().right))
   expect(Math.max(...rights) - Math.min(...rights)).toBeLessThan(1)
   const heights = await rows.evaluateAll(items => items.map(item => item.getBoundingClientRect().height))
   expect(Math.max(...heights)).toBeLessThanOrEqual(33)

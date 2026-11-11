@@ -35,10 +35,23 @@ input:focus-visible {
   outline-offset: 3px;
 }
 
-/* The sign-in field shows focus with its darker border and a soft halo instead. */
-input.email-field:focus-visible {
+/* Text fields show focus with their darker border and a soft halo instead. */
+input.text-field:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px rgb(163 163 163 / 0.3);
+}
+
+/* One scrim behind every dialog and sheet (the side panel's backdrop matches it). */
+dialog::backdrop {
+  background: rgb(23 23 23 / 0.4);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+@media (prefers-color-scheme: dark) {
+  dialog::backdrop {
+    background: rgb(0 0 0 / 0.6);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -81,15 +94,16 @@ input.email-field:focus-visible {
   bottom: calc(env(safe-area-inset-bottom, 0px) + 2rem);
 }
 
-/* Toast entrance */
+/* Toast entrance. Only the rise is animated: the toast is centered with the
+   `translate` property, and a translate(-50%) here would shift it a second time. */
 @keyframes fade-in-up {
   from {
     opacity: 0;
-    transform: translate(-50%, 0.5rem);
+    transform: translateY(0.5rem);
   }
   to {
     opacity: 1;
-    transform: translate(-50%, 0);
+    transform: translateY(0);
   }
 }
 
@@ -97,8 +111,7 @@ input.email-field:focus-visible {
   animation: fade-in-up 0.18s ease-out;
 }
 
-/* Dropdown menus fade in where they are. No transform: fade-in-up's translate(-50%)
-   is for centered toasts and made the header menu start off to the left, then jump. */
+/* Dropdown menus fade in where they are. */
 @keyframes menu-in {
   from {
     opacity: 0;
