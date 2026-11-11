@@ -77,8 +77,12 @@ test('Practice, in the two-card experiment: the completed set shows, then is cla
   await card(page, b!).click()
   await expect(page.locator('[data-completed]')).toHaveCount(3)
   await expect(card(page, thirdCard(a!, b!)!)).toHaveAttribute('data-completed', 'filled')
+  // A click during the pause neither picks a card nor restarts the highlight.
+  const other = (await cards(page)).find(id => ![a, b, thirdCard(a!, b!)].includes(id))!
+  await card(page, other).click({ force: true })
   await expect(page.getByText('Set found!')).toBeVisible()
   await expect(page.locator('[data-completed]')).toHaveCount(0)
+  await expect(page.locator('[data-card-id][aria-pressed="true"]')).toHaveCount(0)
   await expect(card(page, a!)).toHaveCount(0)
 })
 

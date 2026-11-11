@@ -10,6 +10,8 @@ interface BoardProps {
   completedCards?: number[]
   /** The card the game filled in, within `completedCards`. */
   autoFilledCard?: number | null
+  /** The completed set is about to be replaced: fade it out. */
+  completedLeaving?: boolean
   onCardClick: (cardId: number) => void
   claiming: boolean
   gameOver?: boolean
@@ -31,6 +33,7 @@ const Board: React.FC<BoardProps> = ({
   foundCards = [],
   completedCards = [],
   autoFilledCard = null,
+  completedLeaving = false,
   onCardClick,
   claiming,
   gameOver = false,
@@ -88,7 +91,7 @@ const Board: React.FC<BoardProps> = ({
           const borderStyle = isRejected
             ? 'border-rose-600 ring-2 ring-rose-600 animate-shake dark:border-rose-400 dark:ring-rose-400'
             : isCompleted
-              ? `relative z-[1] border-amber-400 ring-[3px] ring-amber-400 dark:border-amber-300 dark:ring-amber-300 ${cardId === autoFilledCard ? 'animate-auto-fill' : ''}`
+              ? `relative z-[1] border-amber-400 ring-[3px] ring-amber-400 shadow-[0_0_12px_2px_rgba(251,191,36,0.45)] ${completedLeaving ? 'animate-set-leave' : 'animate-set-lit'} dark:border-amber-300 dark:ring-amber-300 dark:shadow-[0_0_14px_3px_rgba(252,211,77,0.4)]`
               : isFound
               ? 'relative z-[1] border-emerald-700 ring-2 ring-emerald-700 dark:border-emerald-400 dark:ring-emerald-400'
               : isSelected
@@ -105,7 +108,7 @@ const Board: React.FC<BoardProps> = ({
               aria-label={describeCard(cardId)}
               data-card-id={cardId}
               onClick={() => onCardClick(cardId)}
-              className={`animate-card-in block w-full touch-manipulation select-none overflow-hidden rounded-xl border bg-white transition-[border-color,box-shadow,transform] ${isCompleted ? 'duration-75' : 'duration-200'} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 dark:bg-[#f1f0ec] dark:focus-visible:outline-neutral-100 ${
+              className={`animate-card-in block w-full touch-manipulation select-none overflow-hidden rounded-xl border bg-white transition-[border-color,box-shadow,transform] ${isCompleted ? 'duration-0' : 'duration-200'} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 dark:bg-[#f1f0ec] dark:focus-visible:outline-neutral-100 ${
                 interactionLocked ? 'cursor-default' : 'cursor-pointer active:scale-[0.98]'
               } ${borderStyle}`}
             >

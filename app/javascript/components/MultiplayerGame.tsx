@@ -96,6 +96,7 @@ const MultiplayerGame: React.FC = () => {
   const selectedCardsRef = useRef<number[]>([])
   // The pair behind our claim in flight, when the server is to pick the third card.
   const pairClaimRef = useRef<number[] | null>(null)
+  const playerIdRef = useRef('')
   const pushedStoredNameRef = useRef(false)
   const previousScoresRef = useRef<Record<string, number> | null>(null)
 
@@ -139,6 +140,7 @@ const MultiplayerGame: React.FC = () => {
 
       received(data: ServerMessage) {
         if ('your_id' in data) {
+          playerIdRef.current = data.your_id
           setPlayerId(data.your_id)
           return
         }
@@ -167,16 +169,22 @@ const MultiplayerGame: React.FC = () => {
         previousScoresRef.current = current.scores
         if (Object.keys(current.scores).length === 0) setScoreAnimationKeys({})
 
+        // Display only: the server already holds the claim. Whichever message
+        // shows our pair's set first (the broadcast or our reply) starts the
+        // highlight, so the usual found style never shows before it.
+        const pair = pairClaimRef.current
+        const claim = current.active_claim
+        if (pair && claim && claim.player_id === playerIdRef.current && pair.every(id => claim.cards.includes(id))) {
+          pairClaimRef.current = null
+          const filled = claim.cards.find(id => !pair.includes(id))
+          if (filled) revealAutoComplete(claim.cards, filled)
+        }
+
         if ('success' in data && data.success) {
           // Our own claim succeeded
           playSet()
           clearClaimTimeout()
-          // Display only: the claim is already the server's; this just shows the completed set first.
-          const pair = pairClaimRef.current
           pairClaimRef.current = null
-          const claimed = data.active_claim?.cards
-          const filled = pair && claimed?.find(id => !pair.includes(id))
-          if (claimed && filled) revealAutoComplete(claimed, filled)
           setGameState(data)
           setSelectedCards([])
           setClaiming(false)

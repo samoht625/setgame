@@ -173,15 +173,23 @@ dialog::backdrop {
   animation: card-in 0.22s ease-out;
 }
 
-/* Two-card experiment: the card the game filled in joins the picked pair */
-@keyframes auto-fill {
-  0% { transform: scale(0.96); }
-  50% { transform: scale(1.04); }
-  100% { transform: scale(1); }
+/* Two-card experiment: the completed set lights up together. card-in stays
+   first in the list so adding and removing this doesn't replay the deal-in. */
+@keyframes set-lit {
+  0%, 100% { transform: scale(1); }
+  45% { transform: scale(1.03); }
 }
 
-.animate-auto-fill {
-  animation: auto-fill 0.28s ease-out;
+.animate-set-lit {
+  animation: card-in 0.22s ease-out, set-lit 0.28s ease-out;
+}
+
+@keyframes set-leave {
+  to { opacity: 0; transform: scale(0.97); }
+}
+
+.animate-set-leave {
+  animation: card-in 0.22s ease-out, set-lit 0.28s ease-out, set-leave 0.12s ease-in forwards;
 }
 
 /* Invalid set feedback */

@@ -388,7 +388,7 @@ const DailyGame: React.FC = () => {
     setSelectedCards(pick.cards)
     if (pick.filled !== null) {
       const atMs = Date.now()
-      autoReveal.reveal(pick.cards, pick.filled, () => claimRef.current(pick.cards, false, atMs))
+      autoReveal.reveal(pick.cards, pick.filled, () => claimRef.current(pick.cards, false, atMs), true)
     } else if (pick.cards.length === 3 || pick.missing) claimSet(pick.cards, pick.missing)
   }
 
@@ -589,6 +589,7 @@ const DailyGame: React.FC = () => {
             rejectedCards={rejectedCards}
             completedCards={autoReveal.cards}
             autoFilledCard={autoReveal.filled}
+            completedLeaving={autoReveal.leaving}
             onCardClick={handleCardClick}
             claiming={clockPending}
             loading={starting}
