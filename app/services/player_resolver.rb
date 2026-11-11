@@ -4,9 +4,12 @@
 #
 # A signed-in browser always plays as its account's player. Otherwise the id
 # the browser sends is used only when the browser proves it owns that id: it
-# matches the signed cookie, comes with its PlayerKey, or has never been used
-# (a brand-new player). Anything else falls back to the cookie's player, or a
-# new one. An account's player is never reachable without a session.
+# matches the signed cookie or comes with its PlayerKey. Player ids are public
+# (leaderboards, presence, the multiplayer state), so an id alone is never
+# enough. Anything else falls back to the cookie's player, or a new one. New
+# players are minted by the server: pages set the cookie on a browser's first
+# visit (see KnownPlayer). An account's player is never reachable without a
+# session.
 module PlayerResolver
   UUID_PATTERN = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
 
@@ -29,6 +32,6 @@ module PlayerResolver
   end
 
   def self.owns?(claimed, cookie:, key:)
-    claimed == cookie || PlayerKey.valid?(claimed, key) || !PlayerIdentity.history?(claimed)
+    claimed == cookie || PlayerKey.valid?(claimed, key)
   end
 end

@@ -41,10 +41,37 @@ module Api
       end
     end
 
-    test "a brand-new browser gets no identity hint" do
+    test "a brand-new browser's first page mints its player" do
       reset!
       get "/"
-      assert_select "meta[name='setgame-player-id']", false
+      minted = css_select("meta[name='setgame-player-id']").first&.[]("content")
+      assert PlayerResolver.uuid?(minted)
+      assert_select "meta[name='setgame-player-key'][content=?]", PlayerKey.for(minted)
+      assert_select "meta[name='setgame-player-new'][content='1']"
+
+      # The cookie now names it, so the next page isn't a new player.
+      get "/"
+      assert_select "meta[name='setgame-player-id'][content=?]", minted
+      assert_select "meta[name='setgame-player-new']", false
+      get "/api/daily", headers: { "X-Player-Id" => minted, "X-Player-Key" => nil }
+      assert_equal minted, response.headers["X-Player-Id"]
+    end
+
+    test "an id the server hasn't seen isn't taken on the browser's word" do
+      reset!
+      made_up = SecureRandom.uuid
+      get "/api/daily", headers: { "X-Player-Id" => made_up, "X-Player-Key" => nil }
+      refute_equal made_up, response.headers["X-Player-Id"]
+      assert_equal PlayerKey.for(response.headers["X-Player-Id"]), response.headers["X-Player-Key"]
+    end
+
+    test "a multiplayer-only player's public id doesn't let an impostor play as them" do
+      # Rose has only played multiplayer, so nothing in the database names her,
+      # but her id is in the presence list and the game state.
+      reset!
+      get "/api/daily", headers: { "X-Player-Id" => @rose, "X-Player-Key" => nil }
+      refute_equal @rose, response.headers["X-Player-Id"]
+      refute_equal PlayerKey.for(@rose), response.headers["X-Player-Key"]
     end
   end
 end
