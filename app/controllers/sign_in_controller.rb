@@ -1,8 +1,11 @@
 # frozen_string_literal: true
 
 # Where the emailed link lands. Opening it (GET) doesn't use the link up, so
-# mail scanners that prefetch links can't spend it; the page posts the token
-# straight back, which signs this browser in.
+# mail scanners that prefetch links can't spend it. In the browser that asked
+# for the link, the page posts the token straight back, which signs it in.
+# Anywhere else it asks first, naming the account: otherwise anyone could
+# send a stranger their own link and have the stranger's games land in, and
+# their later play happen in, the sender's account.
 class SignInController < ApplicationController
   include CurrentAccount
 
@@ -10,7 +13,13 @@ class SignInController < ApplicationController
 
   def show
     @token = params[:token].to_s
-    @reminder = SignInToken.peek(@token)&.reminder_minutes.present?
+    record = SignInToken.peek(@token)
+    @reminder = record&.reminder_minutes.present?
+    return render :expired, status: :unprocessable_entity unless record&.usable?
+
+    @email = record.email
+    @merges = current_account.nil?
+    @confirm = cookies.signed[SignInToken::REQUEST_COOKIE] != record.id
   end
 
   def create
@@ -20,6 +29,7 @@ class SignInController < ApplicationController
       return render :expired, status: :unprocessable_entity
     end
 
+    cookies.delete(SignInToken::REQUEST_COOKIE)
     cookie_player = cookies.signed[:player_id].to_s
     account = AccountSignIn.call(
       email: record.email,

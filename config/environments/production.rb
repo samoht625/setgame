@@ -64,8 +64,7 @@ Rails.application.configure do
   
   # ActionCable configuration
   config.action_cable.allowed_request_origins = [
-    "https://set.tido.site",
-    "http://localhost:3000"
+    "https://set.tido.site"
   ]
 
   config.hosts << "set.tido.site"

@@ -1,0 +1,8 @@
+<h1>Play as <%= @email %>?</h1>
+<p>Signs this browser in to your account.<% if @merges %> Games played in this browser will move to it.<% end %></p>
+<%= form_with url: "/play", method: :post, data: { turbo: false } do %>
+  <%= hidden_field_tag :t, @token %>
+  <%= hidden_field_tag :to, @path %>
+  <button type="submit" class="btn primary">Sign in and play</button>
+<% end %>
+<p><a href="<%= @path %>">Play without signing in</a></p>

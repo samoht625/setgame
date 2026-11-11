@@ -20,7 +20,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
   test "the dailies inline this player's status so the first paint is the right card" do
     get "/"
     boot = JSON.parse(response.body[%r{<script type="application/json" id="setgame-boot">(.*?)</script>}m, 1])
-    assert_nil boot["player_id"], "no cookie: it's what a new player sees"
+    assert_equal css_select("meta[name='setgame-player-id']").first["content"], boot["player_id"], "no cookie: the page's new player, with what a new player sees"
     assert_equal DailyStatus.for(SecureRandom.uuid).except(:leaderboard).deep_stringify_keys.except("leaderboard"), boot["daily"].except("leaderboard")
     assert_equal false, boot["puzzle"]["me"]["attempted"]
 

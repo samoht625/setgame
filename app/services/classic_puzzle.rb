@@ -12,6 +12,8 @@ class ClassicPuzzle
   # Clock slack between the browser's timer (started once the cards paint)
   # and the server's start time.
   CLOCK_SLACK_MS = 10_000
+  # Faster than anyone can find six sets: a scripted solve, kept off the leaderboard.
+  MIN_ELAPSED_MS = 6_000
 
   attr_reader :date
 
@@ -119,7 +121,8 @@ class ClassicPuzzle
   end
 
   # Verifies a finished run: all six sets found, a time no shorter than the last
-  # find and no longer than the server has seen the run open.
+  # find (or than a person could manage) and no longer than the server has
+  # seen the run open.
   def finish!(run, elapsed_ms:, claims:, misses:, display_name:, attempts: nil)
     return :already_finished if run.finished?
 
@@ -128,7 +131,7 @@ class ClassicPuzzle
 
     elapsed = Integer(elapsed_ms, exception: false)
     max_ms = ((Time.current - run.started_at) * 1000).to_i + CLOCK_SLACK_MS
-    return :invalid_time unless elapsed && elapsed.positive? && elapsed >= claims.last["t_ms"] && elapsed <= max_ms
+    return :invalid_time unless elapsed && elapsed >= MIN_ELAPSED_MS && elapsed >= claims.last["t_ms"] && elapsed <= max_ms
 
     misses = Integer(misses, exception: false).to_i.clamp(0, 9_999)
     # Hits and misses in order ("hmhh…"), kept only when it agrees with the run.

@@ -46,13 +46,26 @@ class RemindersControllerTest < ActionDispatch::IntegrationTest
     assert @account.reload.reminder_enabled
   end
 
-  test "Play signs this browser in and opens the game left to play" do
-    get "/play", params: { t: Reminder.play_token(@account, Date.current), to: "/puzzle" }
+  test "Play asks before signing this browser in, then opens the game left to play" do
+    token = Reminder.play_token(@account, Date.current)
+    get "/play", params: { t: token, to: "/puzzle" }
+    assert_response :success
+    assert_select "h1", "Play as rose@example.com?"
+    assert_select "form[action='/play'][method=post] input[name='t'][value=?]", token
+    assert_select "a[href='/puzzle']", "Play without signing in"
+    get "/"
+    assert_select "meta[name='setgame-account']", false, "opening the link alone signs nobody in"
+
+    post "/play", params: { t: token, to: "/puzzle" }
     assert_redirected_to "/puzzle"
     get "/"
     assert_select "meta[name='setgame-account'][content='rose@example.com']"
     assert_select "meta[name='setgame-player-id'][content=?]", @account.player_id
     assert_select "meta[name='setgame-reminder'][content='480']"
+
+    # Already signed in: straight to the game.
+    get "/play", params: { t: token, to: "/puzzle" }
+    assert_redirected_to "/puzzle"
   end
 
   test "an expired or forged Play link just opens the game, signed out" do
@@ -106,7 +119,7 @@ class RemindersControllerTest < ActionDispatch::IntegrationTest
     patch "/api/reminder", params: { enabled: true, minutes: 480 }, as: :json
     assert_response :unauthorized
 
-    get "/play", params: { t: Reminder.play_token(@account, Date.current) }
+    post "/play", params: { t: Reminder.play_token(@account, Date.current) }
     patch "/api/reminder", params: { enabled: false, minutes: 1290, time_zone: "Asia/Tokyo" }, as: :json
     assert_response :success
     assert_equal({ "enabled" => false, "minutes" => 1290 }, JSON.parse(response.body))

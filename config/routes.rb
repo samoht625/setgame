@@ -28,12 +28,13 @@ Rails.application.routes.draw do
     patch "reminder", to: "reminders#update"
   end
 
-  # The emailed sign-in link lands here; the page posts the token back.
+  # The emailed sign-in link lands here; the page posts the token back (or asks first, in another browser).
   get '/signin' => 'sign_in#show', as: :sign_in
   post '/signin' => 'sign_in#create'
 
-  # Reminder email links: Play signs in and opens the game; one-click unsubscribe.
+  # Reminder email links: Play opens the game (offering to sign in); one-click unsubscribe.
   get '/play' => 'reminders#play', as: :reminder_play
+  post '/play' => 'reminders#sign_in_and_play'
   get '/reminders/unsubscribe' => 'reminders#confirm_unsubscribe', as: :reminder_unsubscribe
   post '/reminders/unsubscribe' => 'reminders#unsubscribe'
   post '/reminders/resubscribe' => 'reminders#resubscribe'

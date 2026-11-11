@@ -86,12 +86,22 @@ export function getPlayerId(): string {
 
   cachedPlayerId = read(STORAGE_KEY) || undefined
 
-  // Storage was wiped (in-app browsers do this) but the cookie still knows who this is.
+  // The server only accepts an id with its cookie or key, so a stored id
+  // without a key that the cookie doesn't name can't be played as.
+  if (cachedPlayerId && known && known.id !== cachedPlayerId && !read(KEY_PREFIX + cachedPlayerId)) {
+    switchPlayer(known.id, meta('setgame-player-key') || null)
+    return known.id
+  }
+
+  // A first visit (the server minted this player for the page), or storage
+  // was wiped (in-app browsers do this) but the cookie still knows who this is.
   if (!cachedPlayerId && known) {
     cachedPlayerId = known.id
+    createdThisVisit = meta('setgame-player-new') === '1'
     write(STORAGE_KEY, known.id)
   }
 
+  // Only when the page named no player (e.g. a page cached from before the server minted ids).
   if (!cachedPlayerId) {
     cachedPlayerId = crypto.randomUUID()
     createdThisVisit = true

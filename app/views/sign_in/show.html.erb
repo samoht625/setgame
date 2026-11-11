@@ -1,8 +1,18 @@
-<p class="status" role="status"><span class="spinner" aria-hidden="true"></span><%= @reminder ? "Turning on your reminder…" : "Signing you in…" %></p>
-<%= form_with url: "/signin", method: :post, id: "sign-in", data: { turbo: false } do %>
-  <%= hidden_field_tag :token, @token %>
-  <noscript><button type="submit" class="btn primary"><%= @reminder ? "Confirm" : "Sign in" %></button></noscript>
-<% end %>
-<%= javascript_tag nonce: true do %>
-  document.getElementById("sign-in").requestSubmit ? document.getElementById("sign-in").requestSubmit() : document.getElementById("sign-in").submit();
+<% if @confirm %>
+  <h1><%= @reminder ? "Turn on your reminder?" : "Sign in to Set?" %></h1>
+  <p>As <strong><%= @email %></strong>.<% if @merges %> Games played in this browser will move to that account.<% end %></p>
+  <%= form_with url: "/signin", method: :post, id: "sign-in", data: { turbo: false } do %>
+    <%= hidden_field_tag :token, @token %>
+    <button type="submit" class="btn primary"><%= @reminder ? "Confirm" : "Sign in" %></button>
+  <% end %>
+  <p><a href="/">Not you? Play without signing in</a></p>
+<% else %>
+  <p class="status" role="status"><span class="spinner" aria-hidden="true"></span><%= @reminder ? "Turning on your reminder…" : "Signing you in…" %></p>
+  <%= form_with url: "/signin", method: :post, id: "sign-in", data: { turbo: false } do %>
+    <%= hidden_field_tag :token, @token %>
+    <noscript><button type="submit" class="btn primary"><%= @reminder ? "Confirm" : "Sign in" %></button></noscript>
+  <% end %>
+  <%= javascript_tag nonce: true do %>
+    document.getElementById("sign-in").requestSubmit ? document.getElementById("sign-in").requestSubmit() : document.getElementById("sign-in").submit();
+  <% end %>
 <% end %>

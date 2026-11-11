@@ -11,6 +11,8 @@ if [[ ! -f "$ENV_FILE" ]]; then
   cp "$ENV_EXAMPLE" "$ENV_FILE"
   echo "Created $ENV_FILE from example."
 fi
+# Holds RAILS_MASTER_KEY and other secrets: owner-only.
+chmod 600 "$ENV_FILE"
 
 append_if_missing() {
   local key="$1"

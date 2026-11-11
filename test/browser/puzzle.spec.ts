@@ -62,6 +62,8 @@ test('the Puzzle is 12 cards with exactly 6 sets; finding them all lands on a re
   const miss = [board[0]!, board[1]!, board.slice(2).find(id => !isSet(board[0]!, board[1]!, id))!]
   await claim(page, miss)
   await expect(page.getByText('Not a set')).toBeVisible()
+  // The server doesn't rank a run faster than a person could find six sets.
+  await page.waitForTimeout(6_000)
   for (const set of sets.slice(1)) await claim(page, set)
   const card = page.getByRole('region', { name: /^Puzzle #\d+$/ })
   await expect(card).toBeVisible()

@@ -1,9 +1,10 @@
 import { test, expect, type Page } from '@playwright/test'
 import { isSet } from '../../app/javascript/lib/rules'
+import { playAsNewPlayer } from './players'
 
 const SAVE_KEY = 'setgame_daily_v1'
-const ME = '0a0a0a0a-1111-4222-8333-444444444444'
 const PHONE = { width: 375, height: 740 }
+let ME = ''
 
 test.use({ viewport: PHONE })
 
@@ -15,13 +16,14 @@ function today() {
 
 /** A fresh player for specs that really start today's daily (one try per player per day). */
 async function asNewPlayer(page: Page) {
-  await page.addInitScript(id => { if (!localStorage.getItem('setgame_player_id')) localStorage.setItem('setgame_player_id', id) }, crypto.randomUUID())
+  await playAsNewPlayer(page)
 }
 
 async function asPlayer(page: Page, name?: string) {
+  ME = await playAsNewPlayer(page)
+  if (!name) return
   await page.addInitScript(({ id, name }) => {
-    localStorage.setItem('setgame_player_id', id)
-    if (name && !sessionStorage.getItem('named')) {
+    if (!sessionStorage.getItem('named')) {
       localStorage.setItem(`setgame_player_name:${id}`, name)
       sessionStorage.setItem('named', '1')
     }

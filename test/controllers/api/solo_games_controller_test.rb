@@ -64,17 +64,24 @@ module Api
 
     test "progress keeps an unfinished game's claims with their timing" do
       post "/api/solo/games", headers: @headers
-      game_id = JSON.parse(response.body).fetch("game_id")
-      events = [
-        { type: "claim", cards: [3, 1, 2], t_ms: 4100 },
-        { type: "claim", cards: [4, 5, 6], t_ms: 9000 },
-        { type: "claim", cards: [99, 5, 6], t_ms: 9500 }
-      ]
+      body = JSON.parse(response.body)
+      game_id = body.fetch("game_id")
+      real = play_to_completion(body.fetch("seed")).first(2)
+      events = real.map { |e| e.merge(cards: e[:cards].reverse) } + [{ type: "claim", cards: [99, 5, 6], t_ms: 9500 }]
       post "/api/solo/games/#{game_id}/progress", params: { sets_found: 3, events: events }, headers: @headers, as: :json
       assert_response :no_content
       game = SoloGame.find(game_id)
-      assert_equal [{ "type" => "claim", "cards" => [1, 2, 3], "t_ms" => 4100 }, { "type" => "claim", "cards" => [4, 5, 6], "t_ms" => 9000 }], game.events
+      assert_equal real.map { |e| { "type" => "claim", "cards" => e[:cards], "t_ms" => e[:t_ms] } }, game.events
       assert_equal 3, game.sets_found
+    end
+
+    test "made-up claims don't reach the stats" do
+      post "/api/solo/games", headers: @headers
+      game_id = JSON.parse(response.body).fetch("game_id")
+      fake = Array.new(5) { |i| { type: "claim", cards: [1, 2, 4], t_ms: (i + 1) * 10 } }
+      post "/api/solo/games/#{game_id}/progress", params: { sets_found: 1, events: fake }, headers: @headers, as: :json
+      game = SoloGame.find(game_id)
+      assert_empty Array(game.events), "[1, 2, 4] isn't a set"
     end
   end
 end

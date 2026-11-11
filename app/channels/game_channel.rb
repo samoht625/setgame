@@ -21,7 +21,7 @@ class GameChannel < ApplicationCable::Channel
     card_ids = data['card_ids']
     player_id = connection.player_id
 
-    Rails.logger.info "[GameChannel] claim_set: player=#{player_id}, cards=#{card_ids.inspect}"
+    Rails.logger.info "[GameChannel] claim_set: player=#{player_id}, cards=#{card_ids.inspect.truncate(60)}"
 
     result = GAME_ENGINE.claim_set(player_id, card_ids)
 
