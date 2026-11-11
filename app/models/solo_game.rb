@@ -52,8 +52,13 @@ class SoloGame < ApplicationRecord
   # It only ever grows, and finished games keep their verified count.
   # Claims ({type, cards, t_ms since the deal}) ride along so unfinished games
   # keep which sets were found and when; gaps between sets are t_ms deltas.
+  # Only claims that replay on the game's own deal are kept: they feed the
+  # public /stats page.
   def self.record_progress!(id:, player_id:, sets_found:, events: nil)
-    claims = sanitize_claims(events)
+    seed = where(id: id, player_id: player_id).where.not(status: "completed").pick(:seed)
+    return 0 unless seed
+
+    claims = replayable_claims(seed, sanitize_claims(events))
     sets = [sets_found.to_i, claims.length].max.clamp(0, MAX_SETS)
     now = Time.current
     attrs = { sets_found: sets, progress_at: now, updated_at: now }
@@ -74,6 +79,21 @@ class SoloGame < ApplicationRecord
       next unless cards.length == 3 && cards.all? { |c| c&.between?(1, 81) } && t_ms && t_ms >= 0
 
       { "type" => "claim", "cards" => cards.sort, "t_ms" => t_ms }
+    end
+  end
+
+  # The leading claims that are real, in-order finds on this seed's deal.
+  def self.replayable_claims(seed, claims)
+    sim = SoloReplay::Simulator.new(seed)
+    last_t = 0
+    claims.take_while do |claim|
+      next false if sim.finished? || claim["t_ms"] < last_t
+
+      sim.apply_claim!(claim["cards"])
+      last_t = claim["t_ms"]
+      true
+    rescue RuntimeError
+      false
     end
   end
 

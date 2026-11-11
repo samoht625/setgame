@@ -75,6 +75,11 @@ module Api
         assert_response :unprocessable_entity
         assert_equal "invalid_time", JSON.parse(response.body).fetch("error")
 
+        scripted = claims_for(started.fetch("cards"), step_ms: 100)
+        post "/api/puzzle/games/#{id}/finish", params: { elapsed_ms: 700, claims: scripted }, headers: @headers, as: :json
+        assert_response :unprocessable_entity
+        assert_equal "invalid_time", JSON.parse(response.body).fetch("error"), "six sets in under a second is a script"
+
         post "/api/puzzle/games/#{id}/finish", params: { elapsed_ms: 12_000, claims: claims }, headers: { "X-Player-Id" => SecureRandom.uuid }, as: :json
         assert_response :not_found
       end
