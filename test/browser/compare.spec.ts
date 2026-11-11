@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { isSet } from '../../app/javascript/lib/rules'
 import { applySoloClaim, isRoundOver, startSoloDeal } from '../../app/javascript/lib/solo_deal'
+import { mintPlayers, playAsNewPlayer } from './players'
 
 // These finish a deal signed out; keep the one-time reminder prompt (daily.spec covers it) out of the way.
 test.beforeEach(async ({ page }) => {
@@ -8,7 +9,7 @@ test.beforeEach(async ({ page }) => {
 })
 
 const SAVE_KEY = 'setgame_daily_v1'
-const ME = '0b0b0b0b-1111-4222-8333-555555555555'
+let ME = ''
 const SEED = 20261005
 
 type Claim = { cards: number[]; t_ms: number }
@@ -61,7 +62,7 @@ const setsBy = (claims: Claim[], t: number) => claims.filter(claim => claim.t_ms
 /** A finished, submitted run for today and a made-up leaderboard around it. Returns the compare requests made. */
 async function finished(page: Page, { myResult = true, myReplay = true } = {}) {
   const date = today()
-  await page.addInitScript(id => localStorage.setItem('setgame_player_id', id), ME)
+  ME = await playAsNewPlayer(page)
   const entry = (player_id: string, display_name: string | null, elapsed_ms: number, replay: boolean) =>
     ({ player_id, display_name, elapsed_ms, misses: 0, completed_at: new Date().toISOString(), replay })
   await page.route('**/api/daily', route => route.fulfill({
@@ -352,16 +353,13 @@ test('a replay that fails to load can be retried', async ({ page }) => {
   await expect(dialog.getByTestId('replay-score')).toBeVisible()
 })
 
-test('end to end: two finishers compare; a player still mid-deal can’t see anyone’s claims', async ({ page, request }) => {
+test('end to end: two finishers compare; a player still mid-deal can’t see anyone’s claims', async ({ page, request, baseURL }) => {
   test.setTimeout(120_000)
-  const players = [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()]
-  // One cookie jar plays three players, so each sends the key its first response hands back.
-  const [me, rival, midGame]: Record<string, string>[] = players.map(id => ({ 'X-Player-Id': id }))
-  const starts = await Promise.all([me, rival, midGame].map(async headers => {
-    const res = await request.post('/api/daily/games', { headers })
-    headers['X-Player-Key'] = res.headers()['x-player-key']!
-    return res.json()
-  }))
+  // One cookie jar plays three players, so each sends its key.
+  const minted = await mintPlayers(baseURL!, 3)
+  const [me, rival, midGame] = [minted[0]!, minted[1]!, minted[2]!]
+  const players = minted.map(headers => headers['X-Player-Id'])
+  const starts = await Promise.all(minted.map(async headers => (await request.post('/api/daily/games', { headers })).json()))
   expect(starts.map(start => start.game_id)).toEqual([expect.any(String), expect.any(String), expect.any(String)])
   const seed = starts[0].seed as number
 
