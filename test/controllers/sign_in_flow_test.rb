@@ -45,7 +45,7 @@ class SignInFlowTest < ActionDispatch::IntegrationTest
     assert_equal SignInToken::PER_EMAIL_PER_HOUR, SignInMailer.deliveries.length
   end
 
-  test "opening the link doesn't sign in; posting it does, and works again on another browser until it expires" do
+  test "opening the link doesn't sign in; posting it does, once" do
     phone = SecureRandom.uuid
     get "/api/daily", headers: { "X-Player-Id" => phone }
     token = request_link("rose@example.com", phone)
@@ -53,6 +53,7 @@ class SignInFlowTest < ActionDispatch::IntegrationTest
     get "/signin", params: { token: token }
     assert_response :success
     assert_select "form[action='/signin'] input[name='token'][value=?]", token
+    assert_match "Signing you in", response.body, "the browser that asked for the link signs straight in"
     refute SignInToken.last.used_at, "a GET (mail scanners prefetch links) leaves the token unused"
 
     post "/signin", params: { token: token }
@@ -68,19 +69,34 @@ class SignInFlowTest < ActionDispatch::IntegrationTest
     assert_select "meta[name='setgame-account'][content='rose@example.com']"
     assert_select "meta[name='setgame-player-id'][content=?]", phone
 
-    # The same link on a second browser signs that one in too.
+    # A used link (forwarded, or left in browser history) signs nobody else in.
     reset!
+    get "/signin", params: { token: token }
+    assert_response :unprocessable_entity
+    post "/signin", params: { token: token }
+    assert_response :unprocessable_entity
+    assert_match "expired", response.body
+    assert_equal 1, account.account_sessions.count
+  end
+
+  test "a link opened in a browser that didn't ask for it asks first, naming the account" do
+    token = request_link("mallory@example.com")
+    reset!
+    victim = SecureRandom.uuid
+    get "/api/daily", headers: { "X-Player-Id" => victim }
+
+    get "/signin", params: { token: token }
+    assert_response :success
+    assert_select "h1", "Sign in to Set?"
+    assert_select "strong", "mallory@example.com"
+    assert_select "button[type=submit]", "Sign in"
+    refute_match "requestSubmit", response.body, "no automatic sign-in"
+    assert_nil Account.find_by(email: "mallory@example.com")
+    assert_nil SignInToken.last.used_at
+
+    # Their own link on their own other device: one tap.
     post "/signin", params: { token: token }
     assert_redirected_to "/?signed_in=1"
-    assert_match(/setgame_session=/, response.headers["Set-Cookie"].to_s)
-    assert_equal 2, account.account_sessions.count
-
-    reset!
-    travel SignInToken::LIFETIME + 1.second do
-      post "/signin", params: { token: token }
-      assert_response :unprocessable_entity
-      assert_match "expired", response.body
-    end
   end
 
   test "an expired link doesn't sign in" do

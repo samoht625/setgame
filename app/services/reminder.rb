@@ -122,7 +122,7 @@ module Reminder
     today >= since ? today : (local.beginning_of_day + 1.day + account.reminder_minutes.minutes)
   end
 
-  # Signed links. Play signs the browser in for a couple of days; unsubscribe never expires.
+  # Signed links. Play offers to sign the browser in for a couple of days; unsubscribe never expires.
   def self.play_token(account, deal_on)
     verifier(:play).generate([account.id, deal_on.iso8601], expires_in: 2.days)
   end

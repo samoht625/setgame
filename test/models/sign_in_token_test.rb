@@ -3,18 +3,20 @@
 require "test_helper"
 
 class SignInTokenTest < ActiveSupport::TestCase
-  test "a token is stored only as a digest and works until it expires" do
+  test "a token is stored only as a digest and works once" do
     record, token = SignInToken.issue!(email: "rose@example.com", ip: "1.2.3.4", return_to: "/puzzle")
     refute_equal token, record.token_digest
     refute SignInToken.exists?(token_digest: token)
     assert_equal "/puzzle", record.return_to
+    assert record.usable?
 
     assert_equal record, SignInToken.redeem(token)
     first_use = record.reload.used_at
     assert first_use
+    refute record.usable?
     travel 5.minutes do
-      assert_equal record, SignInToken.redeem(token), "reusable within its lifetime"
-      assert_equal first_use, record.reload.used_at, "used_at keeps the first use"
+      assert_nil SignInToken.redeem(token), "not reusable, even within its lifetime"
+      assert_equal first_use, record.reload.used_at
     end
   end
 

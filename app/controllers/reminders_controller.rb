@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
-# Links in the reminder email: Play (signs this browser in, then opens the
-# game) and Unsubscribe (also the List-Unsubscribe one-click POST target).
+# Links in the reminder email: Play (opens the game, offering to sign this
+# browser in first) and Unsubscribe (also the List-Unsubscribe one-click
+# POST target).
 class RemindersController < ApplicationController
   include CurrentAccount
 
@@ -12,8 +13,20 @@ class RemindersController < ApplicationController
 
   PLAY_PATHS = %w[/ /puzzle].freeze
 
+  # A browser already signed in to the account goes straight to the game.
+  # Any other browser is asked first, naming the account, so nobody can sign
+  # a stranger in to theirs by sending them their own Play link.
   def play
-    path = PLAY_PATHS.include?(params[:to]) ? params[:to] : "/"
+    @path = play_path
+    @token = params[:t].to_s
+    account = Reminder.account_for(:play, @token)
+    return redirect_to @path, status: :see_other if account.nil? || current_account == account
+
+    @email = account.email
+    @merges = current_account.nil?
+  end
+
+  def sign_in_and_play
     account = Reminder.account_for(:play, params[:t])
     if account && current_account != account
       cookie_player = cookies.signed[:player_id].to_s
@@ -21,7 +34,7 @@ class RemindersController < ApplicationController
       end_account_session! if current_account_session
       start_account_session!(account)
     end
-    redirect_to path, status: :see_other
+    redirect_to play_path, status: :see_other
   end
 
   def confirm_unsubscribe
@@ -49,5 +62,11 @@ class RemindersController < ApplicationController
     Rails.logger.info("[Reminder] resubscribed account=#{@account.id}")
     @next_at = Reminder.next_at(@account)
     render :resubscribed
+  end
+
+  private
+
+  def play_path
+    PLAY_PATHS.include?(params[:to]) ? params[:to] : "/"
   end
 end

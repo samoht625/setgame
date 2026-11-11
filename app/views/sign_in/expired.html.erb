@@ -1,3 +1,3 @@
 <h1>This link has expired</h1>
-<p>Links work for <%= SignInToken::LIFETIME.inspect %>.</p>
+<p>Links work once, for <%= SignInToken::LIFETIME.inspect %>.</p>
 <a href="<%= @reminder ? "/?sign_in=1&reminder=1" : "/?sign_in=1" %>" class="btn primary">Send a new link</a>
