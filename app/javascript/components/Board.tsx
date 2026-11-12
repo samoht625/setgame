@@ -1,5 +1,6 @@
 import React from 'react'
 import CardFace, { describeCard } from './CardFace'
+import type { RevealTone } from '../hooks/useAutoCompleteReveal'
 
 interface BoardProps {
   cards: number[]
@@ -12,6 +13,8 @@ interface BoardProps {
   autoFilledCard?: number | null
   /** The completed set is about to be replaced: fade it out. */
   completedLeaving?: boolean
+  /** `repeat`: the completed set was already found, so it shows as a wrong pick. */
+  completedTone?: RevealTone
   onCardClick: (cardId: number) => void
   claiming: boolean
   gameOver?: boolean
@@ -34,6 +37,7 @@ const Board: React.FC<BoardProps> = ({
   completedCards = [],
   autoFilledCard = null,
   completedLeaving = false,
+  completedTone = 'found',
   onCardClick,
   claiming,
   gameOver = false,
@@ -87,8 +91,12 @@ const Board: React.FC<BoardProps> = ({
           const isRejected = rejectedCards.includes(cardId)
           const isFound = foundCards.includes(cardId)
           const isCompleted = completedCards.includes(cardId)
+          const isRepeat = isCompleted && completedTone === 'repeat'
+          const completedRole = cardId === autoFilledCard ? 'filled' : 'picked'
 
-          const borderStyle = isRejected
+          const borderStyle = isRepeat
+            ? 'relative z-[1] border-rose-600 ring-2 ring-rose-600 animate-set-repeat dark:border-rose-400 dark:ring-rose-400'
+            : isRejected
             ? 'border-rose-600 ring-2 ring-rose-600 animate-shake dark:border-rose-400 dark:ring-rose-400'
             : isCompleted
               ? `relative z-[1] border-amber-400 ring-[3px] ring-amber-400 shadow-[0_0_12px_2px_rgba(251,191,36,0.45)] ${completedLeaving ? 'animate-set-leave' : 'animate-set-lit'} dark:border-amber-300 dark:ring-amber-300 dark:shadow-[0_0_14px_3px_rgba(252,211,77,0.4)]`
@@ -104,7 +112,8 @@ const Board: React.FC<BoardProps> = ({
               type="button"
               disabled={interactionLocked}
               aria-pressed={isSelected}
-              data-completed={isCompleted ? (cardId === autoFilledCard ? 'filled' : 'picked') : undefined}
+              data-completed={isCompleted && !isRepeat ? completedRole : undefined}
+              data-repeat={isRepeat ? completedRole : undefined}
               aria-label={describeCard(cardId)}
               data-card-id={cardId}
               onClick={() => onCardClick(cardId)}

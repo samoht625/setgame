@@ -5,6 +5,9 @@ export const AUTO_COMPLETE_REVEAL_MS = 400
 /** The end of that hold, when cards about to be replaced fade out (see .animate-set-leave). */
 const LEAVE_MS = 120
 
+/** `found` is a new set (amber); `repeat` is a set already found (red). */
+export type RevealTone = 'found' | 'repeat'
+
 /**
  * The two-card experiment's "here's your set" moment: the three cards (and
  * which one the game filled in) stay highlighted briefly, then `then` runs.
@@ -14,6 +17,7 @@ export function useAutoCompleteReveal() {
   const [cards, setCards] = useState<number[]>([])
   const [filled, setFilled] = useState<number | null>(null)
   const [leaving, setLeaving] = useState(false)
+  const [tone, setTone] = useState<RevealTone>('found')
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
 
   const clearTimers = () => {
@@ -28,11 +32,12 @@ export function useAutoCompleteReveal() {
     setLeaving(false)
   }, [])
 
-  const reveal = useCallback((set: number[], filledCard: number, then?: () => void, leave = false) => {
+  const reveal = useCallback((set: number[], filledCard: number, then?: () => void, leave = false, revealTone: RevealTone = 'found') => {
     clearTimers()
     setCards(set)
     setFilled(filledCard)
     setLeaving(false)
+    setTone(revealTone)
     if (leave) timersRef.current.push(setTimeout(() => setLeaving(true), AUTO_COMPLETE_REVEAL_MS - LEAVE_MS))
     timersRef.current.push(setTimeout(() => {
       timersRef.current = []
@@ -45,5 +50,5 @@ export function useAutoCompleteReveal() {
 
   useEffect(() => clearTimers, [])
 
-  return { cards, filled, leaving, revealing: cards.length > 0, reveal, cancel }
+  return { cards, filled, leaving, tone, revealing: cards.length > 0, reveal, cancel }
 }
