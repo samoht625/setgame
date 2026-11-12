@@ -29,6 +29,7 @@ module Api
       assert_response :success
       result = JSON.parse(response.body)
       assert result.fetch("ok")
+      assert_nil result.fetch("previous_best_ms"), "a first run has nothing to beat"
       assert_equal({ "daily" => true, "weekly" => true, "monthly" => true }, result.fetch("is_personal_best"))
       assert_equal({ "daily" => elapsed_ms, "weekly" => elapsed_ms, "monthly" => elapsed_ms, "all_time" => elapsed_ms }, result.fetch("personal_bests"))
       assert_equal "completed", game.reload.status
@@ -91,7 +92,47 @@ module Api
       end
     end
 
+    test "a finished run reports the player's previous all-time practice best" do
+      create_score(elapsed_ms: 90_000, completed_at: 2.months.ago)
+      create_score(elapsed_ms: 120_000, completed_at: 1.hour.ago)
+      create_score(elapsed_ms: 10_000, completed_at: 1.hour.ago, player_id: SecureRandom.uuid)
+      create_score(elapsed_ms: 20_000, completed_at: 1.hour.ago).update!(daily_on: Date.current)
+
+      result = finish_run(@headers)
+      assert_equal 90_000, result.fetch("previous_best_ms"), "older than this month, but not another player's or a Daily Deal time"
+      assert_equal [result.dig("score", "elapsed_ms"), 90_000].min, result.dig("personal_bests", "all_time")
+    end
+
+    test "a signed-in browser compares against the account's best from every device" do
+      account_player = SecureRandom.uuid
+      Account.create!(email: "tido@example.com", player_id: account_player)
+      create_score(elapsed_ms: 144_000, completed_at: 1.hour.ago, player_id: account_player)
+
+      phone = SecureRandom.uuid
+      get "/api/daily", headers: { "X-Player-Id" => phone }
+      post "/api/sign_in", params: { email: "tido@example.com" }, headers: { "X-Player-Id" => phone }, as: :json
+      token = CGI.unescape(SignInMailer.deliveries.last[:text][/token=([\w\-%]+)/, 1])
+      post "/signin", params: { token: token }
+      assert_response :see_other
+
+      result = finish_run({ "X-Player-Id" => phone })
+      assert_equal account_player, result.dig("score", "player_id")
+      assert_equal 144_000, result.fetch("previous_best_ms")
+    end
+
     private
+
+    def finish_run(headers)
+      post "/api/solo/games", headers: headers
+      assert_response :created
+      game = SoloGame.find(JSON.parse(response.body).fetch("game_id"))
+      events = play_to_completion(game.seed.to_i)
+      elapsed_ms = events.last.fetch(:t_ms)
+      game.update!(started_at: (elapsed_ms / 1000.0 + 5).seconds.ago)
+      post "/api/solo/scores", headers: headers, params: { game_id: game.id, elapsed_ms: elapsed_ms, events: events }, as: :json
+      assert_response :success
+      JSON.parse(response.body)
+    end
 
     def create_score(elapsed_ms:, completed_at:, player_id: @player_id, created_at: completed_at)
       game = SoloGame.create!(
