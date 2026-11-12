@@ -18,7 +18,7 @@ import DailyCard, { primaryButton } from './DailyCard'
 import { Challenge, RulesOffer } from './StartNotes'
 import StreakPill from './StreakPill'
 import { missMessage, newToRules } from '../rules/Tour'
-import { autoCompletePick, inTwoCardMode, THIRD_CARD_MISSING } from '../lib/two_card_mode'
+import { autoCompletePick, twoCardModeOn, THIRD_CARD_MISSING } from '../lib/two_card_mode'
 import { afterNextPaint } from '../lib/after_paint'
 import { seconds, track } from '../lib/analytics'
 import {
@@ -383,7 +383,7 @@ const DailyGame: React.FC = () => {
       : selectedCards.length < 3
         ? [...selectedCards, cardId]
         : selectedCards
-    const pick = autoCompletePick(picked, run.board, inTwoCardMode(getPlayerDisplayName()))
+    const pick = autoCompletePick(picked, run.board, twoCardModeOn(getPlayerDisplayName()))
     if (pick.cards.length > selectedCards.length && pick.cards.length < 3 && !pick.missing) playSelection()
     setSelectedCards(pick.cards)
     if (pick.filled !== null) {

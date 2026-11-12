@@ -12,7 +12,7 @@ import { useSidePanel } from '../hooks/useSidePanel'
 import { useAutoCompleteReveal } from '../hooks/useAutoCompleteReveal'
 import { useSound } from './SoundProvider'
 import { onNameChange } from '../lib/player_name'
-import { inTwoCardMode, THIRD_CARD_MISSING } from '../lib/two_card_mode'
+import { twoCardModeOn, THIRD_CARD_MISSING } from '../lib/two_card_mode'
 
 interface Placement {
   player_id: string
@@ -330,8 +330,8 @@ const MultiplayerGame: React.FC = () => {
         ? [...selectedCards, cardId]
         : selectedCards
 
-    // Players in the two-card experiment claim with two cards; the server picks the third.
-    const pairClaim = nextSelected.length === 2 && inTwoCardMode(gameState.names[playerId])
+    // In two-card mode the claim is two cards; the server picks the third.
+    const pairClaim = nextSelected.length === 2 && twoCardModeOn(gameState.names[playerId])
 
     if (nextSelected.length > selectedCards.length && nextSelected.length < 3 && !pairClaim) playSelection()
     setSelectedCards(nextSelected)

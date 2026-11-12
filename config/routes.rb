@@ -26,6 +26,7 @@ Rails.application.routes.draw do
     post "sign_in", to: "sign_in#create"
     delete "sign_in", to: "sign_in#destroy"
     patch "reminder", to: "reminders#update"
+    patch "settings", to: "settings#update"
   end
 
   # The emailed sign-in link lands here; the page posts the token back (or asks first, in another browser).

@@ -21,6 +21,26 @@ function pairs(board: number[]): { complete: number[][]; missing: number[][] } {
 }
 
 const card = (page: Page, id: number) => page.locator(`[data-card-id="${id}"]`)
+const picked = (page: Page) => page.locator('[data-card-id][aria-pressed="true"]')
+
+/** Opens the header menu and reads the Two-card sets switch, leaving the menu closed. */
+async function expectTwoCardSetting(page: Page, state: 'on' | 'off') {
+  await page.getByRole('button', { name: 'Menu' }).click()
+  const item = page.getByRole('menuitemcheckbox', { name: /^Two-card sets/ })
+  await expect(item).toContainText('Pick two cards and the game picks the third')
+  await expect(item).toHaveAttribute('aria-checked', String(state === 'on'))
+  await page.keyboard.press('Escape')
+  await expect(item).toHaveCount(0)
+}
+
+/** Flips the switch in the header menu and waits for the server to have it. */
+async function switchTwoCard(page: Page, to: 'on' | 'off') {
+  await page.getByRole('button', { name: 'Menu' }).click()
+  const item = page.getByRole('menuitemcheckbox', { name: /^Two-card sets/ })
+  await expect(item).toHaveAttribute('aria-checked', String(to === 'off'))
+  await item.click()
+  await expect(page.getByText(`Two-card sets ${to}`, { exact: true })).toBeVisible()
+}
 
 async function startPuzzle(page: Page): Promise<number[]> {
   await page.goto('/puzzle')
@@ -30,7 +50,7 @@ async function startPuzzle(page: Page): Promise<number[]> {
   return cards(page)
 }
 
-test('Puzzle, in the two-card experiment: a pair finds its set, or misses when the third card is missing', async ({ page }) => {
+test('Puzzle, two-card sets on by default (rose): a pair finds its set, or misses when the third card is missing', async ({ page }) => {
   await playAs(page, 'rose')
   const board = await startPuzzle(page)
   const { complete, missing } = pairs(board)
@@ -52,7 +72,7 @@ test('Puzzle, in the two-card experiment: a pair finds its set, or misses when t
   await expect(page.locator('[data-card-id][aria-pressed="true"]')).toHaveCount(0)
 })
 
-test('Puzzle, in the two-card experiment: a repeat shows red, never amber, and costs nothing', async ({ page }) => {
+test('Puzzle, two-card sets on: a repeat shows red, never amber, and costs nothing', async ({ page }) => {
   await playAs(page, 'Rose')
   const board = await startPuzzle(page)
   const [a, b] = pairs(board).complete[0]!
@@ -98,9 +118,10 @@ test('Puzzle, in the two-card experiment: a repeat shows red, never amber, and c
   expect(saved.attempts).toBe('h')
 })
 
-test('Puzzle, outside the experiment: two cards stay picked until the third', async ({ page }) => {
+test('Puzzle, two-card sets off by default (any other name): two cards stay picked until the third', async ({ page }) => {
   await playAs(page, 'Wily Coyote')
   const board = await startPuzzle(page)
+  await expectTwoCardSetting(page, 'off')
   const pair = pairs(board).complete[0]!
 
   for (const id of pair) await card(page, id).click()
@@ -113,10 +134,11 @@ test('Puzzle, outside the experiment: two cards stay picked until the third', as
   await expect(page.locator('[data-completed]')).toHaveCount(0)
 })
 
-test('Practice, in the two-card experiment: the completed set shows, then is claimed', async ({ page }) => {
+test('Practice, two-card sets on by default (Yaniv): the completed set shows, then is claimed', async ({ page }) => {
   await playAs(page, 'Yaniv')
   await page.goto('/practice')
   await expect(page.locator('[data-card-id]').first()).toBeEnabled()
+  await expectTwoCardSetting(page, 'on')
   const [a, b] = pairs(await cards(page)).complete[0]!
 
   await card(page, a!).click()
@@ -132,7 +154,7 @@ test('Practice, in the two-card experiment: the completed set shows, then is cla
   await expect(card(page, a!)).toHaveCount(0)
 })
 
-test('Daily Deal, in the two-card experiment: the completed set shows, then is claimed', async ({ page }) => {
+test('Daily Deal, two-card sets on by default (Rose): the completed set shows, then is claimed', async ({ page }) => {
   await playAs(page, 'Rose')
   await page.goto('/daily')
   await page.getByRole('button', { name: 'Start', exact: true }).click()
@@ -147,7 +169,7 @@ test('Daily Deal, in the two-card experiment: the completed set shows, then is c
   await expect(card(page, a!)).toHaveCount(0)
 })
 
-test('Multiplayer, in the two-card experiment: the server completes the pair or calls it a miss', async ({ page }) => {
+test('Multiplayer, two-card sets on by default (Tido): the server completes the pair or calls it a miss', async ({ page }) => {
   await playAs(page, 'Tido')
   await page.goto('/m')
   await expect(page.locator('[data-card-id]').first()).toBeEnabled()
@@ -165,4 +187,117 @@ test('Multiplayer, in the two-card experiment: the server completes the pair or 
   // The highlight gives way to the server's usual found reveal.
   await expect(page.locator('[data-completed]')).toHaveCount(0)
   await expect(page.getByText('You found a set!')).toBeVisible()
+})
+
+test('Switching two-card sets off sticks for a default-on name, across a reload', async ({ page }) => {
+  await playAs(page, 'Tido')
+  await page.goto('/puzzle')
+  await expect(page.locator('meta[name="setgame-two-card"]')).toHaveCount(0)
+  await expectTwoCardSetting(page, 'on')
+  await switchTwoCard(page, 'off')
+  await expectTwoCardSetting(page, 'off')
+
+  // The choice is the server's: the reloaded page carries it.
+  await page.reload()
+  await expect(page.locator('meta[name="setgame-two-card"]')).toHaveAttribute('content', 'off')
+  await expectTwoCardSetting(page, 'off')
+
+  await page.getByRole('button', { name: 'Start', exact: true }).click()
+  await expect(page.locator('[data-card-id]').first()).toBeEnabled()
+  const board = await cards(page)
+  const pair = pairs(board).complete[0]!
+  for (const id of pair) await card(page, id).click()
+  await expect(picked(page)).toHaveCount(2)
+  await expect(page.locator('[data-completed]')).toHaveCount(0)
+  await expect(page.locator('[data-found-set]')).toHaveCount(0)
+  await card(page, thirdCard(pair[0]!, pair[1]!)!).click()
+  await expect(page.locator('[data-found-set]')).toHaveCount(1)
+})
+
+test('Switching two-card sets on works under any other name, in every game, across a reload', async ({ page }) => {
+  await playAs(page, 'Wily Coyote')
+  await page.goto('/practice')
+  await expect(page.locator('[data-card-id]').first()).toBeEnabled()
+  const before = pairs(await cards(page)).complete[0]!
+  for (const id of before) await card(page, id).click()
+  await expect(picked(page)).toHaveCount(2)
+  for (const id of before) await card(page, id).click()
+  await expect(picked(page)).toHaveCount(0)
+
+  await switchTwoCard(page, 'on')
+  for (const id of before) await card(page, id).click()
+  await expect(card(page, thirdCard(before[0]!, before[1]!)!)).toHaveAttribute('data-completed', 'filled')
+  await expect(page.getByText('Set found!')).toBeVisible()
+  await expect(card(page, before[0]!)).toHaveCount(0)
+
+  await page.goto('/puzzle')
+  await expect(page.locator('meta[name="setgame-two-card"]')).toHaveAttribute('content', 'on')
+  await expectTwoCardSetting(page, 'on')
+  await page.getByRole('button', { name: 'Start', exact: true }).click()
+  await expect(page.locator('[data-card-id]').first()).toBeEnabled()
+  const [a, b] = pairs(await cards(page)).complete[0]!
+  await card(page, a!).click()
+  await card(page, b!).click()
+  await expect(page.locator('[data-completed]')).toHaveCount(3)
+  await expect(page.locator('[data-found-set]')).toHaveCount(1)
+
+  await page.goto('/daily')
+  await page.getByRole('button', { name: 'Start', exact: true }).click()
+  await expect(page.locator('[data-card-id]').first()).toBeEnabled()
+  const [c, d] = pairs(await cards(page)).complete[0]!
+  await card(page, c!).click()
+  await card(page, d!).click()
+  await expect(page.locator('[data-completed]')).toHaveCount(3)
+  await expect(page.getByText('Set found!')).toBeVisible()
+
+  // Off again, and it stays off.
+  await switchTwoCard(page, 'off')
+  await page.reload()
+  await expect(page.locator('meta[name="setgame-two-card"]')).toHaveAttribute('content', 'off')
+  await expectTwoCardSetting(page, 'off')
+})
+
+test('Multiplayer follows the setting: switched on under another name, the server completes the pair', async ({ page }) => {
+  await playAs(page, 'Pat')
+  await page.goto('/m')
+  await expect(page.locator('[data-card-id]').first()).toBeEnabled()
+  await expect(page.getByText('Pat').first()).toBeVisible()
+
+  // Off by default: two cards wait for a third.
+  const first = pairs(await cards(page)).complete[0]!
+  for (const id of first) await card(page, id).click()
+  await expect(picked(page)).toHaveCount(2)
+  for (const id of first) await card(page, id).click()
+  await expect(picked(page)).toHaveCount(0)
+
+  await switchTwoCard(page, 'on')
+  const { complete, missing } = pairs(await cards(page))
+  for (const id of missing[0]!) await card(page, id).click()
+  await expect(page.getByText("The third card isn't on the board")).toBeVisible()
+
+  const [a, b] = complete[0]!
+  await card(page, a!).click()
+  await card(page, b!).click()
+  await expect(card(page, thirdCard(a!, b!)!)).toHaveAttribute('data-completed', 'filled')
+  await expect(page.getByText('You found a set!')).toBeVisible()
+})
+
+test('Multiplayer follows the setting: switched off by Tido, a pair waits for its third card', async ({ page }) => {
+  await playAs(page, 'Tido')
+  await page.goto('/m')
+  await expect(page.locator('[data-card-id]').first()).toBeEnabled()
+  await expect(page.getByText('Tido').first()).toBeVisible()
+  await switchTwoCard(page, 'off')
+
+  await page.reload()
+  await expect(page.locator('[data-card-id]').first()).toBeEnabled()
+  await expect(page.getByText('Tido').first()).toBeVisible()
+  const [a, b] = pairs(await cards(page)).complete[0]!
+  await card(page, a!).click()
+  await card(page, b!).click()
+  await expect(picked(page)).toHaveCount(2)
+  await expect(page.locator('[data-completed]')).toHaveCount(0)
+  await card(page, thirdCard(a!, b!)!).click()
+  await expect(page.getByText('You found a set!')).toBeVisible()
+  await expect(page.locator('[data-completed]')).toHaveCount(0)
 })

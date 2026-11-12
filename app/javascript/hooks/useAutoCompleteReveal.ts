@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-/** How long a two-card player's completed set stays highlighted before the game moves on. */
+/** How long a set completed in two-card mode stays highlighted before the game moves on. */
 export const AUTO_COMPLETE_REVEAL_MS = 400
 /** The end of that hold, when cards about to be replaced fade out (see .animate-set-leave). */
 const LEAVE_MS = 120
@@ -9,7 +9,7 @@ const LEAVE_MS = 120
 export type RevealTone = 'found' | 'repeat'
 
 /**
- * The two-card experiment's "here's your set" moment: the three cards (and
+ * Two-card mode's "here's your set" moment: the three cards (and
  * which one the game filled in) stay highlighted briefly, then `then` runs.
  * With `leave`, the cards fade out at the end, for boards that replace them.
  */

@@ -173,7 +173,7 @@ dialog::backdrop {
   animation: card-in 0.22s ease-out;
 }
 
-/* Two-card experiment: the completed set lights up together. card-in stays
+/* Two-card mode: the completed set lights up together. card-in stays
    first in the list so adding and removing this doesn't replay the deal-in. */
 @keyframes set-lit {
   0%, 100% { transform: scale(1); }
@@ -205,7 +205,7 @@ dialog::backdrop {
   animation: shake 0.3s ease-in-out;
 }
 
-/* Two-card experiment: a completed set that was already found. Like
+/* Two-card mode: a completed set that was already found. Like
    .animate-set-lit, card-in stays first so the filled-in card doesn't replay it. */
 .animate-set-repeat {
   animation: card-in 0.22s ease-out, shake 0.3s ease-in-out;

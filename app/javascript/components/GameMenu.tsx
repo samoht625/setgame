@@ -11,7 +11,7 @@ export type MenuItem = {
   detail?: string
   /** The badge counts people playing live (a green marker instead of a neutral pill). */
   live?: boolean
-  /** A small muted second line under the label (e.g. the signed-in email under Sign out). */
+  /** A small muted second line under the label: the signed-in email under Sign out (cut short), or what a switch does (wraps). */
   sublabel?: string
   /** A switch (Sound): rendered as a menuitemcheckbox with a toggle. */
   checked?: boolean
@@ -125,7 +125,11 @@ export const MenuButton: React.FC<MenuButtonProps> = ({ sections }) => {
       {item.sublabel ? (
         <span className="flex min-w-0 flex-col py-1.5">
           <span>{item.label}</span>
-          <span className="truncate text-xs text-neutral-500 dark:text-neutral-400" title={item.sublabel}>{item.sublabel}</span>
+          {item.checked === undefined ? (
+            <span className="truncate text-xs text-neutral-500 dark:text-neutral-400" title={item.sublabel}>{item.sublabel}</span>
+          ) : (
+            <span className="text-xs text-neutral-500 dark:text-neutral-400">{item.sublabel}</span>
+          )}
         </span>
       ) : (
         <span className="shrink-0">{item.label}</span>

@@ -12,13 +12,22 @@ class TwoCardModeTest < ActiveSupport::TestCase
     @player = SecureRandom.uuid
   end
 
-  test "the allowlisted names match ignoring case and extra spaces" do
-    %w[Rose rose ROSE Yaniv tido].each { |name| assert TwoCardMode.enabled_for?(name), name }
-    assert TwoCardMode.enabled_for?("  Tido ")
-    [nil, "", " ", "Rosemary", "Ros", "Rose Smith", "Wily Coyote"].each { |name| refute TwoCardMode.enabled_for?(name), name.inspect }
+  test "it's on by default for Tido, Rose and Yaniv, ignoring case and extra spaces, and off for everyone else" do
+    assert_equal %w[Tido Rose Yaniv], TwoCardMode::DEFAULT_ON_NAMES
+    %w[Rose rose ROSE Yaniv tido].each { |name| assert TwoCardMode.enabled?(choice: nil, name: name), name }
+    assert TwoCardMode.enabled?(choice: nil, name: "  Tido ")
+    [nil, "", " ", "Rosemary", "Ros", "Rose Smith", "Wily Coyote"].each { |name| refute TwoCardMode.enabled?(choice: nil, name: name), name.inspect }
   end
 
-  test "a flagged player's pair is completed with the third card on the board" do
+  test "the player's own choice wins over the default, both ways" do
+    refute TwoCardMode.enabled?(choice: false, name: "Tido")
+    assert TwoCardMode.enabled?(choice: true, name: "Wily Coyote")
+    assert TwoCardMode.enabled?(choice: true, name: nil)
+    assert TwoCardMode.enabled?(choice: true, name: "Rose")
+    refute TwoCardMode.enabled?(choice: false, name: "Wily Coyote")
+  end
+
+  test "a default-on player's pair is completed with the third card on the board" do
     deal(board: [*PAIR, THIRD, *OTHERS.first(9)], name: "rose")
 
     result = @engine.claim_set(@player, PAIR)
@@ -29,7 +38,7 @@ class TwoCardModeTest < ActiveSupport::TestCase
     assert_equal [*PAIR, THIRD], @engine.current_state[:recent_claims].first[:cards]
   end
 
-  test "a flagged player's pair is a miss when its third card isn't on the board" do
+  test "a pair is a miss when its third card isn't on the board" do
     deal(board: [*PAIR, *OTHERS], name: "Yaniv")
     refute_includes @engine.board, THIRD
 
@@ -41,7 +50,7 @@ class TwoCardModeTest < ActiveSupport::TestCase
     assert_nil @engine.scores[@player]
   end
 
-  test "a pair from a player who isn't flagged is refused, even when the third card is there" do
+  test "a pair from a player with two-card mode off is refused, even when the third card is there" do
     deal(board: [*PAIR, THIRD, *OTHERS.first(9)], name: "Wily Coyote")
 
     result = @engine.claim_set(@player, PAIR)
@@ -51,7 +60,28 @@ class TwoCardModeTest < ActiveSupport::TestCase
     assert_nil @engine.scores[@player]
   end
 
-  test "a flagged player can still claim all three cards, and the server still checks the pair" do
+  test "a player who switched it on has their pair completed, whatever their name" do
+    deal(board: [*PAIR, THIRD, *OTHERS.first(9)], name: "Wily Coyote")
+
+    result = @engine.claim_set(@player, PAIR, two_card: true)
+
+    assert result[:success], result[:message]
+    assert_equal [*PAIR, THIRD], @engine.current_state[:active_claim][:cards]
+    assert_equal 1, @engine.scores[@player]
+  end
+
+  test "a default-on player who switched it off has their pair refused, and claims three cards as usual" do
+    deal(board: [*PAIR, THIRD, *OTHERS.first(9)], name: "Tido")
+
+    result = @engine.claim_set(@player, PAIR, two_card: false)
+
+    refute result[:success]
+    assert_equal "Must select exactly 3 different cards", result[:message]
+    assert_nil @engine.scores[@player]
+    assert @engine.claim_set(@player, [*PAIR, THIRD], two_card: false)[:success]
+  end
+
+  test "in two-card mode a player can still claim all three cards, and the server still checks the pair" do
     deal(board: [*PAIR, THIRD, *OTHERS.first(9)], name: "Tido")
     off_board = (1..81).find { |id| !@engine.board.include?(id) }
 
