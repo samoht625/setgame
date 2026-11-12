@@ -284,6 +284,88 @@ test('first completions and slower times do not falsely claim a personal best', 
   }
 })
 
+/** Renders pages as signed in, the way the server does for a browser with an account session. */
+async function signIn(page: Page) {
+  await page.route('**/practice', async route => {
+    const response = await route.fetch()
+    const body = (await response.text()).replace('</head>', '<meta name="setgame-account" content="tido@example.com"></head>')
+    await route.fulfill({ response, body })
+  })
+}
+
+/** A ranked game one set from the end; the server answers with `previousBest` for the submitted time. */
+async function rankedLastSet(page: Page, deviceBest: number | null, previousBest: (elapsedMs: number) => number | null) {
+  await page.route('**/api/solo/scores', async route => {
+    const { elapsed_ms } = route.request().postDataJSON()
+    await route.fulfill({ json: { ok: true, score: { player_id: 'me', display_name: 'Tido', elapsed_ms, completed_at: new Date().toISOString() }, previous_best_ms: previousBest(elapsed_ms) } })
+  })
+  await lastSet(page, deviceBest)
+  await page.evaluate(key => {
+    const state = JSON.parse(localStorage.getItem(key)!)
+    Object.assign(state, { gameId: '00000000-0000-4000-8000-000000000009', eligible: true, startedAtMs: Date.now() - 31000 })
+    localStorage.setItem(key, JSON.stringify(state))
+  }, SAVE_KEY)
+  await page.reload()
+  await ready(page)
+}
+
+async function finishRanked(page: Page) {
+  await claim(page, [1, 2, 3])
+  await expect(page.getByText(/^Submitted!/)).toBeVisible()
+}
+
+async function playAgain(page: Page) {
+  await page.getByRole('button', { name: 'Play again', exact: true }).first().click()
+  await ready(page)
+}
+
+test('a signed-in player slower than their account best gets no banner, whatever this device remembers', async ({ page }) => {
+  await signIn(page)
+  await rankedLastSet(page, 402000, elapsedMs => elapsedMs - 10000)
+  await finishRanked(page)
+  await expect(page.locator('[data-personal-best]')).toHaveCount(0)
+})
+
+test('a signed-in player faster than their account best hears by how much, ignoring device times', async ({ page }) => {
+  await signIn(page)
+  await rankedLastSet(page, 20000, elapsedMs => elapsedMs + 14000)
+  await finishRanked(page)
+  await expect(page.locator('[data-personal-best]')).toContainText('14 seconds faster than your previous all-time best.')
+})
+
+test('a signed-in player\'s unranked or first ranked run claims no best', async ({ page }) => {
+  await signIn(page)
+  await lastSet(page, 45000)
+  await claim(page, [1, 2, 3])
+  await expect(page.getByText('Finished', { exact: true })).toBeVisible()
+  await expect(page.locator('[data-personal-best]')).toHaveCount(0)
+  await playAgain(page)
+
+  await rankedLastSet(page, 45000, () => null)
+  await finishRanked(page)
+  await expect(page.locator('[data-personal-best]')).toHaveCount(0)
+})
+
+test('an anonymous ranked run is a best only when it beats the server and the device', async ({ page }) => {
+  await rankedLastSet(page, 45000, elapsedMs => elapsedMs - 5000)
+  await finishRanked(page)
+  await expect(page.locator('[data-personal-best]')).toHaveCount(0)
+  await playAgain(page)
+
+  await rankedLastSet(page, 60000, elapsedMs => elapsedMs + 14000)
+  await finishRanked(page)
+  await expect(page.locator('[data-personal-best]')).toContainText('14 seconds faster than your previous all-time best.')
+})
+
+test('an anonymous device best never shows over a faster "Your best" on the leaderboard', async ({ page }) => {
+  const best = { player_id: 'me', display_name: null, elapsed_ms: 20000, completed_at: new Date().toISOString() }
+  await page.route('**/api/solo/personal_bests', route => route.fulfill({ json: { daily: best, weekly: best, monthly: best, all_time: best } }))
+  await lastSet(page, 45000)
+  await claim(page, [1, 2, 3])
+  await expect(page.getByText('Your best', { exact: true }).first()).toBeVisible()
+  await expect(page.locator('[data-personal-best]')).toHaveCount(0)
+})
+
 test('reduced motion keeps achievement text and logo secret without animation', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await lastSet(page, 45000)

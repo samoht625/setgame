@@ -50,6 +50,7 @@ module Api
       render json: {
         ok: true,
         score: serialize_score(score),
+        previous_best_ms: SoloScore.regular.where(player_id: current_player_id).where.not(id: score.id).minimum(:elapsed_ms),
         personal_bests: {
           daily: personal[:daily]&.elapsed_ms,
           weekly: personal[:weekly]&.elapsed_ms,

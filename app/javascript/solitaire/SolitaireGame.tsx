@@ -8,7 +8,8 @@ import Toast, { ToastMessage, ToastType } from '../components/Toast'
 import SolitaireHud from './SolitaireHud'
 import SolitairePanel, { SoloLeaderboard, type LeaderboardPeriod } from './SolitairePanel'
 import { formatTime } from './time'
-import PersonalBestCelebration from '../components/PersonalBestCelebration'
+import PersonalBestCelebration, { type PersonalBestScope } from '../components/PersonalBestCelebration'
+import { signedInEmail } from '../lib/player_id'
 import { useSound } from '../components/SoundProvider'
 import { useSoloScores } from '../hooks/useSoloScores'
 import { useSidePanel } from '../hooks/useSidePanel'
@@ -112,6 +113,25 @@ function loadSavedGame(): SavedSoloState | null {
   }
 }
 
+/** Adds a finished time to this browser's list and returns the best one before it, if any. */
+function recordDeviceTime(finalMs: number): number | null {
+  try {
+    const stored: unknown = JSON.parse(localStorage.getItem(BEST_TIMES_KEY) || '[]')
+    const times = (Array.isArray(stored) ? stored : []).filter((time): time is { ms: number; at: string } => (
+      time !== null && typeof time === 'object' && Number.isFinite(time.ms) && time.ms > 0 &&
+      typeof time.at === 'string' && Number.isFinite(Date.parse(time.at))
+    ))
+    const previousBest = times.length ? Math.min(...times.map(time => time.ms)) : null
+    times.push({ ms: finalMs, at: new Date().toISOString() })
+    times.sort((a, b) => a.ms - b.ms)
+    localStorage.setItem(BEST_TIMES_KEY, JSON.stringify(times.slice(0, 10)))
+    return previousBest
+  } catch {
+    // Local records are optional when browser storage is unavailable.
+    return null
+  }
+}
+
 function saveGame(state: Omit<SavedSoloState, 'savedAtMs'>): void {
   try {
     localStorage.setItem(
@@ -125,7 +145,8 @@ function saveGame(state: Omit<SavedSoloState, 'savedAtMs'>): void {
 
 const SolitaireGame: React.FC = () => {
   const { playSelection, playSet } = useSound()
-  const [bestImprovementMs, setBestImprovementMs] = useState<number | null>(null)
+  const [bestImprovement, setBestImprovement] = useState<{ finalMs: number; ms: number; scope: PersonalBestScope } | null>(null)
+  const deviceBestRef = useRef<number | null>(null)
   const [claimAnimationKey, setClaimAnimationKey] = useState(0)
   const [board, setBoard] = useState<number[]>([])
   const [deck, setDeck] = useState<number[]>([])
@@ -317,7 +338,8 @@ const SolitaireGame: React.FC = () => {
     setSubmitting(false)
     setSubmissionError(null)
     setSubmittedScore(null)
-    setBestImprovementMs(null)
+    setBestImprovement(null)
+    deviceBestRef.current = null
     submissionStatusRef.current = undefined
     setSelectedCards([])
     setRejectedCards([])
@@ -360,26 +382,19 @@ const SolitaireGame: React.FC = () => {
     void startNewGame('idle')
   }
 
+  const celebrate = (finalMs: number, previousBestMs: number | null, scope: PersonalBestScope) => {
+    if (previousBestMs !== null && finalMs < previousBestMs) setBestImprovement({ finalMs, ms: previousBestMs - finalMs, scope })
+  }
+
   const finishGame = async (finalMs: number, claimEvents: ClaimEvent[]) => {
     if (submittedRef.current) return
     submittedRef.current = true
 
-    try {
-      const stored: unknown = JSON.parse(localStorage.getItem(BEST_TIMES_KEY) || '[]')
-      const times = (Array.isArray(stored) ? stored : []).filter((time): time is { ms: number; at: string } => (
-        time !== null && typeof time === 'object' && Number.isFinite(time.ms) && time.ms > 0 &&
-        typeof time.at === 'string' && Number.isFinite(Date.parse(time.at))
-      ))
-      const previousBest = Math.min(...times.map(time => time.ms))
-      if (Number.isFinite(previousBest) && finalMs < previousBest) setBestImprovementMs(previousBest - finalMs)
-      times.push({ ms: finalMs, at: new Date().toISOString() })
-      times.sort((a, b) => a.ms - b.ms)
-      localStorage.setItem(BEST_TIMES_KEY, JSON.stringify(times.slice(0, 10)))
-    } catch {
-      // Local records are optional when browser storage is unavailable.
-    }
+    deviceBestRef.current = recordDeviceTime(finalMs)
 
     if (!eligibleRef.current || !gameIdRef.current) {
+      // An unranked run never reaches the account, so only an anonymous player hears about it.
+      if (!signedInEmail()) celebrate(finalMs, deviceBestRef.current, 'device')
       if (!eligibleRef.current) {
         showToast('Not ranked — this game was paused or offline', 'error')
         syncProgress()
@@ -411,6 +426,13 @@ const SolitaireGame: React.FC = () => {
     }
 
     if (res.ok) {
+      // The leaderboard's "Your best" is the server's record for this player
+      // (the account when signed in), so the banner compares against the same.
+      if (res.previousBestMs !== undefined) {
+        const deviceBest = signedInEmail() ? null : deviceBestRef.current
+        if (res.previousBestMs === null) celebrate(finalMs, deviceBest, 'device')
+        else celebrate(finalMs, deviceBest === null ? res.previousBestMs : Math.min(res.previousBestMs, deviceBest), 'all_time')
+      }
       setSubmittedScore(res.score ?? null)
       showToast(`Submitted! ${formatTime(finalMs)}`, 'success')
       scores.refresh()
@@ -734,6 +756,14 @@ const SolitaireGame: React.FC = () => {
     </>
   )
 
+  // A device best waits for the server's record, so it never claims a time
+  // the leaderboard's "Your best" beats (unless that record can't be loaded).
+  const allTimeBest = scores.allTimeBest
+  const showBest = bestImprovement !== null && (
+    bestImprovement.scope === 'all_time' ||
+    (allTimeBest === undefined ? scores.personalBestError !== null : allTimeBest === null || bestImprovement.finalMs <= allTimeBest.elapsed_ms)
+  )
+
   // What stays on the board once the results are closed.
   const finishCard = (
     <>
@@ -766,7 +796,7 @@ const SolitaireGame: React.FC = () => {
         }
       >
         {resultTime}
-        {bestImprovementMs !== null && <PersonalBestCelebration improvementMs={bestImprovementMs} />}
+        {showBest && bestImprovement !== null && <PersonalBestCelebration improvementMs={bestImprovement.ms} scope={bestImprovement.scope} />}
         {submissionNote}
         <div className="mt-5 border-t border-neutral-100 pt-4 text-left dark:border-neutral-800">
           <SoloLeaderboard

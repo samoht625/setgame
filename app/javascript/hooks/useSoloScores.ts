@@ -72,6 +72,8 @@ export function useSoloScores(period: Period, enabled: boolean) {
     period,
     leaderboard: scores.period === period ? scores.leaderboard : EMPTY_LEADERBOARD,
     personalBest: personalBests.entries[period] || null,
+    // undefined until personal bests have loaded once.
+    allTimeBest: personalBests.entries.all_time,
     loading: scores.period !== period || scores.loading,
     error: scores.period === period ? scores.error : null,
     personalBestLoading: personalBests.loading,

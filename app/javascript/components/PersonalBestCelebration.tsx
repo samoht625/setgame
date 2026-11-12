@@ -2,7 +2,10 @@ import React, { useEffect, useState } from 'react'
 
 const COLORS = ['#ed1738', '#7135a6', '#009e56']
 
-const PersonalBestCelebration: React.FC<{ improvementMs: number }> = ({ improvementMs }) => {
+/** `all_time`: the player's ranked practice times (what the leaderboard shows); `device`: this browser's own list. */
+export type PersonalBestScope = 'all_time' | 'device'
+
+const PersonalBestCelebration: React.FC<{ improvementMs: number; scope: PersonalBestScope }> = ({ improvementMs, scope }) => {
   const [showParticles, setShowParticles] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches)
 
   useEffect(() => {
@@ -20,7 +23,7 @@ const PersonalBestCelebration: React.FC<{ improvementMs: number }> = ({ improvem
     <div className="relative mt-3" data-personal-best>
       <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm dark:border-amber-800 dark:bg-amber-950/50">
         <p className="font-semibold text-amber-950 dark:text-amber-100">New personal best!</p>
-        <p className="mt-0.5 text-xs text-amber-900 dark:text-amber-200">{faster} than your previous best on this device.</p>
+        <p className="mt-0.5 text-xs text-amber-900 dark:text-amber-200">{faster} than your previous {scope === 'all_time' ? 'all-time best' : 'best on this device'}.</p>
       </div>
       {showParticles && (
         <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl" aria-hidden="true" data-celebration-particles>
