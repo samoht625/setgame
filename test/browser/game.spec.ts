@@ -289,14 +289,16 @@ test('leaderboard requests are single, cancellable, and distinguish failure from
   expect(requests).toEqual([])
   await menu(page, 'Leaderboard')
   await expect(page.getByText('daily leader', { exact: true })).toBeVisible()
-  expect(requests).toEqual(['daily'])
+  // Opening fetches the selected period first and the others once each, ready for their tabs.
+  await expect.poll(() => requests).toEqual(['daily', 'weekly', 'monthly'])
   await page.getByRole('button', { name: 'weekly', exact: true }).click()
   await page.getByRole('button', { name: 'monthly', exact: true }).click()
   await expect(page.getByText('monthly leader', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'monthly', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByText('weekly leader', { exact: true })).toHaveCount(0)
+  expect(requests).toEqual(['daily', 'weekly', 'monthly'])
   fail = true
-  await page.getByRole('button', { name: 'daily', exact: true }).click()
+  await page.reload()
   await expect(page.getByText('Could not load times.', { exact: true })).toBeVisible()
   fail = false
   await page.getByRole('button', { name: 'Try again', exact: true }).click()
