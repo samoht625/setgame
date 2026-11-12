@@ -11,10 +11,12 @@ export type MenuItem = {
   detail?: string
   /** The badge counts people playing live (a green marker instead of a neutral pill). */
   live?: boolean
-  /** A small muted second line under the label: the signed-in email under Sign out (cut short), or what a switch does (wraps). */
+  /** A small muted second line under the label (e.g. the signed-in email under Sign out). */
   sublabel?: string
   /** A switch (Sound): rendered as a menuitemcheckbox with a toggle. */
   checked?: boolean
+  /** One line on what the row does, in a tooltip from a small info mark after the label. */
+  info?: string
 }
 
 /** A group of rows, separated from the next by a thin divider; note is a small muted line above it. */
@@ -56,6 +58,14 @@ const DotsIcon = () => (
   </svg>
 )
 
+const InfoIcon = () => (
+  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" className="h-4 w-4">
+    <circle cx="8" cy="8" r="6.25" />
+    <path d="M8 7.4v3.4" />
+    <circle cx="8" cy="5.2" r="0.5" fill="currentColor" />
+  </svg>
+)
+
 interface MenuButtonProps {
   /** The app's groups, after the current game's own items. */
   sections: MenuSection[]
@@ -67,6 +77,9 @@ export const MenuButton: React.FC<MenuButtonProps> = ({ sections }) => {
   const [open, setOpen] = useState(false)
   // Opened from the keyboard: focus the first row. From a tap or click, nothing starts highlighted.
   const openedByKeyboard = useRef(false)
+  // The row (by label) whose info tooltip is showing.
+  const [infoFor, setInfoFor] = useState<string | null>(null)
+  const infoPointer = useRef('')
   const menuId = useId()
   const rootRef = useRef<HTMLDivElement | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
@@ -92,6 +105,7 @@ export const MenuButton: React.FC<MenuButtonProps> = ({ sections }) => {
     return () => {
       document.removeEventListener('pointerdown', onPointerDown)
       document.removeEventListener('keydown', onKeyDown)
+      setInfoFor(null)
     }
   }, [open])
 
@@ -112,24 +126,63 @@ export const MenuButton: React.FC<MenuButtonProps> = ({ sections }) => {
 
   const itemClass = 'flex min-h-10 w-full items-center justify-between gap-4 rounded-lg px-3 text-left text-sm text-neutral-800 transition-colors hover:bg-neutral-100 focus-visible:bg-neutral-100 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40 dark:text-neutral-100 dark:hover:bg-neutral-800 dark:focus-visible:bg-neutral-800'
 
-  const row = (item: MenuItem) => (
+  const row = (item: MenuItem) => {
+    if (!item.info) return rowButton(item)
+    const infoId = `${menuId}-info-${item.label.replace(/\s+/g, '-')}`
+    return (
+      <div key={item.label} role="none" className="relative">
+        {rowButton(item, infoId)}
+        {/* Above the row and inside the menu's width, so the menu's scrolling never clips it. */}
+        <span
+          id={infoId}
+          role="tooltip"
+          className={`pointer-events-none absolute inset-x-2 bottom-[calc(100%-0.25rem)] z-10 rounded-lg bg-neutral-900 px-2.5 py-1.5 text-xs leading-snug text-balance text-white shadow-lg transition-opacity duration-100 dark:bg-neutral-100 dark:text-neutral-900 ${infoFor === item.label ? 'opacity-100' : 'invisible opacity-0'}`}
+        >
+          {item.info}
+        </span>
+      </div>
+    )
+  }
+
+  const rowButton = (item: MenuItem, infoId?: string) => (
     <button
       key={item.label}
       type="button"
       role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
       aria-checked={item.checked}
+      aria-describedby={infoId}
       disabled={item.disabled}
       onClick={() => select(item)}
+      // Keyboard users get the tooltip when they reach the row; the info mark itself isn't a stop.
+      onFocus={infoId ? event => { if (event.currentTarget.matches(':focus-visible')) setInfoFor(item.label) } : undefined}
+      onBlur={infoId ? () => setInfoFor(null) : undefined}
       className={itemClass}
     >
       {item.sublabel ? (
         <span className="flex min-w-0 flex-col py-1.5">
           <span>{item.label}</span>
-          {item.checked === undefined ? (
-            <span className="truncate text-xs text-neutral-500 dark:text-neutral-400" title={item.sublabel}>{item.sublabel}</span>
-          ) : (
-            <span className="text-xs text-neutral-500 dark:text-neutral-400">{item.sublabel}</span>
-          )}
+          <span className="truncate text-xs text-neutral-500 dark:text-neutral-400" title={item.sublabel}>{item.sublabel}</span>
+        </span>
+      ) : infoId ? (
+        <span className="flex shrink-0 items-center">
+          {item.label}
+          {/* Hovering shows the tooltip; a tap shows or hides it without flipping the switch. */}
+          <span
+            aria-hidden="true"
+            data-menu-info
+            onPointerDown={event => { infoPointer.current = event.pointerType }}
+            onPointerEnter={event => { if (event.pointerType === 'mouse') setInfoFor(item.label) }}
+            onPointerLeave={event => { if (event.pointerType === 'mouse') setInfoFor(null) }}
+            onClick={event => {
+              event.stopPropagation()
+              const byMouse = infoPointer.current === 'mouse'
+              setInfoFor(current => (current === item.label && !byMouse ? null : item.label))
+            }}
+            className="relative flex h-10 w-7 items-center justify-center text-neutral-400 transition-colors hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
+          >
+            <InfoIcon />
+            {infoFor === item.label && <span className="absolute left-1/2 top-0 z-20 h-2 w-2 -translate-x-1/2 rotate-45 bg-neutral-900 dark:bg-neutral-100" />}
+          </span>
         </span>
       ) : (
         <span className="shrink-0">{item.label}</span>

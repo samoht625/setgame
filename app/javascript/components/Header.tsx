@@ -129,7 +129,7 @@ const Header: React.FC<HeaderProps> = ({ mode, page, onSwitchMode, othersOnline 
                   { label: 'Your name', detail: name ?? undefined, onSelect: openNameDialog },
                   ...(email ? [{ label: 'Reminder', detail: reminder?.enabled ? reminderLabel(reminder.minutes) : 'Off', onSelect: openReminderDialog }] : []),
                   { label: 'Sound', onSelect: sound.toggle, checked: sound.enabled },
-                  { label: 'Two-card sets', sublabel: 'Pick two cards and the game picks the third', onSelect: twoCard.toggle, checked: twoCard.enabled }
+                  { label: 'Two-card sets', info: 'Pick two cards and the game picks the third', onSelect: twoCard.toggle, checked: twoCard.enabled }
                 ]
               },
               email

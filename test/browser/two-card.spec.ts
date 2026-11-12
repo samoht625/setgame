@@ -26,8 +26,8 @@ const picked = (page: Page) => page.locator('[data-card-id][aria-pressed="true"]
 /** Opens the header menu and reads the Two-card sets switch, leaving the menu closed. */
 async function expectTwoCardSetting(page: Page, state: 'on' | 'off') {
   await page.getByRole('button', { name: 'Menu' }).click()
-  const item = page.getByRole('menuitemcheckbox', { name: /^Two-card sets/ })
-  await expect(item).toContainText('Pick two cards and the game picks the third')
+  const item = page.getByRole('menuitemcheckbox', { name: 'Two-card sets', exact: true })
+  await expect(item).toHaveAccessibleDescription('Pick two cards and the game picks the third')
   await expect(item).toHaveAttribute('aria-checked', String(state === 'on'))
   await page.keyboard.press('Escape')
   await expect(item).toHaveCount(0)
@@ -36,9 +36,10 @@ async function expectTwoCardSetting(page: Page, state: 'on' | 'off') {
 /** Flips the switch in the header menu and waits for the server to have it. */
 async function switchTwoCard(page: Page, to: 'on' | 'off') {
   await page.getByRole('button', { name: 'Menu' }).click()
-  const item = page.getByRole('menuitemcheckbox', { name: /^Two-card sets/ })
+  const item = page.getByRole('menuitemcheckbox', { name: 'Two-card sets', exact: true })
   await expect(item).toHaveAttribute('aria-checked', String(to === 'off'))
-  await item.click()
+  // On the label: the middle of the row is the info mark.
+  await item.click({ position: { x: 20, y: 20 } })
   await expect(page.getByText(`Two-card sets ${to}`, { exact: true })).toBeVisible()
 }
 
@@ -187,6 +188,69 @@ test('Multiplayer, two-card sets on by default (Tido): the server completes the 
   // The highlight gives way to the server's usual found reveal.
   await expect(page.locator('[data-completed]')).toHaveCount(0)
   await expect(page.getByText('You found a set!')).toBeVisible()
+})
+
+const twoCardInfo = 'Pick two cards and the game picks the third'
+
+test('The Two-card sets row is one line like Sound; its info mark explains it on hover or from the keyboard', async ({ page }) => {
+  await playAs(page, 'Ada')
+  await page.goto('/puzzle')
+  await page.getByRole('button', { name: 'Menu' }).click()
+  const item = page.getByRole('menuitemcheckbox', { name: 'Two-card sets', exact: true })
+  const sound = page.getByRole('menuitemcheckbox', { name: 'Sound', exact: true })
+  const tip = page.getByRole('tooltip')
+  await expect(tip).toBeHidden()
+  expect((await item.boundingBox())!.height).toBe((await sound.boundingBox())!.height)
+
+  await item.locator('[data-menu-info]').hover()
+  await expect(tip).toBeVisible()
+  await expect(tip).toHaveText(twoCardInfo)
+  // The tooltip stays inside the menu, so the menu's scrolling can't clip it.
+  const menuBox = (await page.getByRole('menu').boundingBox())!
+  const tipBox = (await tip.boundingBox())!
+  expect(tipBox.x).toBeGreaterThanOrEqual(menuBox.x)
+  expect(tipBox.x + tipBox.width).toBeLessThanOrEqual(menuBox.x + menuBox.width)
+  expect(tipBox.y).toBeGreaterThanOrEqual(menuBox.y)
+
+  // Clicking the mark keeps the tooltip and the menu, and leaves the switch alone.
+  await item.locator('[data-menu-info]').click()
+  await expect(tip).toBeVisible()
+  await expect(item).toHaveAttribute('aria-checked', 'false')
+  await sound.hover()
+  await expect(tip).toBeHidden()
+
+  // Reached with the arrow keys, the row shows the tooltip while it has focus.
+  await sound.focus()
+  await page.keyboard.press('ArrowDown')
+  await expect(item).toBeFocused()
+  await expect(tip).toBeVisible()
+  await page.keyboard.press('ArrowUp')
+  await expect(sound).toBeFocused()
+  await expect(tip).toBeHidden()
+})
+
+test.describe('on a phone', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
+
+  test('tapping the Two-card sets info mark shows and hides the tooltip without flipping the switch', async ({ page }) => {
+    await playAs(page, 'Ada')
+    await page.goto('/puzzle')
+    await page.getByRole('button', { name: 'Menu' }).tap()
+    const item = page.getByRole('menuitemcheckbox', { name: 'Two-card sets', exact: true })
+    const tip = page.getByRole('tooltip')
+
+    await item.locator('[data-menu-info]').tap()
+    await expect(tip).toBeVisible()
+    await expect(tip).toHaveText(twoCardInfo)
+    await expect(item).toHaveAttribute('aria-checked', 'false')
+    await item.locator('[data-menu-info]').tap()
+    await expect(tip).toBeHidden()
+    await expect(item).toHaveAttribute('aria-checked', 'false')
+
+    // The rest of the row is still the switch.
+    await item.tap({ position: { x: 20, y: 20 } })
+    await expect(page.getByText('Two-card sets on', { exact: true })).toBeVisible()
+  })
 })
 
 test('Switching two-card sets off sticks for a default-on name, across a reload', async ({ page }) => {
