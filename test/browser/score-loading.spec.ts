@@ -80,47 +80,86 @@ test('personal bests load independently and stay cached through period changes',
     await expectBest(page, time)
   }
   expect(personalRequests).toBe(1)
-  expect(periods).toEqual(['daily', 'weekly', 'monthly', 'daily', 'weekly', 'monthly'])
+  // Opening fetched every period; switching back to fresh ones doesn't refetch.
+  expect(periods).toEqual(['daily', 'weekly', 'monthly'])
+})
+
+test('switching periods swaps lists in place without a loading placeholder', async ({ page }) => {
+  const weeklyReady = deferred()
+  const periods: string[] = []
+  await page.route('**/api/solo/personal_bests', route => route.fulfill({ json: personalBests() }))
+  await page.route('**/api/solo/leaderboard?*', async route => {
+    const period = new URL(route.request().url()).searchParams.get('period')!
+    periods.push(period)
+    if (period === 'weekly') await weeklyReady.promise
+    await route.fulfill({ json: { entries: [entry(`${period} leader`), entry(`${period} runner-up`, 130000)] } })
+  })
+
+  await openLeaderboard(page)
+  const panel = page.getByRole('complementary', { name: 'Leaderboard' })
+  await expect(panel.getByText('daily leader', { exact: true })).toBeVisible()
+  await panel.evaluate(root => {
+    const w = window as unknown as { leaderboardBlanked: boolean }
+    w.leaderboardBlanked = false
+    new MutationObserver(() => {
+      if (root.textContent!.includes('Loading times') || !root.querySelector('ol')) w.leaderboardBlanked = true
+    }).observe(root, { childList: true, subtree: true, characterData: true })
+  })
+
+  // Weekly is still on its way: daily's rows (and best) stay up, marked busy.
+  await panel.getByRole('button', { name: 'weekly', exact: true }).click()
+  await expect(panel.locator('[aria-busy="true"]')).toBeVisible()
+  await expect(panel.getByText('daily leader', { exact: true })).toBeVisible()
+  await expectBest(panel, '1:01')
+  weeklyReady.resolve()
+  await expect(panel.getByText('weekly leader', { exact: true })).toBeVisible()
+  await expectBest(panel, '2:02')
+  await expect(panel.locator('[aria-busy="true"]')).toHaveCount(0)
+
+  for (const period of ['monthly', 'daily', 'weekly', 'monthly']) {
+    await panel.getByRole('button', { name: period, exact: true }).click()
+    await expect(panel.getByText(`${period} leader`, { exact: true })).toBeVisible()
+    await expect(panel.locator('[aria-busy="true"]')).toHaveCount(0)
+  }
+  expect(await page.evaluate(() => (window as unknown as { leaderboardBlanked: boolean }).leaderboardBlanked)).toBe(false)
+  expect(periods).toEqual(['daily', 'weekly', 'monthly'])
 })
 
 test('personal-best failures leave leaderboards usable and explicit retry refreshes both', async ({ page }) => {
   let personalRequests = 0
   let failPersonal = true
-  let failLeaderboard = false
+  const failing = new Set(['weekly'])
   await page.route('**/api/solo/personal_bests', route => {
     personalRequests++
     return route.fulfill({ status: failPersonal ? 503 : 200, json: failPersonal ? {} : personalBests() })
   })
   await page.route('**/api/solo/leaderboard?*', route => {
     const period = new URL(route.request().url()).searchParams.get('period')!
-    return route.fulfill({ status: failLeaderboard ? 503 : 200, json: { entries: [entry(`${period} leader`)] } })
+    return route.fulfill({ status: failing.has(period) ? 503 : 200, json: { entries: [entry(`${period} leader`)] } })
   })
 
   await openLeaderboard(page)
   await expect(page.getByText('daily leader', { exact: true })).toBeVisible()
   await expect(page.getByText('Could not load times.', { exact: true })).toHaveCount(0)
-  failLeaderboard = true
   await page.getByRole('button', { name: 'weekly', exact: true }).click()
   await expect(page.getByText('Could not load times.', { exact: true })).toBeVisible()
+  await expect(page.getByText('daily leader', { exact: true })).toHaveCount(0)
   expect(personalRequests).toBe(1)
 
   failPersonal = false
-  failLeaderboard = false
+  failing.clear()
   await page.getByRole('button', { name: 'Try again', exact: true }).click()
   await expect(page.getByText('weekly leader', { exact: true })).toBeVisible()
   await expectBest(page, '2:02')
   expect(personalRequests).toBe(2)
 
+  // A list that already loaded stays up when a later refetch fails.
   failPersonal = true
-  failLeaderboard = true
+  failing.add('daily')
   await page.getByRole('button', { name: 'daily', exact: true }).click()
-  await expect(page.getByText('Could not load times.', { exact: true })).toBeVisible()
-  await expectBest(page, '1:01')
-  failLeaderboard = false
-  await page.getByRole('button', { name: 'Try again', exact: true }).click()
   await expect(page.getByText('daily leader', { exact: true })).toBeVisible()
   await expectBest(page, '1:01')
-  expect(personalRequests).toBe(3)
+  await expect(page.getByText('Could not load times.', { exact: true })).toHaveCount(0)
 })
 
 test('personal-best retry recovers independently without hiding a successful leaderboard', async ({ page }) => {
@@ -195,6 +234,8 @@ test('successful submission refreshes cached personal bests and the selected lea
   await expect(page.locator('[data-card-id]').first()).toBeEnabled()
   await expect(page.getByText('daily leader', { exact: true })).toBeVisible()
   await expectBest(page, '1:01')
+  // Each of the two page loads fetched all three periods.
+  await expect.poll(() => leaderboardRequests).toBe(6)
   const previousPersonalRequests = personalRequests
   const previousLeaderboardRequests = leaderboardRequests
   for (const id of [1, 2, 3]) await page.locator(`[data-card-id="${id}"]`).click()
