@@ -107,17 +107,18 @@ class GameEngine
     true
   end
 
-  # Player claims a set of three cards
+  # Player claims a set of three cards, or two when two-card mode is on for
+  # them. `two_card` is the player's own setting (nil: they haven't chosen).
   # Returns: { success: bool, message: string, new_state: hash }
-  def claim_set(player_id, card_ids)
+  def claim_set(player_id, card_ids, two_card: nil)
     @mutex.synchronize do
       @last_seen[player_id] = Time.now
 
       # Normalize input: ints, no nils, no duplicates
       card_ids = Array(card_ids).map { |id| Integer(id, exception: false) }.compact.uniq
 
-      # Players in the two-card experiment send a pair; the server picks the third.
-      auto_complete = card_ids.length == 2 && TwoCardMode.enabled_for?(@names[player_id])
+      # A player in two-card mode sends a pair; the server picks the third.
+      auto_complete = card_ids.length == 2 && TwoCardMode.enabled?(choice: two_card, name: @names[player_id])
 
       if card_ids.length != 3 && !auto_complete
         return { success: false, message: 'Must select exactly 3 different cards' }

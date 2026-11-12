@@ -13,6 +13,7 @@ import { useReminder } from '../hooks/useReminder'
 import { reminderLabel } from '../lib/reminder'
 import { getSavedName, onNameChange } from '../lib/player_name'
 import { useStreak } from '../hooks/useStreak'
+import { useTwoCardMode } from '../hooks/useTwoCardMode'
 
 interface HeaderProps {
   /** The game on screen; null on pages outside the game (/stats), where neither segment is selected. */
@@ -31,6 +32,7 @@ const Header: React.FC<HeaderProps> = ({ mode, page, onSwitchMode, othersOnline 
   const streak = useStreak()
   const [name, setName] = useState(getSavedName)
   useEffect(() => onNameChange(next => setName(next || null)), [])
+  const twoCard = useTwoCardMode(name)
   const [showLogoSet, setShowLogoSet] = useState(false)
   const taps = useRef({ count: 0, lastAt: 0 })
   const logoTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -126,7 +128,8 @@ const Header: React.FC<HeaderProps> = ({ mode, page, onSwitchMode, othersOnline 
                 items: [
                   { label: 'Your name', detail: name ?? undefined, onSelect: openNameDialog },
                   ...(email ? [{ label: 'Reminder', detail: reminder?.enabled ? reminderLabel(reminder.minutes) : 'Off', onSelect: openReminderDialog }] : []),
-                  { label: 'Sound', onSelect: sound.toggle, checked: sound.enabled }
+                  { label: 'Sound', onSelect: sound.toggle, checked: sound.enabled },
+                  { label: 'Two-card sets', sublabel: 'Pick two cards and the game picks the third', onSelect: twoCard.toggle, checked: twoCard.enabled }
                 ]
               },
               email

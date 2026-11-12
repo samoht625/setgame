@@ -30,5 +30,6 @@ module KnownPlayer
     @known_player_id = id
     @known_player_key = PlayerKey.for(id)
     @known_player_name = @known_player_new ? nil : PlayerIdentity.last_name(id)
+    @two_card_choice = @known_player_new ? nil : PlayerSetting.two_card_choice(id)
   end
 end

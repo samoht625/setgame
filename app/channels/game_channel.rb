@@ -23,7 +23,7 @@ class GameChannel < ApplicationCable::Channel
 
     Rails.logger.info "[GameChannel] claim_set: player=#{player_id}, cards=#{card_ids.inspect.truncate(60)}"
 
-    result = GAME_ENGINE.claim_set(player_id, card_ids)
+    result = GAME_ENGINE.claim_set(player_id, card_ids, two_card: PlayerSetting.two_card_choice(player_id))
 
     if result[:success]
       # Broadcast new state to all clients

@@ -25,7 +25,7 @@ import { dailyDate, puzzleShareLink, shareLink, type DailyShare } from '../lib/d
 import { getPlayerId } from '../lib/player_id'
 import { getSavedName, onNameChange, saveName } from '../lib/player_name'
 import { isSet } from '../lib/rules'
-import { autoCompletePick, inTwoCardMode, THIRD_CARD_MISSING } from '../lib/two_card_mode'
+import { autoCompletePick, twoCardModeOn, THIRD_CARD_MISSING } from '../lib/two_card_mode'
 import {
   fetchPuzzleStatus,
   finishPuzzle,
@@ -318,7 +318,7 @@ const PuzzleGame: React.FC = () => {
     const picked = selectedCards.includes(cardId)
       ? selectedCards.filter(id => id !== cardId)
       : selectedCards.length < 3 ? [...selectedCards, cardId] : selectedCards
-    const pick = autoCompletePick(picked, run.cards, inTwoCardMode(getSavedName()))
+    const pick = autoCompletePick(picked, run.cards, twoCardModeOn(getSavedName()))
     if (pick.cards.length > selectedCards.length && pick.cards.length < 3 && !pick.missing) playSelection()
     setSelectedCards(pick.cards)
     if (pick.filled !== null) {

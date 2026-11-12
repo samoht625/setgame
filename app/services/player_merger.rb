@@ -12,6 +12,8 @@
 # The other run is deleted (it was a second look at the same deal), so the
 # leaderboard never shows the same person twice for a day. Streaks, personal
 # bests and stats are computed from the rows, so they follow automatically.
+# The account keeps its own settings; it takes the anonymous player's only
+# when it has none.
 module PlayerMerger
   def self.merge!(from:, account:)
     to = account.player_id
@@ -41,6 +43,11 @@ module PlayerMerger
       SoloGame.where(player_id: from).update_all(player_id: to, updated_at: now)
       SoloScore.where(player_id: from).update_all(player_id: to, updated_at: now)
       PuzzleRun.where(player_id: from).update_all(player_id: to, updated_at: now)
+      if PlayerSetting.exists?(player_id: to)
+        PlayerSetting.where(player_id: from).delete_all
+      else
+        PlayerSetting.where(player_id: from).update_all(player_id: to, updated_at: now)
+      end
       PlayerMerge.create!(account: account, from_player_id: from, to_player_id: to, dropped: dropped, created_at: now)
     end
     dropped
