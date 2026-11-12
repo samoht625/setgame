@@ -322,6 +322,16 @@ const PuzzleGame: React.FC = () => {
     if (pick.cards.length > selectedCards.length && pick.cards.length < 3 && !pick.missing) playSelection()
     setSelectedCards(pick.cards)
     if (pick.filled !== null) {
+      const sorted = [...pick.cards].sort((a, b) => a - b)
+      if (run.found.some(found => sameSet(found.cards, sorted))) {
+        // Same outcome as a 3-card repeat in claim(): a toast, no miss.
+        if (rejectTimeoutRef.current) clearTimeout(rejectTimeoutRef.current)
+        setRejectedCards([])
+        setSelectedCards([])
+        showToast('Already found', 'error')
+        autoReveal.reveal(pick.cards, pick.filled, undefined, false, 'repeat')
+        return
+      }
       const atMs = Date.now()
       autoReveal.reveal(pick.cards, pick.filled, () => claimRef.current(pick.cards, false, atMs))
     } else if (pick.cards.length === 3 || pick.missing) claim(pick.cards, pick.missing)
@@ -515,6 +525,7 @@ const PuzzleGame: React.FC = () => {
                 rejectedCards={rejectedCards}
                 completedCards={autoReveal.cards}
                 autoFilledCard={autoReveal.filled}
+                completedTone={autoReveal.tone}
                 onCardClick={handleCardClick}
                 claiming={clockPending}
                 loading={starting}

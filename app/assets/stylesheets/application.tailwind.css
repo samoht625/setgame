@@ -205,6 +205,12 @@ dialog::backdrop {
   animation: shake 0.3s ease-in-out;
 }
 
+/* Two-card experiment: a completed set that was already found. Like
+   .animate-set-lit, card-in stays first so the filled-in card doesn't replay it. */
+.animate-set-repeat {
+  animation: card-in 0.22s ease-out, shake 0.3s ease-in-out;
+}
+
 @keyframes score-pop {
   0%, 100% { transform: scale(1); }
   40% { transform: scale(1.18); }

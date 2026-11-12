@@ -52,6 +52,52 @@ test('Puzzle, in the two-card experiment: a pair finds its set, or misses when t
   await expect(page.locator('[data-card-id][aria-pressed="true"]')).toHaveCount(0)
 })
 
+test('Puzzle, in the two-card experiment: a repeat shows red, never amber, and costs nothing', async ({ page }) => {
+  await playAs(page, 'Rose')
+  const board = await startPuzzle(page)
+  const [a, b] = pairs(board).complete[0]!
+  const third = thirdCard(a!, b!)!
+
+  await card(page, a!).click()
+  await card(page, b!).click()
+  await expect(page.locator('[data-found-set]')).toHaveCount(1)
+  await expect(page.locator('[data-completed]')).toHaveCount(0)
+
+  // Record every frame from before the pair's second click until the repeat clears.
+  await page.evaluate(() => {
+    const w = window as unknown as { amberSeen: boolean; repeatFrames: number }
+    w.amberSeen = false
+    w.repeatFrames = 0
+    const tick = () => {
+      if (document.querySelector('[data-completed]')) w.amberSeen = true
+      if (document.querySelectorAll('[data-repeat]').length === 3) w.repeatFrames += 1
+      requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  })
+  await card(page, b!).click()
+  await card(page, a!).click()
+  await expect(page.locator('[data-repeat]')).toHaveCount(3)
+  await expect(card(page, third)).toHaveAttribute('data-repeat', 'filled')
+  await expect(page.getByText('Already found')).toBeVisible()
+  // Clicks during the hold are ignored.
+  const other = board.find(id => ![a, b, third].includes(id))!
+  await card(page, other).click({ force: true })
+  await expect(page.locator('[data-repeat]')).toHaveCount(0)
+  await expect(page.locator('[data-card-id][aria-pressed="true"]')).toHaveCount(0)
+  const seen = await page.evaluate(() => {
+    const w = window as unknown as { amberSeen: boolean; repeatFrames: number }
+    return { amberSeen: w.amberSeen, repeatFrames: w.repeatFrames }
+  })
+  expect(seen.amberSeen).toBe(false)
+  expect(seen.repeatFrames).toBeGreaterThan(5)
+
+  await expect(page.locator('[data-found-set]')).toHaveCount(1)
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('setgame_puzzle_v1')!))
+  expect(saved.misses).toBe(0)
+  expect(saved.attempts).toBe('h')
+})
+
 test('Puzzle, outside the experiment: two cards stay picked until the third', async ({ page }) => {
   await playAs(page, 'Wily Coyote')
   const board = await startPuzzle(page)
