@@ -24,6 +24,10 @@ interface SoloLeaderboardProps {
   personalBestError?: string | null
   onRetryScores: () => void
   period: LeaderboardPeriod
+  /** The period the rows belong to, when the selected one is still loading. */
+  leaderboardPeriod?: LeaderboardPeriod
+  /** The rows are another period's, standing in until the selected one loads. */
+  scoresStale?: boolean
   onPeriodChange: (period: LeaderboardPeriod) => void
   /** Show only the top of the leaderboard, plus the player's own entry. */
   limit?: number
@@ -81,6 +85,8 @@ export const SoloLeaderboard: React.FC<SoloLeaderboardProps> = ({
   personalBestError = null,
   onRetryScores,
   period,
+  leaderboardPeriod = period,
+  scoresStale = false,
   onPeriodChange,
   limit,
   highlight
@@ -104,43 +110,49 @@ export const SoloLeaderboard: React.FC<SoloLeaderboardProps> = ({
       ))}
     </div>
 
-    {personalBest && (
-      <div className="mt-2.5 flex items-center justify-between rounded-lg bg-emerald-50 px-2.5 py-1.5 dark:bg-emerald-950/40">
-        <span className="text-xs font-medium text-emerald-800 dark:text-emerald-200">Your best</span>
-        <span className="text-sm font-semibold tabular-nums text-emerald-800 dark:text-emerald-200">
-          {formatTime(personalBest.elapsed_ms)}
-        </span>
-      </div>
-    )}
+    {/* Dims only if the stand-in rows linger, so a quick swap doesn't blink. */}
+    <div
+      aria-busy={scoresStale || undefined}
+      className={`transition-opacity duration-150 ${scoresStale ? 'opacity-60 delay-200' : ''}`}
+    >
+      {personalBest && (
+        <div className="mt-2.5 flex items-center justify-between rounded-lg bg-emerald-50 px-2.5 py-1.5 dark:bg-emerald-950/40">
+          <span className="text-xs font-medium text-emerald-800 dark:text-emerald-200">Your best</span>
+          <span className="text-sm font-semibold tabular-nums text-emerald-800 dark:text-emerald-200">
+            {formatTime(personalBest.elapsed_ms)}
+          </span>
+        </div>
+      )}
 
-    {personalBestError && (
-      <div className="mt-2.5 rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-700 dark:bg-neutral-800/50 dark:text-neutral-200">
-        <p role="status">{personalBestError}</p>
-        <button type="button" onClick={onRetryScores} className={`${secondaryButtonSmall} mt-2`}>Retry your best times</button>
-      </div>
-    )}
+      {personalBestError && (
+        <div className="mt-2.5 rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-700 dark:bg-neutral-800/50 dark:text-neutral-200">
+          <p role="status">{personalBestError}</p>
+          <button type="button" onClick={onRetryScores} className={`${secondaryButtonSmall} mt-2`}>Retry your best times</button>
+        </div>
+      )}
 
-    {scoresLoading ? (
-      <p role="status" className="mt-2.5 rounded-xl bg-neutral-50 px-3 py-6 text-center text-xs text-neutral-500 dark:bg-neutral-800/50 dark:text-neutral-400">Loading times…</p>
-    ) : scoresError ? (
-      <div className="mt-2.5 rounded-xl border border-dashed border-neutral-200 px-3 py-4 text-center dark:border-neutral-700">
-        <p role="status" className="text-xs text-neutral-600 dark:text-neutral-300">{scoresError}</p>
-        <button type="button" onClick={onRetryScores} className={`${secondaryButtonSmall} mt-2`}>Try again</button>
-      </div>
-    ) : leaderboard.length === 0 ? (
-      <div className="mt-2.5 rounded-xl border border-dashed border-neutral-200 px-3 py-6 text-center dark:border-neutral-700">
-        <p className="text-xs text-neutral-600 dark:text-neutral-300">
-          No times yet — finish a game to claim the top spot.
-        </p>
-      </div>
-    ) : (
-      <LeaderboardList
-        entries={leaderboard}
-        detail={entry => formatWhen(entry.completed_at, period)}
-        highlight={highlight}
-        limit={limit}
-      />
-    )}
+      {scoresLoading ? (
+        <p role="status" className="mt-2.5 rounded-xl bg-neutral-50 px-3 py-6 text-center text-xs text-neutral-500 dark:bg-neutral-800/50 dark:text-neutral-400">Loading times…</p>
+      ) : scoresError ? (
+        <div className="mt-2.5 rounded-xl border border-dashed border-neutral-200 px-3 py-4 text-center dark:border-neutral-700">
+          <p role="status" className="text-xs text-neutral-600 dark:text-neutral-300">{scoresError}</p>
+          <button type="button" onClick={onRetryScores} className={`${secondaryButtonSmall} mt-2`}>Try again</button>
+        </div>
+      ) : leaderboard.length === 0 ? (
+        <div className="mt-2.5 rounded-xl border border-dashed border-neutral-200 px-3 py-6 text-center dark:border-neutral-700">
+          <p className="text-xs text-neutral-600 dark:text-neutral-300">
+            No times yet — finish a game to claim the top spot.
+          </p>
+        </div>
+      ) : (
+        <LeaderboardList
+          entries={leaderboard}
+          detail={entry => formatWhen(entry.completed_at, leaderboardPeriod)}
+          highlight={highlight}
+          limit={limit}
+        />
+      )}
+    </div>
   </div>
 )
 

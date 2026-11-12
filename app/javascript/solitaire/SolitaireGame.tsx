@@ -807,6 +807,8 @@ const SolitaireGame: React.FC = () => {
             personalBestError={scores.personalBestError}
             onRetryScores={scores.refresh}
             period={period}
+            leaderboardPeriod={scores.leaderboardPeriod}
+            scoresStale={scores.stale}
             onPeriodChange={setPeriod}
             limit={RESULTS_LEADERBOARD_SIZE}
             highlight={entry => (
@@ -864,6 +866,8 @@ const SolitaireGame: React.FC = () => {
               personalBestError={scores.personalBestError}
               onRetryScores={scores.refresh}
               period={period}
+              leaderboardPeriod={scores.leaderboardPeriod}
+              scoresStale={scores.stale}
               onPeriodChange={setPeriod}
             />
           </SidePanel>
