@@ -229,6 +229,90 @@ test('The Two-card sets row is one line like Sound; its info mark explains it on
   await expect(tip).toBeHidden()
 })
 
+type TooltipLog = { appearances: number; dips: number }
+
+/**
+ * Watches the tooltip every frame: how often it started to appear, and how many
+ * frames it spent below full strength after reaching it (fading, or blinking).
+ */
+async function watchTooltip(page: Page) {
+  await page.evaluate(() => {
+    const tip = document.querySelector<HTMLElement>('[role="tooltip"]')!
+    const log = { appearances: 0, dips: 0 }
+    let shown = false
+    let full = false
+    const frame = () => {
+      const style = getComputedStyle(tip)
+      const visible = style.visibility === 'visible'
+      const opacity = Number(style.opacity)
+      if (visible && !shown) log.appearances++
+      if (visible && full && opacity < 1) log.dips++
+      shown = visible
+      full = visible && (full || opacity === 1)
+      requestAnimationFrame(frame)
+    }
+    frame()
+    ;(window as unknown as { tooltipLog: typeof log }).tooltipLog = log
+  })
+}
+
+const tooltipLog = (page: Page): Promise<TooltipLog> =>
+  page.evaluate(() => ({ ...(window as unknown as { tooltipLog: TooltipLog }).tooltipLog }))
+
+test('Hovering the info mark is steady: no flash in passing, no blink at its edge, and the bubble and arrow fade as one', async ({ page }) => {
+  await playAs(page, 'Ada')
+  await page.goto('/puzzle')
+  await page.getByRole('button', { name: 'Menu' }).click()
+  const item = page.getByRole('menuitemcheckbox', { name: 'Two-card sets', exact: true })
+  const tip = page.locator('[role="tooltip"]')
+  // Hovering counts on the icon; the mark around it is the larger tap target.
+  const box = (await item.locator('[data-menu-info-hover]').boundingBox())!
+  const markBox = (await item.locator('[data-menu-info]').boundingBox())!
+  const centre = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+  await watchTooltip(page)
+
+  // The mark sits mid-menu: a pointer crossing it on the way to another row never starts the tooltip.
+  await page.mouse.move(centre.x, box.y - 30)
+  await page.mouse.move(centre.x, centre.y)
+  await page.mouse.move(centre.x, box.y + box.height + 30)
+  await page.waitForTimeout(400)
+  expect(await tooltipLog(page)).toEqual({ appearances: 0, dips: 0 })
+
+  // Resting on it shows the tooltip. The arrow is part of the bubble and points at the mark.
+  await page.mouse.move(centre.x, centre.y)
+  await expect(tip).toHaveCSS('opacity', '1')
+  const arrowBox = (await tip.locator('[data-menu-info-arrow]').boundingBox())!
+  expect(Math.abs(arrowBox.x + arrowBox.width / 2 - centre.x)).toBeLessThan(1.5)
+  await expect(item.locator('[data-menu-info] [data-menu-info-arrow]')).toHaveCount(0)
+
+  // Slipping off the mark's edge and back, again and again, never lets it fade or reappear.
+  for (let i = 0; i < 6; i++) {
+    await page.mouse.move(box.x - 3, centre.y)
+    await page.waitForTimeout(30)
+    await page.mouse.move(box.x + 3, centre.y)
+    await page.waitForTimeout(30)
+  }
+  await page.waitForTimeout(300)
+  expect(await tooltipLog(page)).toEqual({ appearances: 1, dips: 0 })
+  await expect(tip).toHaveCSS('opacity', '1')
+
+  // Leaving for good fades it out instead of cutting it off.
+  await page.mouse.move(box.x - 60, centre.y)
+  await expect(tip).toBeHidden()
+  const log = await tooltipLog(page)
+  expect(log.appearances).toBe(1)
+  expect(log.dips).toBeGreaterThan(0)
+  // The pointer is still on the row, so the row keeps its own highlight.
+  expect(await item.evaluate(node => node.matches(':hover'))).toBe(true)
+
+  // A click on the mark beside the icon shows it at once, and leaving the mark takes it away.
+  await page.mouse.click(markBox.x + markBox.width / 2, markBox.y + 3)
+  await expect(tip).toBeVisible()
+  await expect(item).toHaveAttribute('aria-checked', 'false')
+  await page.mouse.move(box.x - 60, centre.y)
+  await expect(tip).toBeHidden()
+})
+
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
 

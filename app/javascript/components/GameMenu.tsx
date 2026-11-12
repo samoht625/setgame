@@ -66,6 +66,10 @@ const InfoIcon = () => (
   </svg>
 )
 
+// How long the pointer rests on an info mark before its tooltip shows, and how long the tooltip stays after it leaves.
+const INFO_SHOW_DELAY = 200
+const INFO_HIDE_DELAY = 150
+
 interface MenuButtonProps {
   /** The app's groups, after the current game's own items. */
   sections: MenuSection[]
@@ -77,8 +81,10 @@ export const MenuButton: React.FC<MenuButtonProps> = ({ sections }) => {
   const [open, setOpen] = useState(false)
   // Opened from the keyboard: focus the first row. From a tap or click, nothing starts highlighted.
   const openedByKeyboard = useRef(false)
-  // The row (by label) whose info tooltip is showing.
+  // The row (by label) whose info tooltip is showing, and where its arrow points (the mark's centre, from the row's left edge).
   const [infoFor, setInfoFor] = useState<string | null>(null)
+  const [infoArrowX, setInfoArrowX] = useState(0)
+  const infoTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const infoPointer = useRef('')
   const menuId = useId()
   const rootRef = useRef<HTMLDivElement | null>(null)
@@ -105,9 +111,38 @@ export const MenuButton: React.FC<MenuButtonProps> = ({ sections }) => {
     return () => {
       document.removeEventListener('pointerdown', onPointerDown)
       document.removeEventListener('keydown', onKeyDown)
+      if (infoTimer.current) clearTimeout(infoTimer.current)
       setInfoFor(null)
     }
   }, [open])
+
+  const cancelInfoTimer = () => {
+    if (infoTimer.current) clearTimeout(infoTimer.current)
+    infoTimer.current = null
+  }
+
+  const showInfo = (label: string, mark: HTMLElement | null, delay = 0) => {
+    cancelInfoTimer()
+    const show = () => {
+      if (mark) setInfoArrowX(mark.offsetLeft + mark.offsetWidth / 2)
+      setInfoFor(label)
+    }
+    if (delay > 0) infoTimer.current = setTimeout(show, delay)
+    else show()
+  }
+
+  const hideInfo = (delay = 0) => {
+    cancelInfoTimer()
+    if (delay > 0) infoTimer.current = setTimeout(() => setInfoFor(null), delay)
+    else setInfoFor(null)
+  }
+
+  const leaveInfo = (event: React.PointerEvent<HTMLElement>, label: string) => {
+    if (event.pointerType !== 'mouse') return
+    // Showing for keyboard focus: the pointer leaving doesn't take it away.
+    if (event.currentTarget.closest('button')?.matches(':focus-visible')) cancelInfoTimer()
+    else hideInfo(infoFor === label ? INFO_HIDE_DELAY : 0)
+  }
 
   const select = (item: MenuItem) => {
     setOpen(false)
@@ -132,13 +167,21 @@ export const MenuButton: React.FC<MenuButtonProps> = ({ sections }) => {
     return (
       <div key={item.label} role="none" className="relative">
         {rowButton(item, infoId)}
-        {/* Above the row and inside the menu's width, so the menu's scrolling never clips it. */}
+        {/* Above the row and inside the menu's width, so the menu's scrolling never clips it.
+            The arrow is part of the bubble, so the two fade as one; visibility is in the
+            transition so the bubble fades out as well as in. */}
         <span
           id={infoId}
           role="tooltip"
-          className={`pointer-events-none absolute inset-x-2 bottom-[calc(100%-0.25rem)] z-10 rounded-lg bg-neutral-900 px-2.5 py-1.5 text-xs leading-snug text-balance text-white shadow-lg transition-opacity duration-100 dark:bg-neutral-100 dark:text-neutral-900 ${infoFor === item.label ? 'opacity-100' : 'invisible opacity-0'}`}
+          className={`pointer-events-none absolute inset-x-2 bottom-[calc(100%-0.25rem)] z-10 rounded-lg bg-neutral-900 px-2.5 py-1.5 text-xs leading-snug text-balance text-white shadow-lg transition-[opacity,visibility] duration-150 ease-out dark:bg-neutral-100 dark:text-neutral-900 ${infoFor === item.label ? 'visible opacity-100' : 'invisible opacity-0'}`}
         >
           {item.info}
+          <span
+            aria-hidden="true"
+            data-menu-info-arrow
+            style={{ left: `calc(${infoArrowX}px - 0.5rem)` }}
+            className="absolute -bottom-1 h-2 w-2 -translate-x-1/2 rotate-45 bg-inherit"
+          />
         </span>
       </div>
     )
@@ -154,8 +197,8 @@ export const MenuButton: React.FC<MenuButtonProps> = ({ sections }) => {
       disabled={item.disabled}
       onClick={() => select(item)}
       // Keyboard users get the tooltip when they reach the row; the info mark itself isn't a stop.
-      onFocus={infoId ? event => { if (event.currentTarget.matches(':focus-visible')) setInfoFor(item.label) } : undefined}
-      onBlur={infoId ? () => setInfoFor(null) : undefined}
+      onFocus={infoId ? event => { if (event.currentTarget.matches(':focus-visible')) showInfo(item.label, event.currentTarget.querySelector<HTMLElement>('[data-menu-info]')) } : undefined}
+      onBlur={infoId ? () => hideInfo() : undefined}
       className={itemClass}
     >
       {item.sublabel ? (
@@ -166,22 +209,34 @@ export const MenuButton: React.FC<MenuButtonProps> = ({ sections }) => {
       ) : infoId ? (
         <span className="flex shrink-0 items-center">
           {item.label}
-          {/* Hovering shows the tooltip; a tap shows or hides it without flipping the switch. */}
+          {/* A tap or click anywhere on the mark shows or hides the tooltip without flipping the switch. */}
           <span
             aria-hidden="true"
             data-menu-info
             onPointerDown={event => { infoPointer.current = event.pointerType }}
-            onPointerEnter={event => { if (event.pointerType === 'mouse') setInfoFor(item.label) }}
-            onPointerLeave={event => { if (event.pointerType === 'mouse') setInfoFor(null) }}
+            onPointerLeave={event => leaveInfo(event, item.label)}
             onClick={event => {
               event.stopPropagation()
-              const byMouse = infoPointer.current === 'mouse'
-              setInfoFor(current => (current === item.label && !byMouse ? null : item.label))
+              if (infoPointer.current !== 'mouse' && infoFor === item.label) hideInfo()
+              else showInfo(item.label, event.currentTarget)
             }}
-            className="relative flex h-10 w-7 items-center justify-center text-neutral-400 transition-colors hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
+            className="flex h-10 w-7 items-center justify-center text-neutral-400 dark:text-neutral-500"
           >
-            <InfoIcon />
-            {infoFor === item.label && <span className="absolute left-1/2 top-0 z-20 h-2 w-2 -translate-x-1/2 rotate-45 bg-neutral-900 dark:bg-neutral-100" />}
+            {/* Hovering counts on the icon itself, after a rest: the mark is in the middle of the menu,
+                so a pointer crossing it on the way to another row doesn't show the tooltip, and one
+                that slips off the icon and comes straight back keeps it. */}
+            <span
+              data-menu-info-hover
+              onPointerEnter={event => {
+                if (event.pointerType !== 'mouse') return
+                if (infoFor === item.label) cancelInfoTimer()
+                else showInfo(item.label, event.currentTarget, INFO_SHOW_DELAY)
+              }}
+              onPointerLeave={event => leaveInfo(event, item.label)}
+              className="flex h-6 w-6 items-center justify-center transition-colors hover:text-neutral-600 dark:hover:text-neutral-300"
+            >
+              <InfoIcon />
+            </span>
           </span>
         </span>
       ) : (
