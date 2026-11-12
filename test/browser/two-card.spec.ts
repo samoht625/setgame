@@ -265,7 +265,9 @@ test('Hovering the info mark is steady: no flash in passing, no blink at its edg
   await page.getByRole('button', { name: 'Menu' }).click()
   const item = page.getByRole('menuitemcheckbox', { name: 'Two-card sets', exact: true })
   const tip = page.locator('[role="tooltip"]')
-  const box = (await item.locator('[data-menu-info]').boundingBox())!
+  // Hovering counts on the icon; the mark around it is the larger tap target.
+  const box = (await item.locator('[data-menu-info-hover]').boundingBox())!
+  const markBox = (await item.locator('[data-menu-info]').boundingBox())!
   const centre = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
   await watchTooltip(page)
 
@@ -302,6 +304,13 @@ test('Hovering the info mark is steady: no flash in passing, no blink at its edg
   expect(log.dips).toBeGreaterThan(0)
   // The pointer is still on the row, so the row keeps its own highlight.
   expect(await item.evaluate(node => node.matches(':hover'))).toBe(true)
+
+  // A click on the mark beside the icon shows it at once, and leaving the mark takes it away.
+  await page.mouse.click(markBox.x + markBox.width / 2, markBox.y + 3)
+  await expect(tip).toBeVisible()
+  await expect(item).toHaveAttribute('aria-checked', 'false')
+  await page.mouse.move(box.x - 60, centre.y)
+  await expect(tip).toBeHidden()
 })
 
 test.describe('on a phone', () => {

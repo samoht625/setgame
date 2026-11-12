@@ -67,7 +67,7 @@ const InfoIcon = () => (
 )
 
 // How long the pointer rests on an info mark before its tooltip shows, and how long the tooltip stays after it leaves.
-const INFO_SHOW_DELAY = 120
+const INFO_SHOW_DELAY = 200
 const INFO_HIDE_DELAY = 150
 
 interface MenuButtonProps {
@@ -137,6 +137,13 @@ export const MenuButton: React.FC<MenuButtonProps> = ({ sections }) => {
     else setInfoFor(null)
   }
 
+  const leaveInfo = (event: React.PointerEvent<HTMLElement>, label: string) => {
+    if (event.pointerType !== 'mouse') return
+    // Showing for keyboard focus: the pointer leaving doesn't take it away.
+    if (event.currentTarget.closest('button')?.matches(':focus-visible')) cancelInfoTimer()
+    else hideInfo(infoFor === label ? INFO_HIDE_DELAY : 0)
+  }
+
   const select = (item: MenuItem) => {
     setOpen(false)
     item.onSelect()
@@ -202,32 +209,34 @@ export const MenuButton: React.FC<MenuButtonProps> = ({ sections }) => {
       ) : infoId ? (
         <span className="flex shrink-0 items-center">
           {item.label}
-          {/* Resting on the mark shows the tooltip; a tap shows or hides it without flipping the switch.
-              The mark is in the middle of the menu, so a pointer passing over it on the way to
-              another row doesn't show the tooltip, and one that slips off the edge and comes back keeps it. */}
+          {/* A tap or click anywhere on the mark shows or hides the tooltip without flipping the switch. */}
           <span
             aria-hidden="true"
             data-menu-info
             onPointerDown={event => { infoPointer.current = event.pointerType }}
-            onPointerEnter={event => {
-              if (event.pointerType !== 'mouse') return
-              if (infoFor === item.label) cancelInfoTimer()
-              else showInfo(item.label, event.currentTarget, INFO_SHOW_DELAY)
-            }}
-            onPointerLeave={event => {
-              if (event.pointerType !== 'mouse') return
-              // Showing for keyboard focus: the pointer leaving doesn't take it away.
-              if (event.currentTarget.closest('button')?.matches(':focus-visible')) cancelInfoTimer()
-              else hideInfo(infoFor === item.label ? INFO_HIDE_DELAY : 0)
-            }}
+            onPointerLeave={event => leaveInfo(event, item.label)}
             onClick={event => {
               event.stopPropagation()
               if (infoPointer.current !== 'mouse' && infoFor === item.label) hideInfo()
               else showInfo(item.label, event.currentTarget)
             }}
-            className="flex h-10 w-7 items-center justify-center text-neutral-400 transition-colors hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
+            className="flex h-10 w-7 items-center justify-center text-neutral-400 dark:text-neutral-500"
           >
-            <InfoIcon />
+            {/* Hovering counts on the icon itself, after a rest: the mark is in the middle of the menu,
+                so a pointer crossing it on the way to another row doesn't show the tooltip, and one
+                that slips off the icon and comes straight back keeps it. */}
+            <span
+              data-menu-info-hover
+              onPointerEnter={event => {
+                if (event.pointerType !== 'mouse') return
+                if (infoFor === item.label) cancelInfoTimer()
+                else showInfo(item.label, event.currentTarget, INFO_SHOW_DELAY)
+              }}
+              onPointerLeave={event => leaveInfo(event, item.label)}
+              className="flex h-6 w-6 items-center justify-center transition-colors hover:text-neutral-600 dark:hover:text-neutral-300"
+            >
+              <InfoIcon />
+            </span>
           </span>
         </span>
       ) : (
