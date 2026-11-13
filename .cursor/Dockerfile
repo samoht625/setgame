@@ -1,21 +1,19 @@
-# Base image for Cursor Cloud Agents — Rails 8 + Node/Yarn + native gem build deps.
+# Base image for Cursor Cloud Agents: Ruby 3.2 (see .ruby-version), Node 22, Yarn and native gem build deps.
 # Paths in environment.json are relative to .cursor/; do not COPY the project (Cursor checks out the repo).
+#
+# Both stages come from ECR Public's mirror of the Docker official images, and nothing here runs
+# apt or curl, so the image builds when the network allows public.ecr.aws and little else.
 
-FROM ubuntu:24.04
+FROM public.ecr.aws/docker/library/node:22-bookworm-slim AS node
 
-ENV DEBIAN_FRONTEND=noninteractive
+# Debian bookworm with gcc, make, git, curl and the -dev headers native gems compile against.
+FROM public.ecr.aws/docker/library/ruby:3.2.3-bookworm
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates curl git gnupg \
-    build-essential \
-    ruby3.2 ruby3.2-dev ruby-bundler \
-    libyaml-dev zlib1g-dev libssl-dev libffi-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Node.js 22 + Yarn (matches cloud agent Node tooling)
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y --no-install-recommends nodejs \
-    && npm install -g yarn \
-    && rm -rf /var/lib/apt/lists/*
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
+COPY --from=node /opt /opt
+RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+    && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
+    && ln -s /opt/yarn-v*/bin/yarn /usr/local/bin/yarn
 
 WORKDIR /workspace
