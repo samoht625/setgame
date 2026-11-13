@@ -58,7 +58,9 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, %(id="site-header")
     assert_includes response.body, "Most found"
     assert_includes response.body, "Most games finished"
-    assert_includes response.body, "<small>Best: <span>Daily Deal 5.0s</span> · <span>Puzzle 38.0s</span></small>"
+    assert_select "table.players thead th", 7
+    assert_equal ["Rank", "Player", "Games", "Practice", "Daily Deal", "Best Daily Deal", "Best Puzzle"], css_select("table.players thead th").map { |th| th.text.squish }
+    assert_equal [["1", "Ada", "1", "0", "1", "5.0s", "38.0s"]], player_rows, "one row per named player: rank, name, games, the practice and daily split, best times"
     assert_includes response.body, "kind-iqr"
     assert_includes response.body, %(for="act-players">Players</label>)
     assert_includes response.body, %(data-tip="Today · 2 games")
@@ -79,7 +81,70 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     assert_equal before, comparable_stats
   end
 
+  test "the players table separates thousands, quiets zeros and says when there is no best time" do
+    Rails.cache.clear
+    [SoloScore, SoloGame, PuzzleRun].each(&:delete_all)
+    now = Time.current
+    finish = lambda do |name, count, daily_on: nil, elapsed_ms: 90_000|
+      SoloScore.insert_all!(Array.new(count) do |i|
+        { solo_game_id: "#{name}-#{daily_on}-#{i}", player_id: "device-#{name}", display_name: name, elapsed_ms: elapsed_ms + i,
+          completed_at: now, daily_on: daily_on, events: [], created_at: now, updated_at: now }
+      end)
+    end
+    finish.call("Rose", 1_229)
+    finish.call("Rose", 1, daily_on: Date.current, elapsed_ms: 71_000)
+    finish.call("Practice only", 3)
+    PuzzleRun.create!(id: SecureRandom.uuid, player_id: "device-Rose", puzzle_on: Date.current, elapsed_ms: 23_200, cards: [], started_at: 1.hour.ago, completed_at: now)
+
+    get "/stats"
+    assert_response :success
+    assert_equal [["1", "Rose", "1,230", "1,229", "1", "1:11", "23.2s"], ["2", "Practice only", "3", "3", "0", "–none", "–none"]], player_rows
+    assert_select "table.players[role=table] tbody tr[role=row]:first-child" do
+      assert_select "th[scope=row][role=rowheader]", "Rose"
+      assert_select "td[role=cell]", 6
+      assert_select ".badge.top1", "1"
+    end
+    assert_select "table.players tbody tr:last-child td.dly .nil", "0"
+    assert_select "table.players tbody tr:last-child td.bdd .sr", "none", "a missing best is a dash to the eye and a word to a screen reader"
+    assert_select "table.players tbody tr:last-child td.bdd [aria-hidden=true]", "–"
+    assert_select ".tiles dd", text: "1,233"
+  end
+
+  test "an empty site gets an empty state instead of empty charts" do
+    Rails.cache.clear
+    [SoloScore, SoloGame, PuzzleRun].each(&:delete_all)
+
+    get "/stats"
+    assert_response :success
+    assert_select "h1", "Stats"
+    assert_equal %w[0 0 0 0×], css_select(".tiles dd").map(&:text)
+    assert_select ".empty", /No sets found yet/
+    assert_select ".empty a[href='/']", "Play the Daily Deal"
+    assert_select "section", 0
+    assert_select "table", 0
+  end
+
+  test "sections with nothing to rank say so" do
+    Rails.cache.clear
+    [SoloScore, SoloGame, PuzzleRun].each(&:delete_all)
+    SoloGame.create!(id: SecureRandom.uuid, player_id: "p1", seed: "1", started_at: 1.hour.ago, sets_found: 1,
+      events: [{ "type" => "claim", "cards" => [1, 2, 3], "t_ms" => 1500 }])
+
+    get "/stats"
+    assert_response :success
+    assert_select "table.players", 0
+    assert_select "p.none", "No named player has finished a game yet."
+    assert_select "p.none", "No set has been found #{SetStats::MIN_SAMPLE} times yet."
+    assert_select ".kinds li.kind", 1
+    assert_select "ol.sets", 2, "most found and least found still list sets"
+  end
+
   private
+
+  # The players table as text: one array of cells per row.
+  def player_rows
+    css_select("table.players tbody tr").map { |tr| tr.css("th, td").map { |cell| cell.text.squish } }
+  end
 
   # Each kind's example set is picked at random, so leave it out of the comparison.
   def comparable_stats

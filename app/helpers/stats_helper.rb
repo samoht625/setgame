@@ -26,4 +26,28 @@ module StatsHelper
     return "–" unless ms
     ms < 60_000 ? format("%.1fs", ms / 1000.0) : format("%d:%02d", ms / 60_000, (ms / 1000) % 60)
   end
+
+  # A whole number with thousands separators.
+  def num(n)
+    number_with_delimiter(n)
+  end
+
+  # A count in a table cell, quieter when it is zero.
+  def count_cell(n)
+    n.zero? ? tag.span("0", class: "nil") : num(n)
+  end
+
+  # A best time in a table cell; a dash (read out as "none") when there isn't one.
+  def time_cell(ms)
+    return secs(ms) if ms
+
+    tag.span("–", class: "nil", "aria-hidden": true) + tag.span("none", class: "sr")
+  end
+
+  # "least–most×" finds per set, or one number when they are the same.
+  def finds_range(spread)
+    lo = spread[:min][:n]
+    hi = spread[:max][:n]
+    lo == hi ? "#{num(lo)}×" : "#{num(lo)}–#{num(hi)}×"
+  end
 end
