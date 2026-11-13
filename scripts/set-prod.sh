@@ -49,7 +49,8 @@ build_assets() {
     yarn build
     yarn build:css
   elif command -v npm >/dev/null 2>&1; then
-    npm ci
+    # yarn.lock is the only lockfile, so npm resolves versions from package.json.
+    npm install --no-package-lock --no-audit --no-fund
     npm run build
     npm run build:css
   else

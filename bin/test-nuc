@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Runs the test suites on the NUC (or any box) without touching the production
-# bundle. Production installs with BUNDLE_WITHOUT=development:test, so the test
-# group (debug, minitest helpers) is missing there; this script keeps its own
-# bundle config and gem path for the full Gemfile.
+# Runs the test suites on the production host (or any box) without touching
+# the production bundle. Production installs with BUNDLE_WITHOUT=development:test,
+# so the test group (debug, minitest helpers) is missing there; this script keeps
+# its own bundle config and gem path for the full Gemfile.
 #
 #   bin/test-nuc            # Rails tests + TypeScript + node rule checks
 #   bin/test-nuc --browser  # also Playwright against a local test server
@@ -19,7 +19,13 @@ mkdir -p "$BUNDLE_APP_CONFIG"
 BUNDLE="ruby -S bundle"
 
 $BUNDLE check >/dev/null 2>&1 || $BUNDLE install --quiet
-[ -d node_modules ] || npm ci --no-audit --no-fund
+if [ ! -d node_modules ]; then
+  if command -v yarn >/dev/null 2>&1; then
+    yarn install --frozen-lockfile
+  else
+    npm install --no-package-lock --no-audit --no-fund
+  fi
+fi
 
 fail=0
 step() { echo "== $*"; "$@" || fail=1; }
