@@ -33,7 +33,7 @@ const Glyph: React.FC<{ shape?: number; color?: number; shading?: number }> = ({
 }
 
 const LEGEND: Record<(typeof FEATURES)[number]['key'], React.ReactNode> = {
-  number: <span className="font-semibold tabular-nums tracking-wider">1 2 3</span>,
+  number: <span className="tabular-nums tracking-wider">1 2 3</span>,
   color: (
     <span className="flex gap-0.5">
       {INKS.map(ink => <span key={ink} className="h-2.5 w-2.5 rounded-full" style={{ background: ink }} />)}
@@ -52,6 +52,8 @@ interface RulesDemoProps {
   step: 'features' | 'set'
   /** Show a New example control that deals six new cards and lights their set. */
   shuffle?: boolean
+  /** Sit the cards in a tinted well, for a plain surface; leave it off where the surface is already tinted. */
+  well?: boolean
 }
 
 const RefreshIcon: React.FC = () => (
@@ -62,7 +64,7 @@ const RefreshIcon: React.FC = () => (
 )
 
 /** Six real cards; on the `set` step the set lights up after a beat. */
-const RulesDemo: React.FC<RulesDemoProps> = ({ step, shuffle = false }) => {
+const RulesDemo: React.FC<RulesDemoProps> = ({ step, shuffle = false, well = true }) => {
   const [revealed, setRevealed] = useState(false)
   const [example, setExample] = useState<DemoExample>(FIRST_EXAMPLE)
   const [round, setRound] = useState(0)
@@ -102,7 +104,21 @@ const RulesDemo: React.FC<RulesDemoProps> = ({ step, shuffle = false }) => {
 
   return (
     <div data-rules-demo={step} data-revealed={lit ? 'true' : 'false'} data-example={round}>
-      <div className={`grid grid-cols-3 gap-1.5 rounded-xl bg-neutral-100 p-1.5 transition-opacity duration-150 dark:bg-neutral-800 ${fading ? 'opacity-0' : 'opacity-100'}`}>
+      {shuffle && step === 'set' && (
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="text-xs font-medium uppercase tracking-wide text-neutral-600 dark:text-neutral-400">Example</h3>
+          <button
+            type="button"
+            onClick={dealNew}
+            className="-mr-2.5 inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-full px-2.5 text-[0.8125rem] font-medium text-neutral-600 transition-colors hover:bg-neutral-200/70 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+          >
+            <RefreshIcon />
+            New example
+          </button>
+        </div>
+      )}
+
+      <div className={`grid grid-cols-3 gap-2 transition-opacity duration-150 ${well ? 'rounded-xl bg-neutral-100 p-2 dark:bg-neutral-800' : ''} ${fading ? 'opacity-0' : 'opacity-100'}`}>
         {example.board.map((id, position) => {
           const inSet = example.set.includes(id)
           return (
@@ -110,50 +126,31 @@ const RulesDemo: React.FC<RulesDemoProps> = ({ step, shuffle = false }) => {
               key={position}
               data-demo-card={id}
               data-in-set={lit && inSet ? 'true' : undefined}
-              className={`overflow-hidden rounded-md outline-2 outline-offset-1 transition-all duration-500 ease-out ${
-                lit && inSet ? 'outline-amber-400' : 'outline-transparent'
-              } ${lit && !inSet ? 'opacity-30' : 'opacity-100'}`}
+              className={`overflow-hidden rounded-lg border transition-[border-color,box-shadow,opacity] duration-500 ease-out ${
+                lit && inSet
+                  ? 'border-amber-400 ring-2 ring-amber-400 dark:border-amber-300 dark:ring-amber-300'
+                  : 'border-neutral-200 ring-0 ring-transparent dark:border-neutral-500/50'
+              } ${lit && !inSet ? 'opacity-45' : 'opacity-100'}`}
             >
               <CardFace cardId={id} className="h-auto w-full" />
+              {step === 'set' && inSet && <span className="sr-only">In the set</span>}
             </div>
           )
         })}
       </div>
 
-      <ul className="mx-auto mt-3 grid w-fit grid-cols-2 gap-x-6 gap-y-1 text-xs text-neutral-500 dark:text-neutral-400" aria-label={step === 'set' ? 'Why it’s a set' : 'The four features'}>
+      <ul className="mt-3 grid grid-cols-4 gap-x-1 text-center" aria-label={step === 'set' ? 'Why it’s a set' : 'The four features'}>
         {FEATURES.map(({ key, label }, index) => (
           <li
             key={key}
             style={step === 'set' ? { transitionDelay: `${150 + index * 90}ms` } : undefined}
-            className={`flex items-center gap-1.5 transition-opacity duration-300 ${step === 'set' && !lit ? 'opacity-0' : 'opacity-100'}`}
+            className={`flex min-w-0 flex-col items-center transition-opacity duration-300 ${step === 'set' && !lit ? 'opacity-0' : 'opacity-100'}`}
           >
-            {step === 'set' ? (
-              <>
-                <span className="font-medium text-neutral-800 dark:text-neutral-200">{label}</span>
-                <span>{row[key]}</span>
-              </>
-            ) : (
-              <>
-                <span className="font-medium text-neutral-800 dark:text-neutral-200">{label}</span>
-                {LEGEND[key]}
-              </>
-            )}
+            <span className="text-xs text-neutral-600 dark:text-neutral-400">{label}</span>{' '}
+            <span className="flex h-5 items-center text-[0.8125rem] font-medium text-neutral-900 dark:text-neutral-100">{step === 'set' ? row[key] : LEGEND[key]}</span>
           </li>
         ))}
       </ul>
-
-      {shuffle && step === 'set' && (
-        <div className="mt-2 flex justify-center">
-          <button
-            type="button"
-            onClick={dealNew}
-            className="inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full px-3 text-xs font-medium text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
-          >
-            <RefreshIcon />
-            New example
-          </button>
-        </div>
-      )}
     </div>
   )
 }

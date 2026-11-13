@@ -121,7 +121,7 @@ test('players from before the tour aren’t offered it', async ({ page }) => {
   await expect(page.getByRole('dialog')).toHaveCount(0)
 })
 
-test('How to play opens from the header menu, leads with the example set and keeps the full rules in the page', async ({ page, request }) => {
+test('How to play opens from the header menu, shows the rule with an example set and keeps the full rules in the page', async ({ page, request }) => {
   const html = await (await request.get('/')).text()
   expect(html).toContain('Three cards are a set when each feature is either the same on all three cards or different on all three.')
   expect(html).not.toContain('not affiliated with Set Enterprises')
@@ -139,20 +139,23 @@ test('How to play opens from the header menu, leads with the example set and kee
   await expect(dialog).toBeVisible()
   await expect(dialog.locator('[data-revealed="true"]')).toBeVisible()
   await expect(dialog.getByRole('heading', { name: 'How to play' })).toBeVisible()
-  await expect(dialog.getByText('Find 3 cards: each feature all same or all different.')).toBeVisible()
-  // The short rules show straight away: no disclosure, no About paragraph, no "free".
-  await expect(dialog.getByText('Three cards are a set when each feature', { exact: false })).toBeVisible()
+  // The rule is said once, in full: no one-line summary repeating it, no disclosure, no About paragraph, no "free".
+  await expect(dialog.getByText('Select three cards that make a set.')).toBeVisible()
+  await expect(dialog.getByText('Three cards are a set when each feature is either the same on all three cards or different on all three.')).toBeVisible()
+  await expect(dialog.getByText('all same or all different')).toHaveCount(0)
+  await expect(dialog).not.toContainText(/\btap\b/i)
   for (const mode of ['Daily Deal', 'Puzzle', 'Practice', 'Multiplayer']) await expect(dialog.getByRole('term').filter({ hasText: mode })).toBeVisible()
   await expect(dialog.getByText('Full rules')).toHaveCount(0)
   await expect(dialog.getByText('About Set')).toHaveCount(0)
   await expect(dialog).not.toContainText(/free/i)
   await expect(dialog.getByRole('button', { name: 'Close' })).toHaveCSS('cursor', 'pointer')
 
-  // New example deals six new cards, lights their one set and says why, without moving the modal.
+  // New example deals six new cards, lights their one set and says why, without moving or resizing anything.
   const newExample = dialog.getByRole('button', { name: 'New example', exact: true })
   await expect(newExample).toHaveCSS('cursor', 'pointer')
-  const ruleLine = dialog.getByText('Find 3 cards: each feature all same or all different.')
-  const before = await ruleLine.boundingBox()
+  const steady = [dialog.locator('[data-how-to-play-panel]'), dialog.locator('[data-demo-card]').first(), dialog.getByRole('list', { name: 'Why it’s a set' }), dialog.getByRole('heading', { name: 'Game modes' })]
+  const boxes = () => Promise.all(steady.map(part => part.boundingBox()))
+  const before = await boxes()
   const firstBoard = (await demoCards(dialog)).map(card => card.id).join(',')
   const boards = new Set([firstBoard])
   for (let round = 1; round <= 3; round++) {
@@ -169,10 +172,8 @@ test('How to play opens from the header menu, leads with the example set and kee
       return size === 1 ? 'same' : 'different'
     })
     const row = await dialog.getByRole('list', { name: 'Why it’s a set' }).getByRole('listitem').allTextContents()
-    expect(row).toEqual(['Number', 'Color', 'Shape', 'Shading'].map((label, i) => label + expected[i]))
-    const after = await ruleLine.boundingBox()
-    expect(after!.height).toBeCloseTo(before!.height, 0)
-    expect(after!.y).toBeCloseTo(before!.y, 0)
+    expect(row).toEqual(['Number', 'Color', 'Shape', 'Shading'].map((label, i) => `${label} ${expected[i]}`))
+    expect(await boxes()).toEqual(before)
   }
   expect(boards.size).toBeGreaterThan(1)
 

@@ -1,0 +1,35 @@
+<%# How to play. Server-rendered so its rules are in the page for search engines; HowToPlay.tsx opens it and adds the example set. Every layout with the header menu renders it. %>
+<dialog id="how-to-play" aria-labelledby="how-to-play-title" aria-describedby="how-to-play-goal" class="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none items-end justify-center overflow-hidden border-0 bg-transparent pb-0 pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)] pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] open:flex sm:items-center sm:p-6">
+  <div data-how-to-play-panel class="how-to-play-panel flex max-h-full w-full flex-col overflow-hidden rounded-t-2xl border border-b-0 border-neutral-200 bg-white font-sans text-base text-neutral-900 shadow-2xl sm:max-w-md sm:rounded-2xl sm:border-b lg:max-w-[52rem] dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100">
+    <div class="flex h-14 shrink-0 items-center justify-between border-b border-neutral-100 pl-5 pr-2 lg:pl-7 lg:pr-3 dark:border-neutral-800">
+      <h2 id="how-to-play-title" class="text-[0.9375rem] font-semibold">How to play</h2>
+      <form method="dialog" class="flex">
+        <button type="submit" aria-label="Close" class="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="h-[1.125rem] w-[1.125rem]"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </form>
+    </div>
+    <div data-how-to-play-body class="min-h-0 flex-1 overflow-y-auto overscroll-contain lg:grid lg:grid-cols-2 lg:grid-rows-[auto_1fr]">
+      <div class="px-5 pb-5 pt-5 lg:px-7 lg:pb-0 lg:pt-7">
+        <p id="how-to-play-goal" class="text-balance text-lg font-semibold leading-snug tracking-tight">Select three cards that make a set.</p>
+        <div class="mt-2.5 space-y-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
+          <p>Every card has four features: number, color, shape and shading.</p>
+          <p>Three cards are a set when each feature is either the same on all three cards or different on all three.</p>
+        </div>
+      </div>
+      <div id="rules-demo-root" class="border-y border-neutral-100 bg-neutral-50 px-5 py-4 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:flex lg:flex-col lg:justify-center lg:border-y-0 lg:border-l lg:px-7 lg:py-7 dark:border-neutral-800 dark:bg-neutral-950/40"></div>
+      <div class="px-5 pb-[calc(env(safe-area-inset-bottom,0px)+1.25rem)] pt-5 sm:pb-5 lg:px-7 lg:pb-7 lg:pt-6">
+        <h3 class="text-xs font-medium uppercase tracking-wide text-neutral-600 dark:text-neutral-400">Game modes</h3>
+        <dl class="mt-2.5 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-neutral-200 bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-700">
+          <%# Each summary is two phrases, so a narrow cell breaks the line between them. %>
+          <% [["Daily Deal", "Same deal for everyone,", "one try a day."], ["Puzzle", "12 cards hold 6 sets.", "Find all 6."], ["Practice", "Timed games,", "as many as you like."], ["Multiplayer", "Most sets", "wins the round."]].each do |name, *phrases| %>
+            <div class="bg-white px-3 py-2.5 dark:bg-neutral-900">
+              <dt class="text-sm font-medium"><%= name %></dt>
+              <dd class="mt-0.5 text-[0.8125rem] leading-snug text-neutral-600 dark:text-neutral-400"><%= safe_join(phrases.map { |phrase| tag.span(phrase, class: "inline-block") }, " ") %></dd>
+            </div>
+          <% end %>
+        </dl>
+      </div>
+    </div>
+  </div>
+</dialog>
