@@ -6,7 +6,7 @@
 # current deal day (Pacific, like the games). Finished both the Daily Deal
 # and the Puzzle: skip. Finished one: the email is about the other. Neither:
 # it's about the Daily Deal and mentions the Puzzle. At most one reminder per
-# account per local day and per deal day; a run that's late (the NUC was down)
+# account per local day and per deal day; a run that's late (the host was down)
 # still sends up to CATCH_UP after the chosen time, never later.
 module Reminder
   # Half-hourly choices, minutes after local midnight.

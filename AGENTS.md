@@ -2,14 +2,14 @@
 
 ## Cursor Cloud specific instructions
 
-This repo is a **Rails 8 + React + Tailwind** app. There is **no database**.
+This repo is a **Rails 8 + React + Tailwind** app with a **SQLite** database: accounts, sessions, scores, player settings and the multiplayer snapshot. There is no Redis and no job server. See `README.md` for the modes and the stack.
 
 ### Environment (required on cloud agents)
 
-Cloud VMs start with Node but **not Ruby**. Use the committed setup:
+The default cloud image has Node but **not Ruby**. Use the committed setup:
 
-- **`.cursor/environment.json`** — Dockerfile base image, `install` deps, and `bin/dev` terminal
-- **`./script/bootstrap-dev.sh`** — fallback if you are on the default image without the custom Dockerfile (installs Ruby via apt, then bundle/yarn/build)
+- **`.cursor/environment.json`** — builds `.cursor/Dockerfile` (Ruby 3.2.3, Node 22, Yarn), runs `./script/bootstrap-dev.sh` as the `install` step, and starts the `dev` terminal
+- **`./script/bootstrap-dev.sh`** — `bundle install`, `yarn install`, `bin/rails db:prepare`, then an asset build. On the default image without the custom Dockerfile it first installs Ruby via apt.
 
 On each agent start, Cursor runs the `install` command from `environment.json`, then starts the `dev` terminal (`bin/dev`).
 
@@ -27,7 +27,26 @@ When the environment's Network Access is restricted, a host missing from this li
 curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/
 ```
 
-Expect `200`. Solo: `/`, multiplayer: `/m`.
+Expect `200`. Daily Deal: `/`, Puzzle: `/puzzle`, Practice: `/practice`, multiplayer: `/m`, stats: `/stats`.
+
+### Tests
+
+```bash
+bin/rails test
+yarn typecheck
+yarn test:rules && yarn test:daily && yarn test:cards && yarn test:demo && yarn test:two-card
+```
+
+Browser specs run against a server in the test environment, with built assets:
+
+```bash
+yarn build && yarn build:css
+RAILS_ENV=test bin/rails db:prepare
+RAILS_ENV=test bin/rails server -p 3999 -b 127.0.0.1 &
+PLAYWRIGHT_BASE_URL=http://127.0.0.1:3999 npx playwright test
+```
+
+`bin/test-nuc --browser` runs all of the above, but installs its own copy of the gems first.
 
 ### UI / assets
 
