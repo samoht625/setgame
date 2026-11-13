@@ -145,6 +145,19 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     assert_select "ol.sets", 2, "most found and least found still list sets"
   end
 
+  test "the header menu's How to play has its dialog on the stats page" do
+    Rails.cache.clear
+
+    get "/stats"
+    assert_response :success
+    assert_select "#site-header", 1
+    assert_select "dialog#how-to-play", 1 do
+      assert_select "#rules-demo-root", 1
+      assert_select "h2#how-to-play-title", "How to play"
+    end
+    assert_select "section.sr-only", 0, "the longer About text stays on the game pages"
+  end
+
   private
 
   # The players table as text: one array of cells per row.

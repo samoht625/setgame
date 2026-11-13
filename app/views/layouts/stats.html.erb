@@ -50,18 +50,18 @@
 
       body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;-webkit-text-size-adjust:100%}
       main{max-width:720px;margin:0 auto;padding:4px 12px calc(env(safe-area-inset-bottom,0px) + 56px)}
-      a{color:inherit}
+      main a{color:inherit}
       .sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
       .nil{color:var(--faint)}
       .card{background:var(--surface);border:1px solid var(--line);border-radius:16px}
 
-      /* Page and section headings */
+      /* Page and section headings, kept to the page so the header's dialogs keep their own type */
       .top{margin:4px 2px 16px}
-      h1{margin:0;font-size:22px;font-weight:650;letter-spacing:-.015em;line-height:1.25}
+      main h1{margin:0;font-size:22px;font-weight:650;letter-spacing:-.015em;line-height:1.25}
       .top p{margin:2px 0 0;color:var(--muted);font-size:14px}
       .sec{margin-top:36px;min-width:0}
       .sec-head{margin:0 2px 12px}
-      h2{margin:0;font-size:16px;font-weight:600;letter-spacing:-.01em;line-height:1.3}
+      main h2{margin:0;font-size:16px;font-weight:600;letter-spacing:-.01em;line-height:1.3}
       .sec-head p,.act-series>p{margin:3px 0 0;color:var(--muted);font-size:13px;line-height:1.45;max-width:100ch}
       .none{margin:0;padding:18px 16px;color:var(--muted);font-size:13.5px}
       .empty{margin-top:12px;padding:32px 20px;text-align:center}
@@ -247,7 +247,7 @@
       @media (min-width:760px){
         main{padding:8px 24px 72px}
         .top{margin-bottom:20px}
-        h1{font-size:24px}
+        main h1{font-size:24px}
         .sec{margin-top:44px}
         .tiles>div{padding:15px 16px 16px}
         .tiles dd{font-size:26px}
@@ -286,5 +286,10 @@
       }
     </style>
   </head>
-  <body><div id="site-header"><%= prerendered(:stats) %></div><%= yield %></body>
+  <body>
+    <div id="site-header"><%= prerendered(:stats) %></div>
+    <%= yield %>
+    <%# The header menu's How to play opens this. %>
+    <%= render "layouts/how_to_play" %>
+  </body>
 </html>

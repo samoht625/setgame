@@ -157,6 +157,17 @@ dialog::backdrop {
   animation: dialog-in 0.2s ease-out;
 }
 
+/* How to play: a sheet rising from the bottom on phones, a dialog settling into place on wider screens */
+.how-to-play-panel {
+  animation: sheet-in 0.2s ease-out;
+}
+
+@media (min-width: 40rem) {
+  .how-to-play-panel {
+    animation: dialog-in 0.2s ease-out;
+  }
+}
+
 /* Newly dealt / replaced cards ease in instead of popping */
 @keyframes card-in {
   from {
