@@ -1,11 +1,16 @@
-## Linux host (systemd + SQLite)
+# Deployment
 
-Production on a dedicated host uses SQLite for:
+Production is one Linux host running Puma as a user systemd service, with SQLite on local disk and a reverse proxy in front for TLS. There are no containers and no hosted platform.
 
-- Multiplayer board/deck/scores snapshot (survives redeploys)
-- Solo game seeds, move replay verification, and leaderboards
+## What the scripts assume
 
-### Redeploy (required entrypoint)
+- The checkout is at `~/www/setgame`. The systemd units in `deploy/` use that path.
+- Puma listens on `127.0.0.1:7778`. A reverse proxy (Caddy on the live site) terminates TLS and forwards to it, including the `/cable` WebSocket.
+- The SQLite file is outside the checkout, at `$DATABASE_PATH` (default `~/www/setgame-data/production.sqlite3`).
+- The public hostname is `set.tido.site`. `config/environments/production.rb` allows only that host and Action Cable origin, so hosting under another name means changing both.
+- Ruby (rbenv is picked up if present), Node and Yarn are installed for the user that runs the service. The `sqlite3` command is only needed for backups and `script/retention`.
+
+## Redeploy
 
 After `git pull` on the host, always run:
 
@@ -13,186 +18,93 @@ After `git pull` on the host, always run:
 ./scripts/set-prod.sh
 ```
 
-That script:
+In order, it:
 
-1. Ensures `deploy/setgame.env` has `DATABASE_PATH` (default `$HOME/www/setgame-data/production.sqlite3`) and `WEB_CONCURRENCY=1`
-2. Creates the data directory; migrates a legacy `storage/production.sqlite3` once if needed
-3. `bundle install` (deployment mode, vendor/bundle) so the `sqlite3` gem is present
-4. Runs `rails db:prepare` (creates/migrates SQLite)
-5. Refreshes the user systemd unit from `deploy/setgame.service`
-6. Builds JS/CSS and precompiles Rails assets
-7. Restarts `setgame.service` and checks it is active
+1. Creates `deploy/setgame.env` from the example if it is missing, and adds any missing `DATABASE_PATH`, `WEB_CONCURRENCY=1`, `RAILS_MAX_THREADS` and `NODE_BINARY`.
+2. Creates the data directory, and copies a legacy `storage/production.sqlite3` there once if one exists.
+3. Refreshes the user systemd unit from `deploy/setgame.service`.
+4. Runs `bundle install` in deployment mode into `vendor/bundle`, without the development and test groups.
+5. Runs `rails db:prepare`.
+6. Installs and enables the reminder timer.
+7. Installs packages, builds JavaScript and CSS, and precompiles Rails assets.
+8. Restarts `setgame.service` and checks that it is active.
 
-`set-prod.sh` is self-contained (it no longer hands off to `www-restart.sh` by default). Point auto-deploy at `./scripts/set-prod.sh` after pull. A bare `systemctl --user restart setgame` will not install the new `sqlite3` gem.
-The systemd unit is also hardened: `setgame-start-pre.sh` ensures the data dir + schema, and `setgame-run-puma.sh` loads env before Puma. Neither hardcodes a Ruby ABI path under `vendor/bundle`.
+A bare `systemctl --user restart setgame` skips all of that, so it will not install a new gem or run a migration.
 
-### Environment
+Two environment switches change the run:
 
-See `deploy/setgame.env.example`. Important vars:
+- `SETGAME_SKIP_RESTART=1` prepares everything and leaves the service alone.
+- `SETGAME_USE_ORCHESTRATOR=1` hands the build and restart to a `scripts/www-restart.sh` beside the checkout, for a host that manages several sites with one script.
 
-- `DATABASE_PATH` — absolute path to the SQLite file, outside the git checkout
-- `WEB_CONCURRENCY=1` — required (one process owns `GAME_ENGINE` and SQLite writes)
-- `RAILS_MASTER_KEY` — required in production
-
-### First boot / service install
+## First install
 
 ```bash
 ./scripts/install-setgame-service.sh
 ```
 
-`deploy/setgame.service` also runs `db:prepare` in `ExecStartPre` via `scripts/setgame-with-bundle.sh` (no hardcoded Ruby ABI path under `vendor/bundle`).
+It runs `set-prod.sh` without the restart, enables and starts `setgame.service`, and turns on lingering for the user (the one step that asks for `sudo`) so the service starts at boot. Set `RAILS_MASTER_KEY` in `deploy/setgame.env` before relying on it.
+
+## Environment
+
+`deploy/setgame.env` is read by systemd and by the scripts. It is gitignored and should be readable only by its owner; `set-prod.sh` sets that. Start from `deploy/setgame.env.example`.
+
+| Variable | Purpose |
+| --- | --- |
+| `RAILS_MASTER_KEY` | Required. Decrypts `config/credentials.yml.enc`. |
+| `DATABASE_PATH` | Absolute path to the SQLite file, outside the checkout. |
+| `WEB_CONCURRENCY` | Must stay `1`. One Puma process owns the multiplayer table and the SQLite writes. |
+| `RESEND_API_KEY` | Sends sign-in links and reminders through Resend. Without it, sign-in is switched off in production. |
+| `SETGAME_MAIL_FROM` | The From address for that email. |
+| `SETGAME_SIGN_IN` | Set to `off` to switch sign-in off even with a key. |
+| `NODE_BINARY` | Path to `node`, used to render share images. systemd's PATH may not include it. |
+
+## What SQLite holds
+
+Accounts, signed-in sessions and sign-in tokens; Practice and Daily Deal games with their move logs and scores; Puzzle runs; player settings; reminder deliveries; and one snapshot of the multiplayer table, so a restart does not lose the round.
 
 ### Backups
 
-Do **not** `cp` a live SQLite database while the app is running (WAL mode). Use the SQLite backup API:
+Do not `cp` a live SQLite database while the app is running. It uses WAL mode. Use the SQLite backup API:
 
 ```bash
 sqlite3 "$DATABASE_PATH" ".backup '/path/to/setgame-$(date +%Y%m%d).sqlite3'"
 ```
 
-### Time windows
+## Reminder emails
 
-Daily / weekly / monthly solo leaderboards use `America/New_York` (`config.time_zone`).
-
-### Solitaire anti-cheat (summary)
-
-- Server issues a game id + seed; client logs claim events with `t_ms`
-- On submit, the server replays the deal and checks wall-clock bounds
-- Pausing marks the run ineligible for the leaderboard
-
----
-
-# Deployment Checklist
-
-## Pre-Deployment
-
-- [x] Rails app created with ActionCable support
-- [x] React + TypeScript frontend implemented
-- [x] Game engine and rules engine implemented
-- [x] Local testing completed
-- [x] render.yaml configuration created
-- [x] SQLite persistence for multiplayer + solo leaderboards
-
-## Render Deployment Steps
-
-### 1. Push to GitHub
+`deploy/setgame-reminders.timer` runs `rails reminders:send` every five minutes as a one-shot service. It sends each account's reminder at the local time that account chose. To send one to an existing account outside the schedule:
 
 ```bash
-git add .
-git commit -m "Initial Set game implementation"
-git push origin main
+./scripts/setgame-with-bundle.sh rails "reminders:test[someone@example.com]"
 ```
 
-### 2. Create Render Web Service
+## Logs and status
 
-1. Go to https://dashboard.render.com
-2. Click "New +" → "Web Service"
-3. Connect your GitHub repository
-4. Render will auto-detect the `render.yaml` configuration
-5. Review the settings:
-   - **Name**: setgame (or your preferred name)
-   - **Environment**: Ruby
-   - **Build Command**: `bin/rails assets:precompile && yarn build && yarn build:css`
-   - **Start Command**: `bundle exec puma -C config/puma.rb`
+```bash
+systemctl --user status setgame
+journalctl --user -u setgame -f
+journalctl --user -u setgame-reminders -n 50
+```
 
-### 3. Configure Environment Variables
+`/up` returns 200 when the app has booted.
 
-Add these environment variables in Render dashboard:
+## Clocks
 
-- `RAILS_ENV`: `production`
-- `RAILS_LOG_TO_STDOUT`: `enabled`
-- `RAILS_MASTER_KEY`: Copy from `config/master.key` (keep secret!)
+- The Daily Deal and the Puzzle roll over at midnight Pacific (`DailyPuzzle::TIME_ZONE`).
+- Practice leaderboards use daily, weekly and monthly windows in Eastern time (`config.time_zone`).
+- The stats page groups days and hours in Central time (`SetStats::ZONE`).
+- Reminders go out in each account's own time zone.
 
-### 4. Deploy
+## How scores are checked
 
-Click "Create Web Service" to start deployment.
+- The server issues each game an id and a seed. The browser logs every claim with its time.
+- On submit, the server replays the deal from the seed and the claims, and checks the elapsed time against its own clock.
+- A log with a pause in it is refused.
 
-### 5. Post-Deployment Configuration
+## Testing on the host
 
-After deployment completes:
+The production bundle leaves out the test gems, so use `bin/test-nuc` from a separate checkout. See [TESTING.md](TESTING.md).
 
-1. Note your app URL (e.g., `https://setgame-xxxx.onrender.com`)
+## Rotating the master key
 
-2. Update `config/environments/production.rb`:
-   ```ruby
-   config.action_cable.allowed_request_origins = [
-     "https://setgame-xxxx.onrender.com"
-   ]
-   ```
-
-3. Commit and push the change:
-   ```bash
-   git add config/environments/production.rb
-   git commit -m "Update ActionCable allowed origins"
-   git push origin main
-   ```
-
-4. Render will automatically redeploy
-
-### 6. Test Deployment
-
-1. Open your app URL in a browser
-2. Open a second browser tab/window
-3. Test multiplayer functionality:
-   - Both tabs should see the same board
-   - Select cards and claim sets
-   - Verify scores update in real-time
-   - Test round transitions
-
-## Troubleshooting
-
-### ActionCable Connection Issues
-
-If WebSocket connections fail:
-1. Verify `allowed_request_origins` includes your Render URL
-2. Check Render logs for ActionCable errors
-3. Ensure the URL uses `https://` (not `http://`)
-
-### Asset Loading Issues
-
-If CSS/JS don't load:
-1. Verify build commands ran successfully
-2. Check `app/assets/builds/` directory exists
-3. Review Render build logs
-
-### Game State Issues
-
-If game state doesn't sync:
-1. Check ActionCable connection in browser console
-2. Verify `GAME_ENGINE` is initialized
-3. Check server logs for errors
-
-## Monitoring
-
-- **Render Dashboard**: Monitor CPU, memory, and logs
-- **Browser Console**: Check for JavaScript errors
-- **Network Tab**: Verify WebSocket connection to `/cable`
-
-## Scaling Considerations
-
-Current implementation:
-- Single instance (no Redis needed)
-- In-memory game state
-- Ephemeral player scores
-
-For multi-instance scaling:
-1. Add Redis service to Render
-2. Configure ActionCable to use Redis adapter
-3. Consider persistent storage for game state
-
-## Rollback
-
-If deployment fails:
-1. Go to Render dashboard
-2. Navigate to "Deploys" tab
-3. Find last successful deployment
-4. Click "Rollback"
-
-## Support
-
-For issues:
-1. Check Render logs
-2. Review browser console
-3. Test locally with `bin/rails server`
-4. Run `ruby script/test_rules.rb` to verify game logic
-
+See [SECURITY.md](SECURITY.md).

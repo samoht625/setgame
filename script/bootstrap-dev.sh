@@ -29,9 +29,9 @@ install_linux_packages() {
 
 install_linux_packages
 
-need_cmd ruby || { echo "Install Ruby 3.2+ (see README)" >&2; exit 1; }
+need_cmd ruby || { echo "Install Ruby 3.2 or newer (see .ruby-version)" >&2; exit 1; }
 need_cmd bundle || { echo "Install Bundler (gem install bundler or ruby-bundler)" >&2; exit 1; }
-need_cmd node || { echo "Install Node.js 18+ (https://nodejs.org)" >&2; exit 1; }
+need_cmd node || { echo "Install Node.js 22 (https://nodejs.org)" >&2; exit 1; }
 need_cmd yarn || { echo "Install Yarn (npm install -g yarn)" >&2; exit 1; }
 
 echo "Ruby:  $(ruby -v)"
@@ -51,6 +51,9 @@ bundle install
 echo "== yarn install =="
 yarn install --check-files
 
+echo "== Preparing the development database =="
+bin/rails db:prepare
+
 echo "== Building assets =="
 yarn build
 yarn build:css
@@ -60,4 +63,4 @@ echo "Done. Start the app with:"
 echo "  bin/dev          # Rails + JS/CSS watchers (recommended)"
 echo "  bin/rails server # Rails only (run yarn build / yarn build:css after UI changes)"
 echo ""
-echo "Open http://localhost:3000 (solo) or http://localhost:3000/m (multiplayer)"
+echo "Open http://localhost:3000 (Daily Deal), /puzzle, /practice, /m (multiplayer) or /stats"

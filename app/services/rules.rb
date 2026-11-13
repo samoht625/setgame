@@ -5,7 +5,7 @@ module Rules
   # Card attributes: number, color, shape, shading
   # Each attribute has values 0, 1, or 2
   # Mapping: card id (1-81) maps to base-3 representation of (id - 1),
-  # least significant digit first. This matches the artwork in public/cards:
+  # least significant digit first. CardFace.tsx draws each card from the same digits:
   #   digit 0 -> number  (0 = one, 1 = two, 2 = three)
   #   digit 1 -> color   (0 = red, 1 = purple, 2 = green)
   #   digit 2 -> shape   (0 = squiggle, 1 = diamond, 2 = oval)

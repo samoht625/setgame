@@ -2,7 +2,7 @@
 // Card attributes: number, color, shape, shading
 // Each attribute has values 0, 1, or 2
 // Mapping: card id (1-81) maps to base-3 digits of (id - 1), least significant first.
-// This matches the artwork in public/cards:
+// CardFace.tsx draws each card from the same digits:
 //   digit 0 -> number  (0 = one, 1 = two, 2 = three)
 //   digit 1 -> color   (0 = red, 1 = purple, 2 = green)
 //   digit 2 -> shape   (0 = squiggle, 1 = diamond, 2 = oval)

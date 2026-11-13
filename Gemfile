@@ -10,7 +10,7 @@ gem "puma", ">= 5.0"
 gem "jsbundling-rails"
 # Bundle and process CSS [https://github.com/rails/cssbundling-rails]
 gem "cssbundling-rails"
-# SQLite for solo leaderboards and multiplayer game snapshots
+# SQLite holds accounts, sessions, scores, player settings and the multiplayer snapshot
 gem "sqlite3", "~> 2.9"
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]

@@ -79,7 +79,7 @@ class ReminderTest < ActiveSupport::TestCase
   test "only at the chosen time, with a catch-up window" do
     assert_empty Reminder.run!(now: LA_8AM - 1.minute, pause: 0)
     assert_empty Reminder.run!(now: LA_8AM + Reminder::CATCH_UP, pause: 0), "too late to be useful"
-    assert_equal 1, Reminder.run!(now: LA_8AM + 2.hours, pause: 0)[:sent], "the NUC was down at 8: still sent at 10"
+    assert_equal 1, Reminder.run!(now: LA_8AM + 2.hours, pause: 0)[:sent], "the host was down at 8: still sent at 10"
   end
 
   test "never twice a day, across runs and restarts" do
