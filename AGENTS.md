@@ -17,7 +17,8 @@ On each agent start, Cursor runs the `install` command from `environment.json`, 
 
 When the environment's Network Access is restricted, a host missing from this list fails the environment build, and agents start on the default image without Ruby or dependencies.
 
-- **Image** (`.cursor/Dockerfile`): `public.ecr.aws` only. Ruby, Node and Yarn come from its mirror of the Docker official images; there is no apt or curl step.
+- **Image** (`.cursor/Dockerfile`): `public.ecr.aws` only. Ruby, Node and Yarn come from its mirror of the Docker official images; the Dockerfile itself has no apt or curl step.
+- **Cursor's machine setup** (`apt-get update` and installs on the built image, for the desktop and Chrome): `deb.debian.org`. The image is Debian bookworm, so no Ubuntu mirror is needed.
 - **Install** (`bundle install`, `yarn install`): `rubygems.org`, `index.rubygems.org`, `registry.npmjs.org`, `registry.yarnpkg.com`.
 - **Browser tests** (`npx playwright install chromium`): `cdn.playwright.dev`.
 
