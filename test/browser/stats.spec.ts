@@ -75,6 +75,16 @@ test('the stats page is a compact table on desktop and two-line rows on a phone,
   expect(Math.abs(most.y - least.y), 'the ranked sets sit side by side on a wide screen').toBeLessThanOrEqual(1)
   expect(least.x).toBeGreaterThan(most.x + 200)
 
+  // Fun facts: five equal cells, each a label, a value and a note, with the values on one line.
+  const facts = page.locator('.facts > div')
+  await expect(facts.locator('dt')).toHaveText(['Fastest find', 'Practice games', 'Daily Deal games', 'Busiest day', 'Busiest hour'])
+  const firstFact = await box(facts.first())
+  const firstValue = await box(facts.first().locator('.val'))
+  for (let i = 1; i < 5; i++) {
+    expect(Math.abs((await box(facts.nth(i))).width - firstFact.width), `fact ${i + 1} is as wide as the first`).toBeLessThanOrEqual(1)
+    expect(Math.abs((await box(facts.nth(i).locator('.val'))).y - firstValue.y), `fact ${i + 1}'s value lines up with the first`).toBeLessThanOrEqual(1)
+  }
+
   // The Per day chart switches between games and players without a script.
   await expect(page.locator('[data-series=games]')).toBeVisible()
   await page.locator('label[for=act-players]').click()
@@ -106,6 +116,11 @@ test('the stats page is a compact table on desktop and two-line rows on a phone,
   // The split's column headings leave the phone layout but stay in the table for screen readers.
   await expect(table.getByRole('columnheader')).toHaveCount(7)
   expect((await box(table.locator('thead .prac'))).width).toBeLessThanOrEqual(1)
+
+  // The fastest find gets a full-width row on a phone; the other four facts pair up beneath it.
+  expect((await box(facts.first())).width).toBeGreaterThan((await box(facts.nth(1))).width * 1.9)
+  expect(Math.abs((await box(facts.nth(1))).y - (await box(facts.nth(2))).y)).toBeLessThanOrEqual(1)
+  expect((await box(facts.first().locator('dt'))).height, 'fact labels stay on one line').toBeLessThan(24)
 
   await page.setViewportSize({ width: 320, height: 640 })
   expect(await overflow(page), 'nothing spills sideways on the narrowest phones').toBeLessThanOrEqual(0)

@@ -210,18 +210,36 @@
   <section class="sec" aria-labelledby="h-facts">
     <div class="sec-head"><h2 id="h-facts">Fun facts</h2></div>
     <dl class="card facts">
-      <% if s[:fastest_find] %>
-        <div class="wide"><dt>Fastest find ever</dt><dd><%= secs(s[:fastest_find][:ms]) %> <%= set_cards(s[:fastest_find][:cards]) %></dd></div>
+      <div class="wide">
+        <dt>Fastest find</dt>
+        <dd class="val"><%= time_cell(s.dig(:fastest_find, :ms)) %></dd>
+        <% if s[:fastest_find] %><dd class="note"><%= set_cards(s[:fastest_find][:cards]) %></dd><% end %>
+      </div>
+      <% { "solo" => "Practice games", "daily" => "Daily Deal games" }.each do |mode, label| %>
+        <div>
+          <dt><%= label %></dt>
+          <dd class="val"><%= num(s[:modes][mode][:runs]) %></dd>
+          <% if s[:modes][mode][:median_ms] %><dd class="note">Median time <%= secs(s[:modes][mode][:median_ms]) %></dd><% end %>
+        </div>
       <% end %>
-      <% { "solo" => "Practice", "daily" => "Daily Deal" }.each do |mode, label| %>
-        <div><dt><%= label %></dt><dd><%= num(s[:modes][mode][:runs]) %> <small class="unit">finished</small><small>median <%= secs(s[:modes][mode][:median_ms]) %></small></dd></div>
-      <% end %>
-      <% if s[:busiest_day] %>
-        <div><dt>Busiest day</dt><dd><%= s[:busiest_day][0].strftime("%b %-d") %><small><%= pluralize(num(s[:busiest_day][1]), "game") %></small></dd></div>
-      <% end %>
-      <% if s[:busiest_hour] %>
-        <div><dt>Busiest hour</dt><dd><%= Time.new(2000, 1, 1, s[:busiest_hour]).strftime("%-l %p") %><small>Central time</small></dd></div>
-      <% end %>
+      <div>
+        <dt>Busiest day</dt>
+        <% if s[:busiest_day] %>
+          <dd class="val"><%= s[:busiest_day][0].strftime("%b %-d") %></dd>
+          <dd class="note"><%= pluralize(num(s[:busiest_day][1]), "game") %></dd>
+        <% else %>
+          <dd class="val"><%= time_cell(nil) %></dd>
+        <% end %>
+      </div>
+      <div>
+        <dt>Busiest hour</dt>
+        <% if s[:busiest_hour] %>
+          <dd class="val"><%= Time.new(2000, 1, 1, s[:busiest_hour]).strftime("%-l %p") %></dd>
+          <dd class="note">Central time</dd>
+        <% else %>
+          <dd class="val"><%= time_cell(nil) %></dd>
+        <% end %>
+      </div>
     </dl>
   </section>
 
