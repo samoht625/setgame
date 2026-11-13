@@ -7,119 +7,223 @@
   <% StatsHelper::SHAPES.each do |shape| %><clipPath id="st-<%= shape %>-clip"><use href="#st-<%= shape %>"/></clipPath><g id="st-<%= shape %>-striped"><use href="#st-stripes" clip-path="url(#st-<%= shape %>-clip)"/><use href="#st-<%= shape %>"/></g><% end %>
 </defs></svg>
 <main>
-  <h1>Stats</h1>
+  <header class="top">
+    <h1>Stats</h1>
+    <p>Every set found in the Daily Deal and Practice, counted anonymously.</p>
+  </header>
 
-  <div class="tiles">
-    <div class="tile"><b><%= number_with_delimiter(s[:total_incl_unfinished]) %></b><span>sets found</span></div>
-    <div class="tile"><b><%= number_with_delimiter(s[:players]) %></b><span>players</span></div>
-    <div class="tile"><b><%= number_with_delimiter(s[:runs]) %></b><span>games finished</span></div>
-    <div class="tile"><b><%= s[:spread][:min][:n] %>× – <%= s[:spread][:max][:n] %>×</b><span>finds per set, min–max</span></div>
-  </div>
+  <dl class="card tiles">
+    <div><dt>Sets found</dt><dd><%= num(s[:total_incl_unfinished]) %></dd></div>
+    <div><dt>Players</dt><dd><%= num(s[:players]) %></dd></div>
+    <div><dt>Games finished</dt><dd><%= num(s[:runs]) %></dd></div>
+    <div><dt>Finds per set, min–max</dt><dd><%= finds_range(s[:spread]) %></dd></div>
+  </dl>
+
+  <% if s[:total_incl_unfinished].zero? && s[:runs].zero? %>
+    <div class="card empty">
+      <b>No sets found yet</b>
+      <p>Charts and rankings show up here once the first games are played.</p>
+      <a class="btn" href="/">Play the Daily Deal</a>
+    </div>
+  <% else %>
 
   <% days = s[:activity_by_day] %>
-  <section class="activity">
+  <section class="sec activity" aria-labelledby="h-activity">
     <input type="radio" name="activity" id="act-games" value="games" checked>
     <input type="radio" name="activity" id="act-players" value="players">
-    <div class="act-head">
-      <h2>Per day</h2>
+    <div class="sec-head act-head">
+      <h2 id="h-activity">Per day</h2>
       <div class="seg" role="radiogroup" aria-label="Show per day"><label for="act-games">Games</label><label for="act-players">Players</label></div>
     </div>
-    <% { games: ["game", "Finished games, Practice + Daily Deal"], players: ["player", "Players who found at least one set"] }.each do |key, (noun, about)| %>
+    <% { games: ["game", "Games finished each day in Practice and the Daily Deal"], players: ["player", "Players who found at least one set each day"] }.each do |key, (noun, about)| %>
       <% counts = days.map { |d| d[key] }; dmax = [counts.max, 1].max; peak = days.max_by { |d| d[key] } %>
       <div class="act-series" data-series="<%= key %>">
-        <p class="muted"><%= about %>, last <%= days.length %> days.<% if peak[key].positive? %> Busiest: <%= peak[key] %> on <%= peak[:date].strftime("%b %-d") %> · about <%= (counts.sum / days.length.to_f).round %> a day.<% end %></p>
-        <div class="bars daychart">
+        <p><%= about %>, over the last <%= days.length %> days.</p>
+        <div class="card daychart">
+          <dl class="chart-stats">
+            <div><dt>Busiest day</dt><dd><% if peak[key].positive? %><%= num(peak[key]) %> <small>on <%= peak[:date].strftime("%b %-d") %></small><% else %><span class="nil">–</span><% end %></dd></div>
+            <div><dt>Daily average</dt><dd><% avg = counts.sum / days.length.to_f %><%= avg.positive? && avg < 0.5 ? "<1" : num(avg.round) %></dd></div>
+          </dl>
           <div class="days" role="img" aria-label="<%= noun.capitalize %>s per day, <%= days.first[:date].strftime("%b %-d") %> to today; busiest <%= peak[key] %> on <%= peak[:date].strftime("%b %-d") %>">
             <% days.each_with_index do |d, i| n = d[key] %>
               <span class="<%= "l" if i < days.length * 0.12 %><%= "r" if i >= days.length * 0.88 %><%= " now" if i == days.length - 1 %>"><i data-tip="<%= i == days.length - 1 ? "Today" : d[:date].strftime("%a, %b %-d") %> · <%= n %> <%= n == 1 ? noun : "#{noun}s" %>" style="height:<%= n.zero? ? 0 : [(n * 100.0 / dmax).round(1), 2].max %>%"></i></span>
             <% end %>
           </div>
-          <div class="hf-axis muted" aria-hidden="true"><span style="left:0"><%= days.first[:date].strftime("%b %-d") %></span><span style="left:100%">Today</span></div>
+          <div class="axis" aria-hidden="true"><span style="left:0"><%= days.first[:date].strftime("%b %-d") %></span><span style="left:100%">Today</span></div>
         </div>
       </div>
     <% end %>
   </section>
 
-  <% if s[:most_games].present? %>
-    <h2>Most games finished</h2>
-    <p class="muted">Named players, Practice + Daily Deal, with each one's best Daily Deal and Puzzle times.</p>
-    <div class="list">
-      <% s[:most_games].each_with_index do |p, i| %>
-        <% bests = { "Daily Deal" => p[:best_daily_ms], "Puzzle" => p[:best_puzzle_ms] }.compact.map { |label, ms| tag.span("#{label} #{secs(ms)}") } %>
-        <div class="row"><span class="k"><%= i + 1 %></span><span class="who"><%= p[:name] %><% if bests.any? %><small>Best: <%= safe_join(bests, " · ") %></small><% end %></span><span class="v"><%= p[:total] %><small><%= p[:solo] %> practice · <%= p[:daily] %> daily deal</small></span></div>
-      <% end %>
+  <section class="sec" aria-labelledby="h-players">
+    <div class="sec-head">
+      <h2 id="h-players">Most games finished</h2>
+      <p id="d-players">Named players by games finished in Practice and the Daily Deal, with each one's best Daily Deal and Puzzle times.</p>
     </div>
-  <% end %>
-
-  <h2>How fast</h2>
-  <p class="muted">Median seconds to find a set, by which attributes are all different. Bar: middle half of finds, 0–20s.</p>
-  <% kmax = 20_000; kpos = ->(ms) { (ms.clamp(0, kmax) * 100.0 / kmax).round(2) } %>
-  <div class="kinds">
-    <% s[:kinds].each do |k| %>
-      <div class="kind">
-        <span class="kind-label"><%= k[:label] %></span>
-        <%= set_cards(k[:cards]) if k[:cards] %>
-        <b class="kind-med"><%= format("%.1fs", k[:median_ms] / 1000.0) %></b>
-        <span class="kind-track" aria-label="middle half <%= secs(k[:p25_ms]) %> to <%= secs(k[:p75_ms]) %>" title="<%= secs(k[:p25_ms]) %> – <%= secs(k[:p75_ms]) %> · <%= number_with_delimiter(k[:n]) %> finds">
-          <% [5_000, 10_000, 15_000].each do |t| %><span class="kind-tick" style="left:<%= kpos.(t) %>%"></span><% end %>
-          <span class="kind-iqr" style="left:<%= kpos.(k[:p25_ms]) %>%;width:<%= (kpos.(k[:p75_ms]) - kpos.(k[:p25_ms])).round(2) %>%"></span>
-          <span class="kind-mid" style="left:<%= kpos.(k[:median_ms]) %>%"></span>
-        </span>
+    <% if s[:most_games].present? %>
+      <%# Rows are laid out with CSS grid (two lines on phones), so every table role is spelled out for screen readers. %>
+      <div class="card">
+        <table class="players" role="table" aria-labelledby="h-players" aria-describedby="d-players">
+          <thead role="rowgroup">
+            <tr role="row">
+              <th role="columnheader" scope="col" class="rk"><span class="sr">Rank</span></th>
+              <th role="columnheader" scope="col" class="who">Player</th>
+              <th role="columnheader" scope="col" class="total">Games</th>
+              <th role="columnheader" scope="col" class="prac">Practice</th>
+              <th role="columnheader" scope="col" class="dly">Daily Deal</th>
+              <th role="columnheader" scope="col" class="bdd">Best <span>Daily<i> Deal</i></span></th>
+              <th role="columnheader" scope="col" class="bpz">Best <span>Puzzle</span></th>
+            </tr>
+          </thead>
+          <tbody role="rowgroup">
+            <% s[:most_games].each_with_index do |p, i| %>
+              <tr role="row">
+                <td role="cell" class="rk"><span class="badge<%= " top#{i + 1}" if i < 3 %>"><%= i + 1 %></span></td>
+                <th role="rowheader" scope="row" class="who" title="<%= p[:name] %>"><%= p[:name] %></th>
+                <td role="cell" class="total"><%= num(p[:total]) %></td>
+                <td role="cell" class="prac"><%= count_cell(p[:solo]) %></td>
+                <td role="cell" class="dly"><%= count_cell(p[:daily]) %></td>
+                <td role="cell" class="bdd"><%= time_cell(p[:best_daily_ms]) %></td>
+                <td role="cell" class="bpz"><%= time_cell(p[:best_puzzle_ms]) %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
       </div>
+    <% else %>
+      <p class="card none">No named player has finished a game yet.</p>
     <% end %>
+  </section>
+
+  <section class="sec" aria-labelledby="h-kinds">
+    <div class="sec-head">
+      <h2 id="h-kinds">How fast</h2>
+      <p>Median time to find a set, by which attributes are all different. Bar: the middle half of finds. Line: the median.</p>
+    </div>
+    <% if s[:kinds].any? %>
+      <% kmax = 20_000; kpos = ->(ms) { (ms.clamp(0, kmax) * 100.0 / kmax).round(2) } %>
+      <div class="card kinds">
+        <div class="kind-axis" aria-hidden="true"><span class="kind-scale"><% (0..4).each do |t| %><i style="left:<%= t * 25 %>%"><%= t * 5 %>s</i><% end %></span></div>
+        <ol role="list">
+          <% s[:kinds].each do |k| %>
+            <li class="kind">
+              <span class="kind-label"><%= k[:label] %></span>
+              <%= set_cards(k[:cards]) if k[:cards] %>
+              <span class="kind-track" role="img" aria-label="middle half <%= secs(k[:p25_ms]) %> to <%= secs(k[:p75_ms]) %>" title="<%= secs(k[:p25_ms]) %> – <%= secs(k[:p75_ms]) %> · <%= num(k[:n]) %> finds">
+                <% [5_000, 10_000, 15_000].each do |t| %><span class="kind-tick" style="left:<%= kpos.(t) %>%"></span><% end %>
+                <span class="kind-iqr" style="left:<%= kpos.(k[:p25_ms]) %>%;width:<%= (kpos.(k[:p75_ms]) - kpos.(k[:p25_ms])).round(2) %>%"></span>
+                <span class="kind-mid" style="left:<%= kpos.(k[:median_ms]) %>%"></span>
+              </span>
+              <b class="kind-med"><%= format("%.1fs", k[:median_ms] / 1000.0) %></b>
+            </li>
+          <% end %>
+        </ol>
+      </div>
+    <% else %>
+      <p class="card none">No timed finds yet.</p>
+    <% end %>
+  </section>
+
+  <div class="cols two">
+    <section class="sec" aria-labelledby="h-shares">
+      <div class="sec-head">
+        <h2 id="h-shares">What gets found</h2>
+        <p>Share of finds by how many attributes are all different. Red tick: the share among all <%= num(SetStats::TOTAL_SETS) %> possible sets.</p>
+      </div>
+      <div class="card shares-card">
+        <table class="shares" aria-labelledby="h-shares">
+          <thead>
+            <tr><th scope="col"><span class="sr">Attributes all different</span></th><th scope="col"><span class="sr">Share of finds, drawn</span></th><th scope="col"><i class="key of-finds"></i>Finds</th><th scope="col"><i class="key of-all"></i>All sets</th></tr>
+          </thead>
+          <tbody>
+            <% total = [s[:total_finds], 1].max %>
+            <% (1..4).each do |n| pct = s[:type_counts][n] * 100.0 / total %>
+              <tr>
+                <th scope="row"><%= n %> different</th>
+                <td class="bar"><span class="track" aria-hidden="true"><span class="fill" style="width:<%= (pct * 2).clamp(0, 100).round(1) %>%"></span><span class="tick" style="left:<%= SetStats::CHANCE[n] * 2 %>%"></span></span></td>
+                <td class="n"><%= format("%.1f", pct) %>%</td>
+                <td class="n all"><%= SetStats::CHANCE[n] %>%</td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <% sp = s[:spread]; peak = [sp[:hist].map(&:last).max, 1].max %>
+    <section class="sec" aria-labelledby="h-spread">
+      <div class="sec-head">
+        <h2 id="h-spread">Finds per set</h2>
+        <p>How many of the <%= num(SetStats::TOTAL_SETS) %> possible sets have been found each number of times. Median: <%= num(sp[:median]) %>×.</p>
+      </div>
+      <div class="card spread">
+        <div class="hist" role="img" aria-label="Histogram of sets by times found, from <%= sp[:min][:n] %>× to <%= sp[:max][:n] %>×, median <%= sp[:median] %>×">
+          <% sp[:hist].each do |n, sets| %><span class="<%= "x" if n == sp[:min][:n] || n == sp[:max][:n] %>" style="height:<%= sets.zero? ? 0 : [(sets * 100.0 / peak).round(1), 3].max %>%" title="<%= n %>×: <%= sets %> sets"></span><% end %>
+        </div>
+        <div class="axis" aria-hidden="true"><span style="left:0"><%= num(sp[:min][:n]) %>×</span><span style="left:100%"><%= num(sp[:max][:n]) %>×</span></div>
+      </div>
+    </section>
   </div>
 
-  <% if s[:fastest].any? %>
-    <h2>Quickest to spot</h2>
-    <p class="muted">Lowest median find time, among sets found at least <%= SetStats::MIN_SAMPLE %> times.</p>
-    <div class="list">
-      <% s[:fastest].each_with_index do |f, i| %>
-        <div class="row"><span class="k"><%= i + 1 %></span><%= set_cards(f[:cards]) %><span class="v"><%= secs(f[:median_ms]) %><small><%= f[:n] %> finds</small></span></div>
+  <div class="cols three">
+    <section class="sec" aria-labelledby="h-fastest">
+      <div class="sec-head">
+        <h2 id="h-fastest">Quickest to spot</h2>
+        <p>Lowest median find time, among sets found at least <%= SetStats::MIN_SAMPLE %> times.</p>
+      </div>
+      <% if s[:fastest].any? %>
+        <ol class="card sets" role="list">
+          <% s[:fastest].each_with_index do |f, i| %>
+            <li><span class="rk" aria-hidden="true"><%= i + 1 %></span><%= set_cards(f[:cards]) %><span class="val"><%= secs(f[:median_ms]) %><small><%= pluralize(num(f[:n]), "find") %></small></span></li>
+          <% end %>
+        </ol>
+      <% else %>
+        <p class="card none">No set has been found <%= SetStats::MIN_SAMPLE %> times yet.</p>
       <% end %>
-    </div>
+    </section>
+
+    <section class="sec" aria-labelledby="h-most">
+      <div class="sec-head">
+        <h2 id="h-most">Most found</h2>
+        <p>The sets found the most times.</p>
+      </div>
+      <ol class="card sets" role="list">
+        <% s[:most_found].each_with_index do |f, i| %>
+          <li><span class="rk" aria-hidden="true"><%= i + 1 %></span><%= set_cards(f[:cards]) %><span class="val"><%= num(f[:n]) %>×</span></li>
+        <% end %>
+      </ol>
+    </section>
+
+    <section class="sec" aria-labelledby="h-least">
+      <div class="sec-head">
+        <h2 id="h-least">Least found</h2>
+        <p>The sets found the fewest times.</p>
+      </div>
+      <ol class="card sets" role="list">
+        <% sp[:least].each_with_index do |f, i| %>
+          <li><span class="rk" aria-hidden="true"><%= i + 1 %></span><%= set_cards(f[:cards]) %><span class="val"><%= num(f[:n]) %>×</span></li>
+        <% end %>
+      </ol>
+    </section>
+  </div>
+
+  <section class="sec" aria-labelledby="h-facts">
+    <div class="sec-head"><h2 id="h-facts">Fun facts</h2></div>
+    <dl class="card facts">
+      <% if s[:fastest_find] %>
+        <div class="wide"><dt>Fastest find ever</dt><dd><%= secs(s[:fastest_find][:ms]) %> <%= set_cards(s[:fastest_find][:cards]) %></dd></div>
+      <% end %>
+      <% { "solo" => "Practice", "daily" => "Daily Deal" }.each do |mode, label| %>
+        <div><dt><%= label %></dt><dd><%= num(s[:modes][mode][:runs]) %> <small class="unit">finished</small><small>median <%= secs(s[:modes][mode][:median_ms]) %></small></dd></div>
+      <% end %>
+      <% if s[:busiest_day] %>
+        <div><dt>Busiest day</dt><dd><%= s[:busiest_day][0].strftime("%b %-d") %><small><%= pluralize(num(s[:busiest_day][1]), "game") %></small></dd></div>
+      <% end %>
+      <% if s[:busiest_hour] %>
+        <div><dt>Busiest hour</dt><dd><%= Time.new(2000, 1, 1, s[:busiest_hour]).strftime("%-l %p") %><small>Central time</small></dd></div>
+      <% end %>
+    </dl>
+  </section>
+
   <% end %>
-
-  <h2>What gets found</h2>
-  <p class="muted">Share of finds by how many attributes are all different. Red tick: share among all 1,080 possible sets.</p>
-  <div class="bars">
-    <% total = [s[:total_finds], 1].max %>
-    <% (1..4).each do |n| pct = s[:type_counts][n] * 100.0 / total %>
-      <div class="bar"><span><%= n %> different</span><span class="track"><span class="fill" style="width:<%= (pct * 2).clamp(0, 100).round(1) %>%"></span><span class="tick" style="left:<%= SetStats::CHANCE[n] * 2 %>%"></span></span><span class="num"><%= pct.round(1) %>% <span class="muted">/ <%= SetStats::CHANCE[n] %>%</span></span></div>
-    <% end %>
-  </div>
-
-  <% sp = s[:spread]; peak = [sp[:hist].map(&:last).max, 1].max %>
-  <h2>Finds per set</h2>
-  <p class="muted">How many of the <%= number_with_delimiter(SetStats::TOTAL_SETS) %> possible sets have been found each number of times. Median: <%= sp[:median] %>×.</p>
-  <div class="bars spread">
-    <div class="hist" aria-hidden="true">
-      <% sp[:hist].each do |n, sets| %><span class="<%= "x" if n == sp[:min][:n] || n == sp[:max][:n] %>" style="height:<%= sets.zero? ? 0 : [(sets * 100.0 / peak).round(1), 3].max %>%" title="<%= n %>×: <%= sets %> sets"></span><% end %>
-    </div>
-    <div class="hf-axis muted" aria-hidden="true"><span style="left:0"><%= sp[:min][:n] %>×</span><span style="left:100%"><%= sp[:max][:n] %>×</span></div>
-  </div>
-
-  <h2>Most found</h2>
-  <div class="list">
-    <% s[:most_found].each_with_index do |f, i| %>
-      <div class="row"><span class="k"><%= i + 1 %></span><%= set_cards(f[:cards]) %><span class="v"><%= f[:n] %>×</span></div>
-    <% end %>
-  </div>
-
-  <h2>Least found</h2>
-  <div class="list">
-    <% sp[:least].each_with_index do |f, i| %>
-      <div class="row"><span class="k"><%= i + 1 %></span><%= set_cards(f[:cards]) %><span class="v"><%= f[:n] %>×</span></div>
-    <% end %>
-  </div>
-
-  <h2>Fun facts</h2>
-  <div class="facts">
-    <% if s[:fastest_find] %><div class="fact">Fastest find ever: <b><%= secs(s[:fastest_find][:ms]) %></b><br><%= set_cards(s[:fastest_find][:cards]) %></div><% end %>
-    <div class="fact">
-      Practice: <b><%= s[:modes]["solo"][:runs] %></b> finished, median <b><%= secs(s[:modes]["solo"][:median_ms]) %></b><br>
-      Daily Deal: <b><%= s[:modes]["daily"][:runs] %></b> finished, median <b><%= secs(s[:modes]["daily"][:median_ms]) %></b>
-      <% if s[:busiest_day] %><br>Busiest day: <b><%= s[:busiest_day][0].strftime("%b %-d") %></b> (<%= s[:busiest_day][1] %> games)<% end %>
-      <% if s[:busiest_hour] %><br>Busiest hour: <b><%= Time.new(2000, 1, 1, s[:busiest_hour]).strftime("%-l %p") %> CT</b><% end %>
-    </div>
-  </div>
 </main>
