@@ -184,11 +184,13 @@
       .c{flex:none;width:58px;height:38px;border-radius:6px;background:var(--card);box-shadow:0 0 0 1px var(--card-line)}
 
       /* Fun facts */
-      .facts dd{margin-top:2px;font-size:18px;line-height:1.3}
-      .facts small{display:block;color:var(--muted);font-size:12.5px;font-weight:400;letter-spacing:0}
-      .facts small.unit{display:inline}
-      .facts .wide{grid-column:1 / -1}
-      .facts .wide dd{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px}
+      .facts dt{white-space:nowrap}
+      .facts .val{margin-top:2px;font-size:18px;line-height:1.3}
+      .facts .note{margin-top:1px;color:var(--muted);font-size:12.5px;font-weight:400;letter-spacing:0}
+      .facts .wide{grid-column:1 / -1;display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:16px}
+      .facts .wide dt,.facts .wide .val{grid-column:1}
+      .facts .wide .note{grid-area:1 / 2 / span 2;align-self:center;margin:0}
+      .facts .set{display:flex}
       .facts .c{width:52px;height:auto;aspect-ratio:258/167}
 
       @media (max-width:759px){
@@ -239,6 +241,7 @@
         .players tr{grid-template-columns:20px max-content 0 minmax(0,1fr) 42px 38px 42px;column-gap:6px}
         .kind,.kind-axis{grid-template-columns:100px minmax(0,1fr) 40px;column-gap:10px}
         .kind .c{width:31px}
+        .facts .c{width:44px}
       }
 
       @media (min-width:760px){
@@ -257,6 +260,10 @@
         .tiles{grid-template-columns:repeat(4,1fr)}
       }
 
+      @media (min-width:760px) and (max-width:999px){
+        .facts{grid-template-columns:repeat(4,1fr)}
+      }
+
       @media (min-width:1000px){
         main{max-width:1000px}
         .tiles>div{padding:16px 20px 17px}
@@ -271,10 +278,11 @@
         .kind .c{width:46px}
         .days{height:168px}
         .sets .c{width:54px;height:auto;aspect-ratio:258/167}
-        .facts{grid-template-columns:1.3fr repeat(4,1fr)}
-        .facts .wide{grid-column:auto}
-        .facts .wide dd{justify-content:flex-start}
-        .facts .c{width:46px}
+        .facts{grid-template-columns:repeat(5,1fr)}
+        .facts>div{padding:16px 20px 17px}
+        .facts .wide{grid-column:auto;display:flex}
+        .facts .wide .note{align-self:auto;margin-top:5px}
+        .facts .c{width:40px}
       }
     </style>
   </head>

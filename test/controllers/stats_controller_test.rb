@@ -61,6 +61,10 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     assert_select "table.players thead th", 7
     assert_equal ["Rank", "Player", "Games", "Practice", "Daily Deal", "Best Daily Deal", "Best Puzzle"], css_select("table.players thead th").map { |th| th.text.squish }
     assert_equal [["1", "Ada", "1", "0", "1", "5.0s", "38.0s"]], player_rows, "one row per named player: rank, name, games, the practice and daily split, best times"
+    assert_equal [["Fastest find", "1.5s", ""], ["Practice games", "1", "Median time 9.0s"], ["Daily Deal games", "1", "Median time 5.0s"],
+      ["Busiest day", Date.current.strftime("%b %-d"), "3 games"], ["Busiest hour", "11 AM", "Central time"]], facts,
+      "every fun fact is a label, a value and a note"
+    assert_select ".facts .wide .note svg.c", 3, "the fastest find shows its three cards"
     assert_includes response.body, "kind-iqr"
     assert_includes response.body, %(for="act-players">Players</label>)
     assert_includes response.body, %(data-tip="Today · 2 games")
@@ -108,6 +112,8 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     assert_select "table.players tbody tr:last-child td.bdd .sr", "none", "a missing best is a dash to the eye and a word to a screen reader"
     assert_select "table.players tbody tr:last-child td.bdd [aria-hidden=true]", "–"
     assert_select ".tiles dd", text: "1,233"
+    assert_equal [["Fastest find", "–none"], ["Practice games", "1,232", "Median time 1:30"], ["Daily Deal games", "1", "Median time 1:11"],
+      ["Busiest day", "–none"], ["Busiest hour", "–none"]], facts, "a fact with nothing to show keeps its place"
   end
 
   test "an empty site gets an empty state instead of empty charts" do
@@ -144,6 +150,11 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
   # The players table as text: one array of cells per row.
   def player_rows
     css_select("table.players tbody tr").map { |tr| tr.css("th, td").map { |cell| cell.text.squish } }
+  end
+
+  # The fun facts as text: label, value and note per fact.
+  def facts
+    css_select(".facts > div").map { |fact| fact.css("dt, dd").map { |part| part.text.squish } }
   end
 
   # Each kind's example set is picked at random, so leave it out of the comparison.
