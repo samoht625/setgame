@@ -68,6 +68,7 @@ Rails.application.configure do
   ]
 
   config.hosts << "set.tido.site"
+  config.hosts << "setdaily.app"
 
   config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
   
