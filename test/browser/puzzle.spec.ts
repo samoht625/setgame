@@ -86,10 +86,10 @@ test('the Puzzle is 12 cards with exactly 6 sets; finding them all lands on a re
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
   await card.getByRole('button', { name: 'Share', exact: true }).click()
   const shared = await page.evaluate(() => navigator.clipboard.readText())
-  expect(shared).toMatch(/^Set Puzzle #\d+ · \d+:\d\d\n✅❌✅✅✅✅✅\n🏆 \d+(st|nd|rd|th) of \d+\nhttps:\/\/set\.tido\.site\/puzzle\?r=[\w-]+$/u)
+  expect(shared).toMatch(/^Set Puzzle #\d+ · \d+:\d\d\n✅❌✅✅✅✅✅\n🏆 \d+(st|nd|rd|th) of \d+\nhttps:\/\/setdaily\.app\/puzzle\?r=[\w-]+$/u)
   const link = new URL(shared.split('\n').at(-1)!)
   const preview = await (await page.request.get(link.pathname + link.search, { headers: { 'User-Agent': 'facebookexternalhit/1.1 Facebot Twitterbot/1.0' } })).text()
-  const image = preview.match(/<meta property="og:image" content="https:\/\/set\.tido\.site(\/og\/puzzle\/[\w-]+\.png)">/)![1]
+  const image = preview.match(/<meta property="og:image" content="https:\/\/setdaily\.app(\/og\/puzzle\/[\w-]+\.png)">/)![1]
   expect((await page.request.get(image)).status()).toBe(200)
 
   const again = await page.request.post('/api/puzzle/games', { headers: { 'X-Player-Id': await page.evaluate(() => localStorage.getItem('setgame_player_id')!) } })

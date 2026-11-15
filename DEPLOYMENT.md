@@ -7,7 +7,8 @@ Production is one Linux host running Puma as a user systemd service, with SQLite
 - The checkout is at `~/www/setgame`. The systemd units in `deploy/` use that path.
 - Puma listens on `127.0.0.1:7778`. A reverse proxy (Caddy on the live site) terminates TLS and forwards to it, including the `/cable` WebSocket.
 - The SQLite file is outside the checkout, at `$DATABASE_PATH` (default `~/www/setgame-data/production.sqlite3`).
-- The public hostname is `set.tido.site`. `config/environments/production.rb` allows only that host and Action Cable origin, so hosting under another name means changing both.
+- The public hostname is `setdaily.app`. It is the `SITE_URL` in `app/helpers/application_helper.rb`, which canonical links, link previews, shared results and the links in email are built from. `public/sitemap.xml`, `public/robots.txt` and the share links in `app/javascript/lib/daily.ts` name it too.
+- `config/environments/production.rb` allows only `setdaily.app` and the old name, `set.tido.site`, as hosts and Action Cable origins, so hosting under another name means changing both lists. The proxy redirects `set.tido.site` to `setdaily.app`; the old name stays allowed so a request for it that still reaches the app is served, not refused.
 - Ruby (rbenv is picked up if present), Node and Yarn are installed for the user that runs the service. The `sqlite3` command is only needed for backups and `script/retention`.
 
 ## Redeploy
@@ -54,9 +55,20 @@ It runs `set-prod.sh` without the restart, enables and starts `setgame.service`,
 | `DATABASE_PATH` | Absolute path to the SQLite file, outside the checkout. |
 | `WEB_CONCURRENCY` | Must stay `1`. One Puma process owns the multiplayer table and the SQLite writes. |
 | `RESEND_API_KEY` | Sends sign-in links and reminders through Resend. Without it, sign-in is switched off in production. |
-| `SETGAME_MAIL_FROM` | The From address for that email. |
+| `SETGAME_MAIL_FROM` | The From address for that email. Defaults to `Set <deal@set.tido.site>`. See [Email sender](#email-sender). |
 | `SETGAME_SIGN_IN` | Set to `off` to switch sign-in off even with a key. |
 | `NODE_BINARY` | Path to `node`, used to render share images. systemd's PATH may not include it. |
+
+### Email sender
+
+The links in every email point at `setdaily.app`, but the default From address is still `Set <deal@set.tido.site>` (`ResendMail::DEFAULT_FROM`). Resend only sends from a verified domain, and `setdaily.app` is not verified there yet, so changing the sender first would make Resend refuse every sign-in link and reminder.
+
+To move the sender:
+
+1. Add `setdaily.app` as a domain in Resend, publish the DNS records it asks for, and wait for it to show as verified.
+2. Add the line `SETGAME_MAIL_FROM=Set <deal@setdaily.app>` to `deploy/setgame.env`, without quotes, and run `./scripts/set-prod.sh`.
+3. Ask for a sign-in link on the site and check that it arrives from the new address.
+4. Then change `DEFAULT_FROM` in `app/services/resend_mail.rb` to match.
 
 ## What SQLite holds
 

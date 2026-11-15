@@ -73,7 +73,7 @@ restart_service() {
 
   sleep 1
   if systemctl --user is-active --quiet setgame.service; then
-    echo "Set Game restarted OK: https://set.tido.site"
+    echo "Set Game restarted OK: https://setdaily.app"
     echo "  DB: ${DATABASE_PATH:-unknown}"
   else
     echo "set-prod: service failed to start — check: journalctl --user -u setgame -n 50" >&2

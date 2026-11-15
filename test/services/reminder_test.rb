@@ -32,7 +32,7 @@ class ReminderTest < ActiveSupport::TestCase
     assert_equal "Today’s Daily Deal is ready\n\nPlay:", mail[:text][/\A.*?Play:/m]
     assert_match(/to=%2F$/, mail[:text])
     assert_match %r{/play\?}, mail[:text]
-    assert_match %r{\A<https://set\.tido\.site/reminders/unsubscribe\?t=.+>\z}, mail[:headers]["List-Unsubscribe"]
+    assert_match %r{\A<https://setdaily\.app/reminders/unsubscribe\?t=.+>\z}, mail[:headers]["List-Unsubscribe"]
     assert_equal "List-Unsubscribe=One-Click", mail[:headers]["List-Unsubscribe-Post"]
     refute_match(/free/i, mail[:html])
     delivery = ReminderDelivery.sole

@@ -16,7 +16,8 @@ module Api
 
     # The API is cookie-authenticated and has no CSRF token. SameSite=Lax
     # keeps other sites out, but not other hosts on the same site (any
-    # *.tido.site page), which can still submit a form here. Browsers send
+    # *.setdaily.app page, or any *.tido.site page for a browser still on the
+    # old set.tido.site name), which can still submit a form here. Browsers send
     # Origin on every POST, PATCH and DELETE, so a write from anywhere but
     # this site's own pages is refused.
     def verify_same_origin!

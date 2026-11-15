@@ -19,8 +19,15 @@ module ResendMail
     ENV["RESEND_API_KEY"].presence
   end
 
+  # TODO: the site moved to setdaily.app, but Resend has only verified
+  # set.tido.site as a sending domain, so the default sender stays on the old
+  # name. Once setdaily.app is verified in Resend, switch with
+  # SETGAME_MAIL_FROM=Set <deal@setdaily.app> in deploy/setgame.env, then make
+  # that the default here. See "Email sender" in DEPLOYMENT.md.
+  DEFAULT_FROM = "Set <deal@set.tido.site>"
+
   def self.from
-    ENV["SETGAME_MAIL_FROM"].presence || "Set <deal@set.tido.site>"
+    ENV["SETGAME_MAIL_FROM"].presence || DEFAULT_FROM
   end
 
   def self.deliver(to:, subject:, html:, text:, headers: {})

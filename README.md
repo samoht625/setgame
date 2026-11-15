@@ -1,6 +1,6 @@
 # Set
 
-**Play free in your browser:** [set.tido.site](https://set.tido.site/)
+**Play free in your browser:** [setdaily.app](https://setdaily.app/)
 
 The card game Set, for phones and desktops. No signup and no download.
 

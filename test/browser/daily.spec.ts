@@ -169,7 +169,7 @@ test('the daily is one shared deal: played once, clocked from first paint, then 
   await results.getByRole('button', { name: 'Share', exact: true }).click()
   await expect(results.getByText('Result copied — paste it anywhere')).toBeVisible()
   const shared = await page.evaluate(() => navigator.clipboard.readText())
-  expect(shared).toMatch(new RegExp(`^Set Daily Deal #${number} · \\d+:\\d\\d\\n(?:[🟩🟨🟥]{1,9}\\n)+🏆 \\d+(?:st|nd|rd|th) of \\d+(?: · 🔥 \\d+ days)?\\nhttps://set\\.tido\\.site/daily\\?r=[\\w-]+$`, 'u'))
+  expect(shared).toMatch(new RegExp(`^Set Daily Deal #${number} · \\d+:\\d\\d\\n(?:[🟩🟨🟥]{1,9}\\n)+🏆 \\d+(?:st|nd|rd|th) of \\d+(?: · 🔥 \\d+ days)?\\nhttps://setdaily\\.app/daily\\?r=[\\w-]+$`, 'u'))
   // Nine squares to a row, one per set found.
   const rows = shared.split('\n').slice(1, -2)
   expect(rows.slice(0, -1).every(row => Array.from(row).length === 9)).toBe(true)
@@ -180,7 +180,7 @@ test('the daily is one shared deal: played once, clocked from first paint, then 
   const preview = await (await page.request.get(link.pathname + link.search, { headers: { 'User-Agent': 'Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)' } })).text()
   const time = shared.match(/ · (\d+:\d\d)\n/)![1]
   expect(preview).toContain(`<meta property="og:title" content="Set Daily Deal #${number} · ${time}">`)
-  const image = preview.match(/<meta property="og:image" content="https:\/\/set\.tido\.site(\/og\/daily\/[\w-]+\.png)">/)![1]
+  const image = preview.match(/<meta property="og:image" content="https:\/\/setdaily\.app(\/og\/daily\/[\w-]+\.png)">/)![1]
   const png = await page.request.get(image)
   expect(png.status()).toBe(200)
   expect(png.headers()['content-type']).toBe('image/png')
@@ -453,7 +453,7 @@ test.describe('on a phone', () => {
 
     await share.click()
     await expect.poll(() => page.evaluate(() => (window as unknown as { __shared: ShareData[] }).__shared)).toEqual([
-      { text: 'Set Daily Deal #7 · 2:12\nhttps://set.tido.site/daily' }
+      { text: 'Set Daily Deal #7 · 2:12\nhttps://setdaily.app/daily' }
     ])
     await expect(page.getByText('Result copied — paste it anywhere')).toHaveCount(0)
   })
@@ -491,7 +491,7 @@ test.describe('on a phone', () => {
     await expect(results.getByRole('tooltip')).toBeHidden()
     await results.getByRole('button', { name: 'Share', exact: true }).click()
     await expect.poll(() => page.evaluate(() => (window as unknown as { __shared: ShareData[] }).__shared)).toEqual([
-      { text: `Set Daily Deal #7 · 2:12\n🟩🟩🟩🟨🟨🟨🟥🟥🟥\n🟩🟨\n🏆 1st of 1 · 🔥 3 days\nhttps://set.tido.site/daily?r=${token}` }
+      { text: `Set Daily Deal #7 · 2:12\n🟩🟩🟩🟨🟨🟨🟥🟥🟥\n🟩🟨\n🏆 1st of 1 · 🔥 3 days\nhttps://setdaily.app/daily?r=${token}` }
     ])
   })
 })
