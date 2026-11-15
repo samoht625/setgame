@@ -32,11 +32,11 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
 
   test "each page has its own title, description, canonical URL and share preview" do
     {
-      "/" => [DAILY_TITLE, "https://set.tido.site/"],
-      "/daily" => [DAILY_TITLE, "https://set.tido.site/"],
-      "/puzzle" => ["Set Puzzle · The Daily Set Puzzle: Find All 6 Sets", "https://set.tido.site/puzzle"],
-      "/practice" => ["Set Practice · Timed Set Card Game", "https://set.tido.site/practice"],
-      "/m" => ["Set Multiplayer · Play Set Online with Friends", "https://set.tido.site/m"]
+      "/" => [DAILY_TITLE, "https://setdaily.app/"],
+      "/daily" => [DAILY_TITLE, "https://setdaily.app/"],
+      "/puzzle" => ["Set Puzzle · The Daily Set Puzzle: Find All 6 Sets", "https://setdaily.app/puzzle"],
+      "/practice" => ["Set Practice · Timed Set Card Game", "https://setdaily.app/practice"],
+      "/m" => ["Set Multiplayer · Play Set Online with Friends", "https://setdaily.app/m"]
     }.each do |path, (title, url)|
       get path
       assert_response :success
@@ -47,7 +47,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
       assert_select "link[rel=canonical][href=?]", url
       assert_select "meta[property='og:title'][content=?]", title
       assert_select "meta[property='og:url'][content=?]", url
-      assert_select "meta[property='og:image'][content=?]", "https://set.tido.site/og-image.png"
+      assert_select "meta[property='og:image'][content=?]", "https://setdaily.app/og-image.png"
       assert_select "meta[property='og:image:width'][content='1200']"
       assert_select "meta[property='og:image:height'][content='630']"
       assert_select "meta[name='twitter:card'][content='summary_large_image']"
@@ -91,13 +91,13 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
       get path, headers: { "User-Agent" => messages }
       assert_response :success, "#{path} should be served to Messages"
       assert_select "meta[property='og:title'][content]"
-      assert_select "meta[property='og:image'][content=?]", "https://set.tido.site/og-image.png"
+      assert_select "meta[property='og:image'][content=?]", "https://setdaily.app/og-image.png"
     end
 
     get "/daily", params: { r: token }, headers: { "User-Agent" => messages }
     assert_response :success
     assert_select "meta[property='og:title'][content=?]", "Set Daily Deal #12 · 2:41"
-    assert_select "meta[property='og:image'][content=?]", "https://set.tido.site/og/daily/#{token}.png"
+    assert_select "meta[property='og:image'][content=?]", "https://setdaily.app/og/daily/#{token}.png"
 
     # The same old Safari without a preview bot's name is still turned away.
     get "/", headers: { "User-Agent" => messages.delete_suffix(" facebookexternalhit/1.1 Facebot Twitterbot/1.0") }
@@ -111,18 +111,18 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
       get "/daily", params: { r: token }, headers: { "User-Agent" => user_agent }
       assert_response :success
       assert_select "title", text: DAILY_TITLE
-      assert_select "link[rel=canonical][href=?]", "https://set.tido.site/"
+      assert_select "link[rel=canonical][href=?]", "https://setdaily.app/"
       assert_select "meta[property='og:title'][content=?]", "Set Daily Deal #12 · 2:41"
       assert_select "meta[name='twitter:title'][content=?]", "Set Daily Deal #12 · 2:41"
-      assert_select "meta[property='og:url'][content=?]", "https://set.tido.site/daily?r=#{token}"
-      assert_select "meta[property='og:image'][content=?]", "https://set.tido.site/og/daily/#{token}.png"
-      assert_select "meta[name='twitter:image'][content=?]", "https://set.tido.site/og/daily/#{token}.png"
+      assert_select "meta[property='og:url'][content=?]", "https://setdaily.app/daily?r=#{token}"
+      assert_select "meta[property='og:image'][content=?]", "https://setdaily.app/og/daily/#{token}.png"
+      assert_select "meta[name='twitter:image'][content=?]", "https://setdaily.app/og/daily/#{token}.png"
       assert_select "#root"
     end
 
     get "/daily", params: { r: "c-3gk0-abcdefghijkl" }
     assert_select "meta[property='og:title'][content=?]", DAILY_TITLE
-    assert_select "meta[property='og:image'][content=?]", "https://set.tido.site/og-image.png"
+    assert_select "meta[property='og:image'][content=?]", "https://setdaily.app/og-image.png"
   end
 
   test "Safari 17.0 on iOS gets the app; browsers too old to render it do not" do
@@ -153,11 +153,11 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
 
   test "crawl and install files point at the canonical domain" do
     robots = Rails.root.join("public/robots.txt").read
-    assert_includes robots, "Sitemap: https://set.tido.site/sitemap.xml"
+    assert_includes robots, "Sitemap: https://setdaily.app/sitemap.xml"
 
     sitemap = Nokogiri::XML(Rails.root.join("public/sitemap.xml").read)
     locations = sitemap.remove_namespaces!.xpath("//url/loc").map(&:text)
-    assert_equal %w[https://set.tido.site/ https://set.tido.site/puzzle https://set.tido.site/practice https://set.tido.site/m https://set.tido.site/stats], locations
+    assert_equal %w[https://setdaily.app/ https://setdaily.app/puzzle https://setdaily.app/practice https://setdaily.app/m https://setdaily.app/stats], locations
 
     manifest = JSON.parse(Rails.root.join("public/manifest.json").read)
     assert_equal "Set", manifest.fetch("name")
@@ -194,7 +194,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     get "/"
     data = JSON.parse(css_select("script[type='application/ld+json']").first.text)
     site, app = data.fetch("@graph")
-    assert_equal({ "@type" => "WebSite", "name" => "Set", "url" => "https://set.tido.site/" }, site)
+    assert_equal({ "@type" => "WebSite", "name" => "Set", "url" => "https://setdaily.app/" }, site)
     assert_equal "WebApplication", app.fetch("@type")
     assert_equal "GameApplication", app.fetch("applicationCategory")
     assert_equal "0", app.dig("offers", "price")

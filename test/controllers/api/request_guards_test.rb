@@ -5,11 +5,11 @@ require "test_helper"
 module Api
   class RequestGuardsTest < ActionDispatch::IntegrationTest
     test "writes from another origin are refused, even another host on the same site" do
-      %w[https://evil.tido.site https://evil.example null].each do |origin|
+      %w[https://evil.setdaily.app https://evil.example null].each do |origin|
         post "/api/solo/games", headers: { "X-Player-Id" => SecureRandom.uuid, "Origin" => origin }
         assert_response :forbidden, origin
       end
-      delete "/api/sign_in", headers: { "Origin" => "https://evil.tido.site" }
+      delete "/api/sign_in", headers: { "Origin" => "https://evil.setdaily.app" }
       assert_response :forbidden
       assert_equal 0, SoloGame.count
     end

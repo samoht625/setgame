@@ -68,11 +68,11 @@ try {
 
   check('a share has the number and time as text, and the link on its own', () => {
     assert.deepEqual(dailyShareLink({ number: 12, elapsedMs: 161_400 }),
-      { title: 'Set Daily Deal #12', text: 'Set Daily Deal #12 · 2:41', url: 'https://set.tido.site/daily' })
+      { title: 'Set Daily Deal #12', text: 'Set Daily Deal #12 · 2:41', url: 'https://setdaily.app/daily' })
     assert.deepEqual(dailyShareLink({ number: 1, elapsedMs: 59_999 }),
-      { title: 'Set Daily Deal #1', text: 'Set Daily Deal #1 · 0:59', url: 'https://set.tido.site/daily' })
+      { title: 'Set Daily Deal #1', text: 'Set Daily Deal #1 · 0:59', url: 'https://setdaily.app/daily' })
     assert.deepEqual(dailyShareLink({ number: 12, elapsedMs: 161_400, token: 'c-3gk0-abcdefghijkl' }),
-      { title: 'Set Daily Deal #12', text: 'Set Daily Deal #12 · 2:41', url: 'https://set.tido.site/daily?r=c-3gk0-abcdefghijkl' })
+      { title: 'Set Daily Deal #12', text: 'Set Daily Deal #12 · 2:41', url: 'https://setdaily.app/daily?r=c-3gk0-abcdefghijkl' })
   })
 
   check('ranks read as ordinals', () => {
@@ -163,7 +163,7 @@ try {
   const { sourceOf, referrerSource } = require(sourceBundle)
 
   check('a first visit is put down to its ref tag, utm_source, shared link, referrer, or direct', () => {
-    const at = (query, referrer = '') => sourceOf(new URL(`https://set.tido.site/${query}`), referrer)
+    const at = (query, referrer = '') => sourceOf(new URL(`https://setdaily.app/${query}`), referrer)
     assert.equal(at('?ref=DIB2', 'https://www.reddit.com/'), 'ref:dib2')
     assert.equal(at('?utm_source=newsletter&r=abc'), 'utm:newsletter')
     assert.equal(at('daily?r=c-3gk0-abcdefghijkl'), 'share')
@@ -174,12 +174,12 @@ try {
     assert.equal(at('', 'https://www.google.co.uk/'), 'google')
     assert.equal(at('', 'https://mail.google.com/'), 'gmail')
     assert.equal(at('', 'https://news.ycombinator.com/item?id=1'), 'news.ycombinator.com')
-    assert.equal(at('', 'https://set.tido.site/stats'), 'direct')
+    assert.equal(at('', 'https://setdaily.app/stats'), 'direct')
     assert.equal(at(''), 'direct')
     // Tags that can't be stored as they are fall through to the next rule.
     assert.equal(at('?ref=<script>'), 'direct')
     assert.equal(at(`?ref=${'x'.repeat(41)}`), 'direct')
-    assert.equal(referrerSource('not a url', 'set.tido.site'), null)
+    assert.equal(referrerSource('not a url', 'setdaily.app'), null)
   })
 
   console.log('\nAll checks passed.')

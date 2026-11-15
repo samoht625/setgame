@@ -1,7 +1,7 @@
 import { formatTime } from '../solitaire/time'
 
-export const DAILY_URL = 'https://set.tido.site/daily'
-export const PUZZLE_URL = 'https://set.tido.site/puzzle'
+export const DAILY_URL = 'https://setdaily.app/daily'
+export const PUZZLE_URL = 'https://setdaily.app/puzzle'
 // Must match DailyPuzzle::TIME_ZONE.
 export const DAILY_TIME_ZONE = 'America/Los_Angeles'
 

@@ -51,7 +51,7 @@ module Api
       refute_equal @player, response.headers["X-Player-Id"]
       assert_equal false, PlayerSetting.two_card_choice(@player)
 
-      patch "/api/settings", params: { two_card_mode: true }, headers: @headers.merge("Origin" => "https://evil.tido.site"), as: :json
+      patch "/api/settings", params: { two_card_mode: true }, headers: @headers.merge("Origin" => "https://evil.setdaily.app"), as: :json
       assert_response :forbidden
       assert_equal false, PlayerSetting.two_card_choice(@player)
     end

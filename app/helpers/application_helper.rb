@@ -1,5 +1,5 @@
 module ApplicationHelper
-  SITE_URL = "https://set.tido.site"
+  SITE_URL = "https://setdaily.app"
   DEFAULT_TITLE = "Set"
 
   PRERENDERED = Rails.root.join("app/assets/builds/prerendered.json")

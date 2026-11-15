@@ -62,13 +62,16 @@ Rails.application.configure do
   # Skip DNS rebinding protection for the default health check endpoint.
   # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
   
-  # ActionCable configuration
+  # The site is served at setdaily.app. set.tido.site is its old name, which
+  # the proxy redirects there. It stays allowed, so a request for the old name
+  # that still reaches the app is served instead of refused.
   config.action_cable.allowed_request_origins = [
+    "https://setdaily.app",
     "https://set.tido.site"
   ]
 
-  config.hosts << "set.tido.site"
   config.hosts << "setdaily.app"
+  config.hosts << "set.tido.site"
 
   config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
   

@@ -5,4 +5,4 @@ Disallow: /api/
 Disallow: /cable
 Disallow: /presence
 
-Sitemap: https://set.tido.site/sitemap.xml
+Sitemap: https://setdaily.app/sitemap.xml
