@@ -5,11 +5,31 @@
 class DailyPuzzle
   TIME_ZONE = "America/Los_Angeles"
   LEADERBOARD_SIZE = 20
+  # A run started before midnight can still be finished this long into the
+  # next day (no verified Daily Deal runs longer). After that the day is
+  # closed: nothing can be ranked on it any more, and only then does it open
+  # in the archive with its solution (see DailyArchive).
+  FINISH_GRACE = 2.hours
 
   attr_reader :date
 
   def self.today(now = Time.current)
     new(now.in_time_zone(TIME_ZONE).to_date)
+  end
+
+  # The latest day that is closed. Every "has this day ended?" question, for
+  # both dailies, is answered here, by the same clock and zone as today.
+  def self.last_closed_date(now = Time.current)
+    today(now - FINISH_GRACE).date - 1
+  end
+
+  def self.closed?(date, now = Time.current)
+    date <= last_closed_date(now)
+  end
+
+  # The first day anyone played a Daily Deal (day #1); nil before then.
+  def self.launch_date
+    SoloGame.where.not(daily_on: nil).minimum(:daily_on)
   end
 
   # Consecutive completed days ending today, or ending yesterday while today's
@@ -43,7 +63,7 @@ class DailyPuzzle
 
   def number
     @number ||= begin
-      launch = SoloGame.where.not(daily_on: nil).minimum(:daily_on) || date
+      launch = self.class.launch_date || date
       (date - [launch, date].min).to_i + 1
     end
   end

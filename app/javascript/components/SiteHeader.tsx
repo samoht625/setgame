@@ -12,8 +12,11 @@ import AppToast from './AppToast'
 
 export const SITE_HEADER_SHELL = 'text-neutral-900 antialiased dark:text-neutral-100'
 
-/** The game's header, menu and its dialogs on a page outside the game (e.g. /stats). */
-const SiteHeader: React.FC<{ page: 'stats' }> = ({ page }) => (
+/**
+ * The game's header, menu and its dialogs on a page outside the game (/stats,
+ * the archive). `children` share its sound and menu, wherever on the page they render.
+ */
+const SiteHeader: React.FC<{ page?: 'stats' | 'archive'; children?: React.ReactNode }> = ({ page, children }) => (
   <SoundProvider>
     <GameMenuProvider>
       <div className={SITE_HEADER_SHELL}>
@@ -24,6 +27,7 @@ const SiteHeader: React.FC<{ page: 'stats' }> = ({ page }) => (
         <SignInDialog />
         <ReminderDialog />
         <AppToast />
+        {children}
       </div>
     </GameMenuProvider>
   </SoundProvider>

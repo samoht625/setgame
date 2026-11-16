@@ -122,9 +122,11 @@ class ClassicPuzzle
 
   # Verifies a finished run: all six sets found, a time no shorter than the last
   # find (or than a person could manage) and no longer than the server has
-  # seen the run open.
+  # seen the run open. A closed day takes no more runs: its leaderboard is
+  # final and its solution is in the archive.
   def finish!(run, elapsed_ms:, claims:, misses:, display_name:, attempts: nil)
     return :already_finished if run.finished?
+    return :day_closed if DailyPuzzle.closed?(date)
 
     claims = valid_claims(claims)
     return :incomplete unless claims.length == SET_COUNT

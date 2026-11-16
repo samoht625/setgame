@@ -20,6 +20,8 @@ module SoloReplay
       return failure("wrong_player") unless @game.player_id == @player_id
       return failure("already_completed") if @game.status == "completed"
       return failure("expired") if @game.expired? || @game.status == "expired"
+      # A Daily Deal's day has closed: its leaderboard is final and its deal is in the archive.
+      return failure("day_closed") if @game.daily_on && DailyPuzzle.closed?(@game.daily_on)
       return failure("unsupported_rules_version") unless @game.rules_version == SoloGame::RULES_VERSION
       return failure("invalid_elapsed") unless @elapsed_ms.between?(MIN_ELAPSED_MS, MAX_ELAPSED_MS)
 

@@ -7,7 +7,7 @@ Production is one Linux host running Puma as a user systemd service, with SQLite
 - The checkout is at `~/www/setgame`. The systemd units in `deploy/` use that path.
 - Puma listens on `127.0.0.1:7778`. A reverse proxy (Caddy on the live site) terminates TLS and forwards to it, including the `/cable` WebSocket.
 - The SQLite file is outside the checkout, at `$DATABASE_PATH` (default `~/www/setgame-data/production.sqlite3`).
-- The public hostname is `setdaily.app`. It is the `SITE_URL` in `app/helpers/application_helper.rb`, which canonical links, link previews, shared results and the links in email are built from. `public/sitemap.xml`, `public/robots.txt` and the share links in `app/javascript/lib/daily.ts` name it too.
+- The public hostname is `setdaily.app`. It is the `SITE_URL` in `app/helpers/application_helper.rb`, which canonical links, link previews, shared results, the links in email and `/sitemap.xml` are built from. `public/robots.txt` and the share links in `app/javascript/lib/daily.ts` name it too.
 - `config/environments/production.rb` allows only `setdaily.app` and the old name, `set.tido.site`, as hosts and Action Cable origins, so hosting under another name means changing both lists. The proxy redirects `set.tido.site` to `setdaily.app`; the old name stays allowed so a request for it that still reaches the app is served, not refused.
 - Ruby (rbenv is picked up if present), Node and Yarn are installed for the user that runs the service. The `sqlite3` command is only needed for backups and `script/retention`.
 
