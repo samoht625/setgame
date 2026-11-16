@@ -1,6 +1,22 @@
 import React from 'react'
-import CardFace, { DARK_RING_GAP, DARK_RING_GAP_FACE, describeCard } from './CardFace'
+import CardFace, { describeCard } from './CardFace'
 import type { RevealTone } from '../hooks/useAutoCompleteReveal'
+
+// Dark mode keeps the card faces light, and a card's ring hugs the card there as
+// it does in the light theme: the border takes the ring's colour, with nothing
+// between the ring and the face.
+//
+// Keyboard focus in dark mode is one ring as well. On a card with a ring already
+// (selected, claimed, a wrong pick) it is that ring made heavier in the same
+// colour, so two rings never stack; on any other card it is blue, which reads
+// against both the light face and the dark page. These need `!`: the page-wide
+// focus outline in application.tailwind.css is unlayered, so it beats utilities.
+const DARK_RING = {
+  amber: 'dark:border-amber-300 dark:ring-amber-300 dark:focus-visible:outline-[5px]! dark:focus-visible:outline-amber-300!',
+  rose: 'dark:border-rose-400 dark:ring-rose-400 dark:focus-visible:outline-[5px]! dark:focus-visible:outline-rose-400!',
+  emerald: 'dark:border-emerald-400 dark:ring-emerald-400 dark:focus-visible:outline-[5px]! dark:focus-visible:outline-emerald-400!'
+}
+const DARK_FOCUS = 'dark:focus-visible:border-blue-500 dark:focus-visible:outline-blue-500!'
 
 interface BoardProps {
   cards: number[]
@@ -93,19 +109,17 @@ const Board: React.FC<BoardProps> = ({
           const isCompleted = completedCards.includes(cardId)
           const isRepeat = isCompleted && completedTone === 'repeat'
           const completedRole = cardId === autoFilledCard ? 'filled' : 'picked'
-          const ringed = isRepeat || isRejected || isCompleted || isFound || isSelected
-
           const borderStyle = isRepeat
-            ? `relative z-[1] border-rose-600 ring-2 ring-rose-600 animate-set-repeat dark:ring-[3px] dark:ring-rose-400 ${DARK_RING_GAP}`
+            ? `relative z-[1] border-rose-600 ring-2 ring-rose-600 animate-set-repeat ${DARK_RING.rose}`
             : isRejected
-            ? `border-rose-600 ring-2 ring-rose-600 animate-shake dark:ring-[3px] dark:ring-rose-400 ${DARK_RING_GAP}`
+            ? `border-rose-600 ring-2 ring-rose-600 animate-shake ${DARK_RING.rose}`
             : isCompleted
-              ? `relative z-[1] border-amber-400 ring-[3px] ring-amber-400 shadow-[0_0_12px_2px_rgba(251,191,36,0.45)] ${completedLeaving ? 'animate-set-leave' : 'animate-set-lit'} dark:ring-amber-300 dark:shadow-[0_0_14px_3px_rgba(252,211,77,0.4)] ${DARK_RING_GAP}`
+              ? `relative z-[1] border-amber-400 ring-[3px] ring-amber-400 shadow-[0_0_12px_2px_rgba(251,191,36,0.45)] ${completedLeaving ? 'animate-set-leave' : 'animate-set-lit'} dark:shadow-[0_0_14px_3px_rgba(252,211,77,0.4)] ${DARK_RING.amber}`
               : isFound
-              ? `relative z-[1] border-emerald-700 ring-2 ring-emerald-700 dark:ring-[3px] dark:ring-emerald-400 ${DARK_RING_GAP}`
+              ? `relative z-[1] border-emerald-700 ring-2 ring-emerald-700 ${DARK_RING.emerald}`
               : isSelected
-                ? `relative z-[1] border-neutral-900 ring-2 ring-neutral-900 dark:ring-[3px] dark:ring-amber-300 ${DARK_RING_GAP}`
-                : 'border-neutral-200 hover:border-neutral-400 dark:border-neutral-500/50 dark:hover:border-neutral-400'
+                ? `relative z-[1] border-neutral-900 ring-2 ring-neutral-900 ${DARK_RING.amber}`
+                : `border-neutral-200 hover:border-neutral-400 dark:border-neutral-500/50 dark:hover:border-neutral-400 ${DARK_FOCUS}`
 
           return (
             <button
@@ -118,11 +132,11 @@ const Board: React.FC<BoardProps> = ({
               aria-label={describeCard(cardId)}
               data-card-id={cardId}
               onClick={() => onCardClick(cardId)}
-              className={`animate-card-in block w-full touch-manipulation select-none overflow-hidden rounded-xl border bg-white transition-[border-color,box-shadow,transform] ${isCompleted ? 'duration-0' : 'duration-200'} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 dark:bg-[#f1f0ec] dark:focus-visible:outline-offset-[3px] dark:focus-visible:outline-neutral-100 ${
+              className={`animate-card-in block w-full touch-manipulation select-none overflow-hidden rounded-xl border bg-white transition-[border-color,box-shadow,transform] ${isCompleted ? 'duration-0' : 'duration-200'} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 dark:bg-[#f1f0ec] dark:focus-visible:outline-offset-0! ${
                 interactionLocked ? 'cursor-default' : 'cursor-pointer active:scale-[0.98]'
               } ${borderStyle}`}
             >
-              <CardFace cardId={cardId} decorative className={`pointer-events-none h-auto w-full ${ringed ? DARK_RING_GAP_FACE : ''}`} />
+              <CardFace cardId={cardId} decorative className="pointer-events-none h-auto w-full" />
             </button>
           )
         })}

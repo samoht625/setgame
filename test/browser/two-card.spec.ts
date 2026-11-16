@@ -155,6 +155,38 @@ test('Practice, two-card sets on by default (Yaniv): the completed set shows, th
   await expect(card(page, a!)).toHaveCount(0)
 })
 
+test('Practice in dark mode: the completed set lights up with one ring straight onto each card', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' })
+  await playAs(page, 'Yaniv')
+  await page.goto('/practice')
+  await expect(page.locator('[data-card-id]').first()).toBeEnabled()
+  const [a, b] = pairs(await cards(page)).complete[0]!
+
+  // The set is lit for under half a second, so its outline is read the moment it appears.
+  await page.evaluate(() => {
+    const seen = window as unknown as { litOutlines?: { borderWidth: string; borderColor: string; shadow: string; outline: string }[] }
+    new MutationObserver(() => {
+      const lit = [...document.querySelectorAll('[data-completed]')]
+      if (seen.litOutlines || lit.length !== 3) return
+      seen.litOutlines = lit.map(node => {
+        const style = getComputedStyle(node)
+        return { borderWidth: style.borderTopWidth, borderColor: style.borderTopColor, shadow: style.boxShadow, outline: style.outlineStyle }
+      })
+    }).observe(document.body, { subtree: true, attributes: true, childList: true })
+  })
+  await card(page, a!).click()
+  await page.mouse.move(0, 0)
+  await card(page, b!).click()
+  await expect(page.getByText('Set found!')).toBeVisible()
+  const outlines = await page.evaluate(() => (window as unknown as { litOutlines?: { borderWidth: string; borderColor: string; shadow: string; outline: string }[] }).litOutlines)
+  expect(outlines).toHaveLength(3)
+  for (const outline of outlines!) {
+    expect(outline.borderWidth).toBe('1px')
+    expect(outline.shadow, 'the ring is the border’s colour: nothing sits between it and the face').toContain(`${outline.borderColor} 0px 0px 0px 3px`)
+    expect(outline.outline, 'and no outline is drawn around it').toBe('none')
+  }
+})
+
 test('Daily Deal, two-card sets on by default (Rose): the completed set shows, then is claimed', async ({ page }) => {
   await playAs(page, 'Rose')
   await page.goto('/daily')

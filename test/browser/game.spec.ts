@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Locator, type Page } from '@playwright/test'
 import { isSet } from '../../app/javascript/lib/rules'
 
 /** Picks an action from the header's overflow menu. */
@@ -512,45 +512,109 @@ for (const colorScheme of ['light', 'dark'] as const) {
   })
 }
 
-/** What one card's outline is made of: its border, its ring, its face, and where the artwork sits. */
-async function cardOutline(page: Page, cardId: number) {
-  return page.locator(`[data-card-id="${cardId}"]`).evaluate(node => {
+/** What one card's outline is made of: its border, its ring, its focus outline, its face, and where the artwork sits. */
+async function cardOutline(page: Page, card: number | Locator) {
+  const locator = typeof card === 'number' ? page.locator(`[data-card-id="${card}"]`) : card
+  return locator.evaluate(node => {
     const context = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!
-    const luminance = (color: string) => {
+    const rgb = (color: string) => {
+      context.clearRect(0, 0, 1, 1)
       context.fillStyle = color
       context.fillRect(0, 0, 1, 1)
-      const [r, g, b] = [...context.getImageData(0, 0, 1, 1).data].map(value => {
+      return [...context.getImageData(0, 0, 1, 1).data].slice(0, 3)
+    }
+    const luminance = (color: string) => {
+      const [r, g, b] = rgb(color).map(value => {
         const channel = value / 255
         return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
       })
-      return 0.2126 * r + 0.7152 * g + 0.0722 * b
+      return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!
     }
     const contrast = (a: string, b: string) => {
       const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x)
-      return (light + 0.05) / (dark + 0.05)
+      return (light! + 0.05) / (dark! + 0.05)
     }
     const style = getComputedStyle(node)
     const face = node.querySelector('svg')!
     // A ring is the box shadow with a spread and no blur or offset.
     const ring = [...style.boxShadow.matchAll(/((?:rgba?|oklch|oklab|color)\([^)]+\)) 0px 0px 0px (\d+(?:\.\d+)?)px(?! inset)/g)]
-      .map(match => ({ color: match[1], width: Number(match[2]) }))
+      .map(match => ({ color: match[1]!, width: Number(match[2]) }))
       .find(shadow => shadow.width > 0)
+    const outlined = style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) > 0
     const faceColor = getComputedStyle(face).backgroundColor
     const page = getComputedStyle(document.body).backgroundColor
     const box = face.getBoundingClientRect()
     return {
       borderWidth: parseFloat(style.borderTopWidth),
+      borderColor: rgb(style.borderTopColor),
       ringWidth: ring?.width ?? 0,
-      ringVsBorder: ring ? contrast(ring.color, style.borderTopColor) : 0,
+      ringColor: ring ? rgb(ring.color) : null,
       ringVsPage: ring ? contrast(ring.color, page) : 0,
-      borderVsFace: contrast(style.borderTopColor, faceColor),
       ringVsFace: ring ? contrast(ring.color, faceColor) : 0,
+      outlineWidth: outlined ? parseFloat(style.outlineWidth) : 0,
+      outlineOffset: outlined ? parseFloat(style.outlineOffset) : 0,
+      outlineColor: outlined ? rgb(style.outlineColor) : null,
+      outlineVsPage: outlined ? contrast(style.outlineColor, page) : 0,
+      outlineVsFace: outlined ? contrast(style.outlineColor, faceColor) : 0,
+      faceColor: rgb(faceColor),
+      pageColor: rgb(page),
       face: [box.x, box.y, box.width, box.height].map(value => Math.round(value * 100) / 100)
     }
   })
 }
 
-test('dark mode sets the selection and wrong-pick rings apart from the light card faces', async ({ page }) => {
+/**
+ * The colours met walking from the page into a card across its left edge, as
+ * drawn: one entry per band, so a clean ring reads page, ring, face. A lone
+ * pixel between two bands is an edge's anti-aliasing (or the hairline border
+ * of a card with no ring) and is left out.
+ */
+async function edgeBands(page: Page, card: number | Locator): Promise<number[][]> {
+  const locator = typeof card === 'number' ? page.locator(`[data-card-id="${card}"]`) : card
+  const box = (await locator.boundingBox())!
+  // From inside the gap beside the card (8px at its narrowest) to the blank part of the face.
+  const strip = await page.screenshot({ clip: { x: box.x - 7, y: Math.round(box.y + box.height / 2), width: 15, height: 1 } })
+  const pixels = await page.evaluate(async source => {
+    const image = new Image()
+    image.src = source
+    await image.decode()
+    const canvas = document.createElement('canvas')
+    canvas.width = image.naturalWidth
+    canvas.height = 1
+    const context = canvas.getContext('2d')!
+    context.drawImage(image, 0, 0)
+    const data = context.getImageData(0, 0, canvas.width, 1).data
+    return Array.from({ length: canvas.width }, (_, x) => [data[x * 4]!, data[x * 4 + 1]!, data[x * 4 + 2]!])
+  }, `data:image/png;base64,${strip.toString('base64')}`)
+  const near = (a: number[], b: number[]) => a.every((value, channel) => Math.abs(value - b[channel]!) <= 6)
+  const runs: { color: number[]; length: number }[] = []
+  for (const pixel of pixels) {
+    const last = runs[runs.length - 1]
+    if (last && near(last.color, pixel)) last.length += 1
+    else runs.push({ color: pixel, length: 1 })
+  }
+  const bands: number[][] = []
+  for (const run of runs.filter(run => run.length > 1)) {
+    if (!bands.length || !near(bands[bands.length - 1]!, run.color)) bands.push(run.color)
+  }
+  return bands
+}
+
+/** Whether two colours are the same to the eye, give or take a rounding step. */
+function sameColor(a: number[] | null, b: number[] | null): boolean {
+  return !!a && !!b && a.every((value, channel) => Math.abs(value - b[channel]!) <= 6)
+}
+
+async function expectBands(page: Page, card: number | Locator, expected: (number[] | null)[], message: string) {
+  await expect.poll(async () => {
+    const bands = await edgeBands(page, card)
+    return bands.length === expected.length && bands.every((band, index) => sameColor(band, expected[index]!))
+      ? 'as expected'
+      : JSON.stringify(bands)
+  }, { message: `${message}: wanted ${JSON.stringify(expected)}` }).toBe('as expected')
+}
+
+test('dark mode draws one ring hugging the light card face: no band inside it, no halo outside it', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' })
   for (const width of [1280, 390]) {
     await page.setViewportSize({ width, height: 844 })
@@ -558,43 +622,94 @@ test('dark mode sets the selection and wrong-pick rings apart from the light car
     await ready(page)
     const board = await cards(page)
     const wrong = findTriple(board, false)
-    const idle = await cardOutline(page, wrong[0])
-    expect(idle.ringWidth).toBe(0)
+    const other = board.find(id => !wrong.includes(id))!
+    const card = (id: number) => page.locator(`[data-card-id="${id}"]`)
+    const idle = await cardOutline(page, wrong[0]!)
+    expect([idle.ringWidth, idle.borderWidth, idle.outlineWidth]).toEqual([0, 1, 0])
+    await expectBands(page, wrong[0]!, [idle.pageColor, idle.faceColor], 'a card with no ring')
 
-    // Selected: a bright ring, a dark band, then the light face. Each edge reads at 3:1 or better.
-    await page.locator(`[data-card-id="${wrong[0]}"]`).click()
-    await expect(page.locator(`[data-card-id="${wrong[0]}"]`)).toHaveAttribute('aria-pressed', 'true')
-    const selected = await cardOutline(page, wrong[0])
-    expect(selected.ringWidth, 'the ring is as heavy as the light theme’s').toBeGreaterThanOrEqual(3)
-    expect(selected.borderWidth, 'a band of the page colour sits between the ring and the face').toBe(2)
-    expect(selected.ringVsBorder).toBeGreaterThanOrEqual(3)
+    // Selected: the border and the ring are one colour, as heavy as the light theme's, straight onto the face.
+    await card(wrong[0]!).click()
+    await expect(card(wrong[0]!)).toHaveAttribute('aria-pressed', 'true')
+    await page.mouse.move(0, 0)
+    const selected = await cardOutline(page, wrong[0]!)
+    expect([selected.borderWidth, selected.ringWidth], 'the light theme’s weights').toEqual([1, 2])
+    expect(sameColor(selected.borderColor, selected.ringColor), 'no band of another colour between the ring and the face').toBe(true)
     expect(selected.ringVsPage).toBeGreaterThanOrEqual(3)
-    expect(selected.borderVsFace).toBeGreaterThanOrEqual(3)
-    expect(selected.face, 'the artwork stays put when the band appears').toEqual(idle.face)
+    expect(selected.outlineWidth, 'a click alone draws no focus outline').toBe(0)
+    expect(selected.face, 'the artwork stays put').toEqual(idle.face)
+    await expectBands(page, wrong[0]!, [selected.pageColor, selected.ringColor, selected.faceColor], 'a selected card')
+
+    // Hovering it changes nothing.
+    await card(wrong[0]!).hover()
+    const hovered = await cardOutline(page, wrong[0]!)
+    expect([hovered.borderWidth, hovered.ringWidth, hovered.outlineWidth]).toEqual([1, 2, 0])
+    expect(sameColor(hovered.borderColor, selected.ringColor)).toBe(true)
+    await expectBands(page, wrong[0]!, [selected.pageColor, selected.ringColor, selected.faceColor], 'a selected card under the pointer')
+    await page.mouse.move(0, 0)
+
+    // A key pressed with the clicked card still focused brings the focus outline: the same ring, heavier, not a second one.
+    await page.keyboard.press('Shift')
+    await expect.poll(async () => (await cardOutline(page, wrong[0]!)).outlineWidth).toBeGreaterThan(0)
+    const focused = await cardOutline(page, wrong[0]!)
+    expect(focused.outlineOffset, 'the focus outline starts at the card, over the ring').toBe(0)
+    expect(focused.outlineWidth, 'and is heavier than the ring, so focus still shows').toBeGreaterThan(focused.ringWidth)
+    expect(sameColor(focused.outlineColor, focused.ringColor), 'in the ring’s own colour').toBe(true)
+    expect(sameColor(focused.borderColor, focused.ringColor)).toBe(true)
+    await expectBands(page, wrong[0]!, [selected.pageColor, selected.ringColor, selected.faceColor], 'a selected card with keyboard focus')
+
+    // Keyboard focus on a card with no ring is one ring too, in a colour that reads against the face and the page.
+    await card(other).focus()
+    await expect.poll(async () => (await cardOutline(page, other)).outlineWidth).toBeGreaterThan(0)
+    const focusOnly = await cardOutline(page, other)
+    expect(focusOnly.ringWidth).toBe(0)
+    expect(focusOnly.outlineOffset).toBe(0)
+    expect(sameColor(focusOnly.borderColor, focusOnly.outlineColor), 'the border joins the outline').toBe(true)
+    expect(focusOnly.outlineVsFace).toBeGreaterThanOrEqual(3)
+    expect(focusOnly.outlineVsPage).toBeGreaterThanOrEqual(3)
+    expect(sameColor(focusOnly.outlineColor, selected.ringColor), 'and is not the selection’s colour').toBe(false)
+    await expectBands(page, other, [focusOnly.pageColor, focusOnly.outlineColor, focusOnly.faceColor], 'a focused card with no ring')
+    await card(other).blur()
 
     // A wrong pick gets the same treatment in its own colour.
-    await page.locator(`[data-card-id="${wrong[1]}"]`).click()
-    await page.locator(`[data-card-id="${wrong[2]}"]`).click()
+    await card(wrong[1]!).click()
+    await card(wrong[2]!).click()
     await expect(page.locator('.animate-shake')).toHaveCount(3)
-    const rejected = await cardOutline(page, wrong[1])
-    expect(rejected.ringWidth).toBeGreaterThanOrEqual(3)
-    expect(rejected.ringVsBorder).toBeGreaterThanOrEqual(3)
-    expect(rejected.borderVsFace).toBeGreaterThanOrEqual(3)
+    const rejected = await cardOutline(page, wrong[1]!)
+    expect([rejected.borderWidth, rejected.ringWidth]).toEqual([1, 2])
+    expect(sameColor(rejected.borderColor, rejected.ringColor)).toBe(true)
+    expect(sameColor(rejected.ringColor, selected.ringColor)).toBe(false)
+    expect(rejected.ringVsPage).toBeGreaterThanOrEqual(3)
     await expect(page.locator('.animate-shake')).toHaveCount(0)
-    const after = await cardOutline(page, wrong[1])
+    const after = await cardOutline(page, wrong[1]!)
     expect([after.ringWidth, after.borderWidth], 'and the card is as it was once the ring goes').toEqual([0, 1])
   }
 
-  // The light theme draws its ring straight onto the white face, where a dark ring already reads.
+  // The How to play example lights its set the same way.
+  await menu(page, 'How to play')
+  const lit = page.locator('[data-in-set="true"]').first()
+  await expect(lit).toBeVisible({ timeout: 15_000 })
+  const example = await cardOutline(page, lit)
+  expect([example.borderWidth, example.ringWidth]).toEqual([1, 2])
+  expect(sameColor(example.borderColor, example.ringColor)).toBe(true)
+  const corners = await lit.evaluate(card => getComputedStyle(card).backgroundColor === getComputedStyle(card.querySelector('svg')!).backgroundColor)
+  expect(corners, 'the card behind the face is the face’s colour, so nothing darker shows inside the ring at the corners').toBe(true)
+  await page.keyboard.press('Escape')
+
+  // The light theme is as it was: a dark ring straight onto the white face, and the page's own focus outline.
   await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' })
   await page.goto('/practice')
   await ready(page)
   const [first] = await cards(page)
   await page.locator(`[data-card-id="${first}"]`).click()
-  const light = await cardOutline(page, first)
+  const light = await cardOutline(page, first!)
   expect(light.borderWidth).toBe(1)
   expect(light.ringWidth).toBe(2)
+  expect(sameColor(light.borderColor, light.ringColor)).toBe(true)
   expect(light.ringVsFace).toBeGreaterThanOrEqual(3)
+  await page.keyboard.press('Shift')
+  await expect.poll(async () => (await cardOutline(page, first!)).outlineWidth).toBe(2)
+  expect((await cardOutline(page, first!)).outlineOffset).toBe(3)
 })
 
 test('multiplayer synchronizes claims, names, reset cancellation, and reconnection', async ({ browser }) => {
