@@ -1,4 +1,7 @@
 <% s = @stats %>
+<% content_for :title, "Stats" %>
+<% content_for :description, "How fast people spot a set, and which sets take longest: timing from every set found in the Daily Deal and Practice on setdaily.app." %>
+<% content_for :social_description, "Timing from every set found on setdaily.app: how fast people spot a set, by how its cards differ." %>
 <%= render "shared/card_symbols" %>
 <main>
   <header class="top">
@@ -95,24 +98,7 @@
       <p>Median time to find a set, by which attributes are all different. Bar: the middle half of finds. Line: the median.</p>
     </div>
     <% if s[:kinds].any? %>
-      <% kmax = 20_000; kpos = ->(ms) { (ms.clamp(0, kmax) * 100.0 / kmax).round(2) } %>
-      <div class="card kinds">
-        <div class="kind-axis" aria-hidden="true"><span class="kind-scale"><% (0..4).each do |t| %><i style="left:<%= t * 25 %>%"><%= t * 5 %>s</i><% end %></span></div>
-        <ol role="list">
-          <% s[:kinds].each do |k| %>
-            <li class="kind">
-              <span class="kind-label"><%= k[:label] %></span>
-              <%= set_cards(k[:cards]) if k[:cards] %>
-              <span class="kind-track" role="img" aria-label="middle half <%= secs(k[:p25_ms]) %> to <%= secs(k[:p75_ms]) %>" title="<%= secs(k[:p25_ms]) %> – <%= secs(k[:p75_ms]) %> · <%= num(k[:n]) %> finds">
-                <% [5_000, 10_000, 15_000].each do |t| %><span class="kind-tick" style="left:<%= kpos.(t) %>%"></span><% end %>
-                <span class="kind-iqr" style="left:<%= kpos.(k[:p25_ms]) %>%;width:<%= (kpos.(k[:p75_ms]) - kpos.(k[:p25_ms])).round(2) %>%"></span>
-                <span class="kind-mid" style="left:<%= kpos.(k[:median_ms]) %>%"></span>
-              </span>
-              <b class="kind-med"><%= format("%.1fs", k[:median_ms] / 1000.0) %></b>
-            </li>
-          <% end %>
-        </ol>
-      </div>
+      <%= render "stats/how_fast", kinds: s[:kinds] %>
     <% else %>
       <p class="card none">No timed finds yet.</p>
     <% end %>
@@ -124,24 +110,8 @@
         <h2 id="h-shares">What gets found</h2>
         <p>Share of finds by how many attributes are all different. Red tick: the share among all <%= num(SetStats::TOTAL_SETS) %> possible sets.</p>
       </div>
-      <div class="card shares-card">
-        <table class="shares" aria-labelledby="h-shares">
-          <thead>
-            <tr><th scope="col"><span class="sr">Attributes all different</span></th><th scope="col"><span class="sr">Share of finds, drawn</span></th><th scope="col"><i class="key of-finds"></i>Finds</th><th scope="col"><i class="key of-all"></i>All sets</th></tr>
-          </thead>
-          <tbody>
-            <% total = [s[:total_finds], 1].max %>
-            <% (1..4).each do |n| pct = s[:type_counts][n] * 100.0 / total %>
-              <tr>
-                <th scope="row"><%= n %> different</th>
-                <td class="bar"><span class="track" aria-hidden="true"><span class="fill" style="width:<%= (pct * 2).clamp(0, 100).round(1) %>%"></span><span class="tick" style="left:<%= SetStats::CHANCE[n] * 2 %>%"></span></span></td>
-                <td class="n"><%= format("%.1f", pct) %>%</td>
-                <td class="n all"><%= SetStats::CHANCE[n] %>%</td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
+      <% total = [s[:total_finds], 1].max %>
+      <%= render "stats/what_gets_found", shares: (1..4).to_h { |n| [n, s[:type_counts][n] * 100.0 / total] }, labelledby: "h-shares" %>
     </section>
 
     <% sp = s[:spread]; peak = [sp[:hist].map(&:last).max, 1].max %>

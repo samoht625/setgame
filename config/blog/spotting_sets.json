@@ -1,0 +1,25 @@
+{
+  "source": "https://setdaily.app/stats",
+  "taken_at": "2026-11-15T23:09:00-08:00",
+  "sets_found": 35959,
+  "players": 313,
+  "games_finished": 1312,
+  "kinds": [
+    {"label":"shape","cards":[31,40,49],"n":1264,"p25_ms":2056,"median_ms":2996,"p75_ms":5708},
+    {"label":"number","cards":[1,2,3],"n":1299,"p25_ms":2046,"median_ms":3032,"p75_ms":5792},
+    {"label":"color","cards":[10,13,16],"n":1164,"p25_ms":2318,"median_ms":3886,"p75_ms":7902},
+    {"label":"shading","cards":[19,46,73],"n":1024,"p25_ms":2550,"median_ms":3996,"p75_ms":7870},
+    {"label":"number + shape","cards":[36,43,53],"n":2238,"p25_ms":2580,"median_ms":4074,"p75_ms":8466},
+    {"label":"number + shading","cards":[2,30,55],"n":2029,"p25_ms":3176,"median_ms":5364,"p75_ms":10606},
+    {"label":"shape + shading","cards":[4,40,76],"n":1981,"p25_ms":3334,"median_ms":5818,"p75_ms":12502},
+    {"label":"number + color","cards":[48,49,53],"n":2046,"p25_ms":3250,"median_ms":5916,"p75_ms":12956},
+    {"label":"color + shape","cards":[61,67,73],"n":1957,"p25_ms":3360,"median_ms":6062,"p75_ms":13382},
+    {"label":"all but color","cards":[8,54,70],"n":3872,"p25_ms":3834,"median_ms":6826,"p75_ms":13854},
+    {"label":"color + shading","cards":[1,31,61],"n":1782,"p25_ms":4292,"median_ms":7688,"p75_ms":15926},
+    {"label":"all but shading","cards":[36,37,50],"n":3293,"p25_ms":4318,"median_ms":8014,"p75_ms":17614},
+    {"label":"all but number","cards":[3,42,81],"n":3077,"p25_ms":5682,"median_ms":10994,"p75_ms":22300},
+    {"label":"all but shape","cards":[25,48,77],"n":3215,"p25_ms":5976,"median_ms":11024,"p75_ms":21000},
+    {"label":"all four","cards":[23,28,72],"n":5094,"p25_ms":8144,"median_ms":15012,"p75_ms":28000}
+  ],
+  "shares": {"1":13.4,"2":34.0,"3":38.1,"4":14.4}
+}

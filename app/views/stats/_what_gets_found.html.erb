@@ -1,0 +1,18 @@
+<%# What gets found: the share of finds with 1 to 4 attributes all different, against the share of all possible sets. `shares` is percent of finds by that number; `labelledby` the id of the heading that names the table. Styled by the stats layout. %>
+<div class="card shares-card">
+  <table class="shares" aria-labelledby="<%= labelledby %>">
+    <thead>
+      <tr><th scope="col"><span class="sr">Attributes all different</span></th><th scope="col"><span class="sr">Share of finds, drawn</span></th><th scope="col"><i class="key of-finds"></i>Finds</th><th scope="col"><i class="key of-all"></i>All sets</th></tr>
+    </thead>
+    <tbody>
+      <% (1..4).each do |n| pct = shares.fetch(n) %>
+        <tr>
+          <th scope="row"><%= n %> different</th>
+          <td class="bar"><span class="track" aria-hidden="true"><span class="fill" style="width:<%= (pct * 2).clamp(0, 100).round(1) %>%"></span><span class="tick" style="left:<%= SetStats::CHANCE[n] * 2 %>%"></span></span></td>
+          <td class="n"><%= format("%.1f", pct) %>%</td>
+          <td class="n all"><%= SetStats::CHANCE[n] %>%</td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

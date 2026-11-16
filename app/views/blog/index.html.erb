@@ -1,0 +1,20 @@
+<%# The blog: its posts, newest first. %>
+<% content_for :title, "Blog" %>
+<% content_for :description, "Notes from Set Daily: what the timing of every set found on the site shows about how people play Set." %>
+<% content_for :site_page, "blog" %>
+<% content_for :head, render("blog/styles") %>
+<main class="blog">
+  <header class="top">
+    <h1>Blog</h1>
+    <p>Notes on Set, from the numbers behind Set Daily.</p>
+  </header>
+  <ol class="card posts" role="list">
+    <% @posts.each do |post| %>
+      <li>
+        <time datetime="<%= post::PUBLISHED_ON.iso8601 %>"><%= post_date(post::PUBLISHED_ON) %></time>
+        <h2><a href="<%= Blog.path(post) %>"><%= post::TITLE %></a></h2>
+        <p><%= post::DESCRIPTION %></p>
+      </li>
+    <% end %>
+  </ol>
+</main>

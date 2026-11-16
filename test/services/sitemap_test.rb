@@ -25,9 +25,9 @@ class SitemapTest < ActiveSupport::TestCase
     listed = urls(xml)
 
     assert xml.start_with?(%(<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n))
-    assert_equal %w[/ /daily /practice /m /stats /archive /puzzle/21 /daily/3 /puzzle/20 /daily/2 /puzzle/19 /daily/1 /puzzle/18].map { |path| "https://setdaily.app#{path}" },
-                 listed.keys.first(13)
-    assert_equal 6 + 3 + 21, listed.length
+    assert_equal %w[/ /daily /practice /m /stats /archive /blog /blog/spotting-sets /puzzle/21 /daily/3 /puzzle/20 /daily/2 /puzzle/19 /daily/1 /puzzle/18].map { |path| "https://setdaily.app#{path}" },
+                 listed.keys.first(15)
+    assert_equal 8 + 3 + 21, listed.length
     assert_equal "https://setdaily.app/puzzle/1", listed.keys.last
     assert listed.keys.all? { |loc| loc.start_with?("https://setdaily.app/") }
     assert_equal listed.length, listed.keys.uniq.length
@@ -65,7 +65,28 @@ class SitemapTest < ActiveSupport::TestCase
   test "with nothing archived it is the site's pages alone" do
     empty = Sitemap.new(site: "https://setdaily.app", today: TODAY, archives: [DailyArchive.new("daily", launch: nil, last_closed: TODAY - 1)])
 
-    assert_equal %w[https://setdaily.app/ https://setdaily.app/daily https://setdaily.app/practice https://setdaily.app/m https://setdaily.app/stats], urls(empty.to_xml).keys
+    assert_equal %w[/ /daily /practice /m /stats /blog /blog/spotting-sets].map { |path| "https://setdaily.app#{path}" }, urls(empty.to_xml).keys
+  end
+
+  test "the blog's index and each post are listed, dated by when a post was published" do
+    post = ->(slug, date) { Class.new { const_set(:SLUG, slug); const_set(:PUBLISHED_ON, date) } }
+    posts = [post.("newer", Date.new(2026, 11, 9)), post.("older", Date.new(2026, 10, 30))]
+    archives = [DailyArchive.new("puzzle", launch: ClassicPuzzle::LAUNCH_DATE, last_closed: TODAY - 1)]
+    listed = urls(Sitemap.new(site: "https://setdaily.app", today: TODAY, archives: archives, posts: posts).to_xml)
+
+    assert_equal %w[/ /daily /practice /m /stats /archive /blog /blog/newer /blog/older /puzzle/21].map { |path| "https://setdaily.app#{path}" }, listed.keys.first(10)
+    assert_equal "2026-11-09", listed.fetch("https://setdaily.app/blog/newer")
+    assert_equal "2026-10-30", listed.fetch("https://setdaily.app/blog/older")
+    assert_equal "2026-11-09", listed.fetch("https://setdaily.app/blog"), "the index changed when its newest post was published"
+
+    early = urls(Sitemap.new(site: "https://setdaily.app", today: TODAY, archives: archives, posts: [post.("ahead", TODAY + 3)]).to_xml)
+    assert_equal "2026-11-15", early.fetch("https://setdaily.app/blog/ahead"), "never a date in the future"
+    assert_equal "2026-11-15", early.fetch("https://setdaily.app/blog")
+
+    none = urls(Sitemap.new(site: "https://setdaily.app", today: TODAY, archives: archives, posts: []).to_xml)
+    assert_empty none.keys.grep(/blog/), "no posts, no blog"
+
+    assert_equal ["https://setdaily.app/blog", "https://setdaily.app/blog/spotting-sets"], urls(sitemap.to_xml).keys.grep(/blog/), "the posts the site has, by default"
   end
 
   test "the current sitemap follows the clock: a day joins when it closes" do

@@ -64,6 +64,10 @@ Rails.application.routes.draw do
   get '/daily/:number' => 'archive#daily', as: :archived_daily, format: false
   get '/puzzle/:number' => 'archive#puzzle', as: :archived_puzzle, format: false
 
+  # The blog: its posts, and each one at its slug
+  get '/blog' => 'blog#index', as: :blog, format: false
+  get '/blog/:slug' => 'blog#show', as: :blog_post, format: false
+
   # Every page, and every archived day as it closes
   get '/sitemap.xml' => 'sitemap#show', as: :sitemap, format: false
 
