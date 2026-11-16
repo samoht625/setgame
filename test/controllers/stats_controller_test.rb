@@ -125,7 +125,7 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     assert_select "h1", "Stats"
     assert_equal %w[0 0 0 0×], css_select(".tiles dd").map(&:text)
     assert_select ".empty", /No sets found yet/
-    assert_select ".empty a[href='/']", "Play the Daily Deal"
+    assert_select ".empty a[href='/daily']", "Play the Daily Deal"
     assert_select "section", 0
     assert_select "table", 0
   end

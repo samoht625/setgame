@@ -78,7 +78,8 @@ class RemindersControllerTest < ActionDispatch::IntegrationTest
       get "/play", params: { t: token, to: to }
       assert_response :success
       assert_select "a[href=?]", path, "Play without signing in"
-      assert_select "form[action='/play'][method=post] input[name='to'][value=?]", to, "the form names the same game again"
+      # The form posts what the link said, not the path it opens, so the POST opens the same game.
+      assert_select "form[action='/play'][method=post] input[name='to'][value=?]", to
     end
 
     post "/play", params: { t: token, to: "/" }
