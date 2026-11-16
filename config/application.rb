@@ -33,8 +33,9 @@ module Setgame
     # These settings can be overridden in specific environments using the files
     # in config/environments, which are processed later.
     #
-    # Leaderboard day/week/month windows use Eastern time.
-    config.time_zone = "America/New_York"
+    # The zone the days roll over in. DailyPuzzle::TIME_ZONE is what the code
+    # reads; this keeps Date.current and Time.zone on the same day as the games.
+    config.time_zone = "America/Los_Angeles"
 
     # Don't generate system test files.
     config.generators.system_tests = nil

@@ -311,6 +311,29 @@ test('leaderboard requests are single, cancellable, and distinguish failure from
   await expect(page.getByText('daily leader', { exact: true })).toBeVisible()
 })
 
+test.describe('for a reader a long way from Pacific time', () => {
+  test.use({ timezoneId: 'Asia/Tokyo' })
+
+  test('the week’s and month’s practice times carry the day they count for, and today’s the reader’s own clock', async ({ page }) => {
+    // 11:30 PM Pacific on Sunday, Nov 15: the last half hour of that day and of
+    // that week. In Tokyo it is 4:30 PM on Monday the 16th.
+    const entries = [{ player_id: 'test', display_name: 'Late on Sunday', elapsed_ms: 120000, completed_at: '2026-11-16T07:30:00Z' }]
+    await page.route('**/api/solo/leaderboard?*', route => route.fulfill({ json: { entries } }))
+    await page.goto('/practice')
+    await ready(page)
+    expect(await page.evaluate(() => new Date('2026-11-16T07:30:00Z').getDate())).toBe(16)
+    await menu(page, 'Leaderboard')
+    const row = page.getByRole('listitem').filter({ hasText: 'Late on Sunday' })
+    await expect(row).toContainText('4:30 PM')
+    for (const period of ['weekly', 'monthly']) {
+      await page.getByRole('button', { name: period, exact: true }).click()
+      await expect(page.getByRole('button', { name: period, exact: true })).toHaveAttribute('aria-pressed', 'true')
+      await expect(row).toContainText('Nov 15')
+      await expect(row).not.toContainText('Nov 16')
+    }
+  })
+})
+
 test('the leaderboard opens as a sheet on phones and stays closed on reload', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 800 })
   await page.goto('/practice')

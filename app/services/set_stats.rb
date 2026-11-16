@@ -7,14 +7,24 @@ class SetStats
   CHANCE = { 1 => 10, 2 => 30, 3 => 40, 4 => 20 }.freeze
   TOTAL_SETS = 1080
   MIN_SAMPLE = 5
-  ZONE = "America/Chicago"
+  # Days and hours are counted where the dailies roll over, so a day here is
+  # the same day as that day's Puzzle and Daily Deal.
+  ZONE = DailyPuzzle::TIME_ZONE
   # A gap this long between finds is a tab left open, not someone looking:
   # it still counts as a find, but not toward any timing.
   IDLE_MS = 5 * 60 * 1000
   CHART_DAYS = 90
 
+  CACHE_KEY = "set_stats/v12"
+  CACHE_FOR = 5.minutes
+
+  # At most CACHE_FOR old, and never a day behind: the per-day chart ends on
+  # today, so numbers worked out before midnight are worked out again after it.
   def self.cached
-    Rails.cache.fetch("set_stats/v11", expires_in: 5.minutes) { new.compute }
+    stats = Rails.cache.fetch(CACHE_KEY, expires_in: CACHE_FOR) { new.compute }
+    return stats if stats[:activity_by_day].last[:date] == DailyPuzzle.today.date
+
+    new.compute.tap { |fresh| Rails.cache.write(CACHE_KEY, fresh, expires_in: CACHE_FOR) }
   end
 
   def self.all_sets
@@ -156,7 +166,7 @@ class SetStats
   # each of the last CHART_DAYS days, oldest first, with empty days kept so the
   # bars stay evenly spaced in time.
   def activity_by_day
-    today = Time.current.in_time_zone(ZONE).to_date
+    today = DailyPuzzle.today.date
     start = today - (CHART_DAYS - 1)
     from = start.in_time_zone(ZONE)
     games = Hash.new(0)

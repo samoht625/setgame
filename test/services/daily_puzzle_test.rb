@@ -8,8 +8,35 @@ class DailyPuzzleTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 10, 4), DailyPuzzle.today(Time.utc(2026, 10, 4, 7)).date
     assert_equal Date.new(2026, 11, 30), DailyPuzzle.today(Time.utc(2026, 12, 1, 7, 59, 59)).date
     assert_equal Date.new(2026, 12, 1), DailyPuzzle.today(Time.utc(2026, 12, 1, 8)).date
-    # New York (the app's zone) has turned the page; the daily hasn't yet.
+    # New York has turned the page; the daily hasn't yet.
     assert_equal Date.new(2026, 10, 3), DailyPuzzle.today(Time.find_zone("America/New_York").local(2026, 10, 4, 1, 30)).date
+  end
+
+  test "one zone decides what day it is: the dailies', which the app's own zone and the stats follow" do
+    assert_equal "America/Los_Angeles", DailyPuzzle::TIME_ZONE
+    assert_equal DailyPuzzle::TIME_ZONE, ClassicPuzzle::TIME_ZONE
+    assert_equal DailyPuzzle::TIME_ZONE, SetStats::ZONE
+    assert_equal DailyPuzzle::TIME_ZONE, Rails.application.config.time_zone, "config.time_zone, so Date.current is the dailies' day"
+    assert_equal ActiveSupport::TimeZone[DailyPuzzle::TIME_ZONE], Time.zone
+
+    # 11:30 PM and 12:30 AM Pacific, as the app sees them by default.
+    travel_to(Time.utc(2026, 11, 16, 7, 30)) { assert_equal [Date.new(2026, 11, 15), DailyPuzzle.today.date], [Date.current, Time.current.to_date] }
+    travel_to(Time.utc(2026, 11, 16, 8, 30)) { assert_equal [Date.new(2026, 11, 16), DailyPuzzle.today.date], [Date.current, Time.current.to_date] }
+  end
+
+  test "no other time zone is written into the app" do
+    sources = Dir[Rails.root.join("{app,config,lib,script}/**/*.{rb,erb,rake,ts,tsx,js}").to_s].reject { |path| path.include?("/assets/builds/") }
+    sources += [Rails.root.join("script/retention").to_s]
+    assert_operator sources.length, :>, 100, "the app's source was found"
+
+    named = sources.flat_map do |path|
+      File.read(path).scan(%r{\b(?:Africa|America|Antarctica|Asia|Atlantic|Australia|Europe|Indian|Pacific|US|Etc)/[A-Z][A-Za-z_]+(?:/[A-Z][A-Za-z_]+)?}).map { |zone| [zone, path.delete_prefix("#{Rails.root}/")] }
+    end
+    assert_equal ["America/Los_Angeles"], named.map(&:first).uniq, "zones named in #{named.map(&:last).uniq.sort.join(', ')}"
+    assert_includes named.map(&:last), "app/services/daily_puzzle.rb"
+    assert_includes named.map(&:last), "app/javascript/lib/daily.ts"
+    in_words = sources.select { |path| File.read(path).match?(/\b(?:Central|Eastern|Mountain) time\b/i) }
+    assert_empty in_words.map { |path| path.delete_prefix("#{Rails.root}/") }, "days and hours are given in Pacific time only"
   end
 
   test "the next deal lands at the coming Pacific midnight, including across a clock change" do

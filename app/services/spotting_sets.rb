@@ -29,9 +29,10 @@ class SpottingSets
     @kinds = snapshot.fetch(:kinds)
   end
 
-  # When the numbers were copied from /stats.
+  # When the numbers were copied from /stats, on the dailies' clock, so the
+  # day the post gives is that day's Puzzle's whatever offset it was saved with.
   def taken_at
-    Time.iso8601(@snapshot.fetch(:taken_at))
+    Time.iso8601(@snapshot.fetch(:taken_at)).in_time_zone(DailyPuzzle::TIME_ZONE)
   end
 
   # Every set found, timed or not: the Sets found tile.
