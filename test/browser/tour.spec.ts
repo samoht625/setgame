@@ -151,7 +151,7 @@ test('How to play opens from the header menu, shows the rule with an example set
   await expect(dialog.getByText('Three cards are a set when each feature is either the same on all three cards or different on all three.')).toBeVisible()
   await expect(dialog.getByText('all same or all different')).toHaveCount(0)
   await expect(dialog).not.toContainText(/\btap\b/i)
-  for (const mode of ['Daily Deal', 'Puzzle', 'Practice', 'Multiplayer']) await expect(dialog.getByRole('term').filter({ hasText: mode })).toBeVisible()
+  for (const mode of ['Puzzle', 'Daily Deal', 'Practice', 'Multiplayer']) await expect(dialog.getByRole('term').filter({ hasText: mode })).toBeVisible()
   await expect(dialog.getByText('Full rules')).toHaveCount(0)
   await expect(dialog.getByText('About Set')).toHaveCount(0)
   await expect(dialog).not.toContainText(/free/i)

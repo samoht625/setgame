@@ -65,7 +65,7 @@ class Sitemap
     list
   end
 
-  # Newest first, the two games side by side.
+  # Newest first, the two games side by side: the Puzzle, then the Daily Deal.
   def days
     @archives.flat_map(&:days).sort_by { |day| [-day.date.jd, DailyArchive::KINDS.index(day.kind)] }.map do |day|
       Entry.new(day.path, day.date + 1)

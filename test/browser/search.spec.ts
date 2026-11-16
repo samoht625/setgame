@@ -149,7 +149,7 @@ test('the tab title is the site’s name at home and “Page | Set Daily” else
   for (const title of seen) expect(title).not.toMatch(/^Set Daily Deal/)
 })
 
-test('the Daily Deal / Puzzle switch is two real links that switch in place', async ({ page, context }) => {
+test('the Puzzle / Daily Deal switch is two real links that switch in place', async ({ page, context }) => {
   await page.goto('/')
   const daily = modes(page).getByRole('link', { name: 'Daily Deal', exact: true })
   const puzzle = modes(page).getByRole('link', { name: 'Puzzle', exact: true })
@@ -196,6 +196,73 @@ test('the Daily Deal / Puzzle switch is two real links that switch in place', as
   await expect(modes(page).getByRole('link', { name: 'Practice', exact: true })).toHaveAttribute('aria-current', 'page')
 })
 
+/** The switch's links in the order the page holds them, which is the order a keyboard and a screen reader meet them in. */
+async function switchOrder(page: Page) {
+  const links = modes(page).getByRole('link')
+  const hrefs = await links.evaluateAll(nodes => nodes.map(node => node.getAttribute('href')))
+  const lefts = await links.evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().left))
+  return { links, hrefs, lefts }
+}
+
+test('the switch lists the Puzzle first, then the Daily Deal: as served, on screen and by keyboard', async ({ page, request }) => {
+  // As served, before any script runs.
+  for (const path of ['/', '/daily', '/puzzle', '/practice', '/m']) {
+    const html = await (await request.get(path)).text()
+    const nav = html.match(/<nav aria-label="Game mode"[^>]*>(.*?)<\/nav>/s)?.[1] ?? ''
+    expect([...nav.matchAll(/<a href="([^"]*)"/g)].map(match => match[1]).slice(0, 2), path).toEqual(['/', '/daily'])
+  }
+
+  const pages: [string, string[], number][] = [
+    ['/', ['/', '/daily'], 0],
+    ['/daily', ['/', '/daily'], 1],
+    // A third segment, when there is one, follows the two dailies.
+    ['/practice', ['/', '/daily', '/practice'], 2],
+    ['/m', ['/', '/daily', '/m'], 2]
+  ]
+  for (const [path, expected, active] of pages) {
+    await page.goto(path)
+    await expect(modes(page).getByRole('link')).toHaveCount(expected.length)
+    const { links, hrefs, lefts } = await switchOrder(page)
+    expect(hrefs, path).toEqual(expected)
+    // Left to right on screen, the same order.
+    expect(lefts, path).toEqual([...lefts].sort((a, b) => a - b))
+    // Only the game being played is marked as the current page.
+    for (let i = 0; i < expected.length; i++) {
+      if (i === active) await expect(links.nth(i), path).toHaveAttribute('aria-current', 'page')
+      else await expect(links.nth(i), path).not.toHaveAttribute('aria-current')
+    }
+    // Tab moves through them in that order, and back.
+    await links.first().focus()
+    for (let i = 1; i < expected.length; i++) {
+      await page.keyboard.press('Tab')
+      await expect(links.nth(i), path).toBeFocused()
+    }
+    await page.keyboard.press('Shift+Tab')
+    await expect(links.nth(expected.length - 2), path).toBeFocused()
+  }
+
+  // The active segment follows a switch without the links changing places.
+  await page.goto('/')
+  await modes(page).getByRole('link', { name: 'Daily Deal', exact: true }).click()
+  await expect(page).toHaveURL(/\/daily$/)
+  expect((await switchOrder(page)).hrefs).toEqual(['/', '/daily'])
+  await expect(modes(page).getByRole('link').nth(1)).toHaveAttribute('aria-current', 'page')
+})
+
+test('the stats and archive pages’ switch is in the same order', async ({ page }) => {
+  for (const path of ['/stats', '/archive']) {
+    const html = await (await page.request.get(path)).text()
+    const nav = html.match(/<nav aria-label="Game mode"[^>]*>(.*?)<\/nav>/s)?.[1] ?? ''
+    expect([...nav.matchAll(/<a href="([^"]*)"/g)].map(match => match[1]), path).toEqual(['/', '/daily'])
+    await page.goto(path)
+    const { hrefs, lefts } = await switchOrder(page)
+    expect(hrefs, path).toEqual(['/', '/daily'])
+    expect(lefts[0], path).toBeLessThan(lefts[1]!)
+    // Neither game is this page.
+    await expect(modes(page).locator('[aria-current]'), path).toHaveCount(0)
+  }
+})
+
 test('a crawler finds both dailies from every game page without running the script', async ({ browser, request }) => {
   for (const path of ['/', '/daily', '/puzzle', '/practice', '/m']) {
     const html = await (await request.get(path)).text()
@@ -236,6 +303,9 @@ test.describe('on a small phone', () => {
       // One row, and no segment's label is cut off.
       expect(Math.abs(logo.y + logo.height / 2 - (nav.y + nav.height / 2)), path).toBeLessThan(4)
       expect(await modes(page).evaluate(node => node.scrollWidth <= node.clientWidth), path).toBe(true)
+      const { hrefs, lefts } = await switchOrder(page)
+      expect(hrefs.slice(0, 2), path).toEqual(['/', '/daily'])
+      expect(lefts, path).toEqual([...lefts].sort((a, b) => a - b))
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), path).toBe(true)
     }
     // With two segments the name is spelled out, even here.

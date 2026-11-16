@@ -23,7 +23,7 @@ async function expectTheRules(dialog: Locator) {
   await expect(dialog.locator('[data-demo-card]')).toHaveCount(6)
   await expect(dialog.locator('[data-in-set="true"]')).toHaveCount(3)
   await expect(dialog.getByRole('list', { name: 'Why it’s a set' }).getByRole('listitem')).toHaveText([/^Number (same|different)$/, /^Color (same|different)$/, /^Shape (same|different)$/, /^Shading (same|different)$/])
-  await expect(dialog.getByRole('term')).toHaveText(['Daily Deal', 'Puzzle', 'Practice', 'Multiplayer'])
+  await expect(dialog.getByRole('term')).toHaveText(['Puzzle', 'Daily Deal', 'Practice', 'Multiplayer'])
   await expect(dialog.getByRole('button', { name: 'Close' })).toBeInViewport({ ratio: 1 })
 }
 

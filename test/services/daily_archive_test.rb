@@ -127,7 +127,7 @@ class DailyArchiveTest < ActiveSupport::TestCase
     after = pacific(2026, 10, 26, 2, 0, 0)
     assert_equal [1], DailyArchive.for("puzzle", after).days.map(&:number)
     assert_equal 23, DailyArchive.for("daily", after).size
-    assert_equal %w[daily puzzle], DailyArchive.all(after).map(&:kind)
+    assert_equal %w[puzzle daily], DailyArchive.all(after).map(&:kind), "the Puzzle first, as wherever the two are listed"
 
     archive = DailyArchive.for("daily", pacific(2026, 11, 15, 12))
     archive.days.each { |day| assert_equal DailyPuzzle.new(day.date).number, day.number }

@@ -15,7 +15,7 @@ All of these are gitignored. `config/credentials.yml.enc` is encrypted and safe 
 
 - **Signed cookies.** Every browser is signed out, and the cookie that names an anonymous browser's player stops being accepted.
 - **Player keys.** The proof a browser keeps that it owns its player id stops matching. With the cookie gone too, an anonymous browser starts over as a new player. Its old games stay in the database but the browser can no longer reach them. A signed-in player signs in again by email and gets their history back.
-- **Daily Deal and Puzzle seeds.** A day someone has already played keeps its stored deal. Later days get a different deal than they would have.
+- **Puzzle and Daily Deal seeds.** A day someone has already played keeps its stored deal. Later days get a different deal than they would have.
 - **Shared result links.** Links shared before the rotation stop showing the result and its preview image.
 - **Reminder email links.** Play and unsubscribe links in email already sent stop working.
 

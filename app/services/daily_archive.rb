@@ -15,8 +15,10 @@ require "date"
 # Plain Ruby on purpose: dates in, dates and numbers out, no clock and no
 # database (DailyArchive.for supplies those).
 class DailyArchive
-  KINDS = %w[daily puzzle].freeze
-  NAMES = { "daily" => "Daily Deal", "puzzle" => "Puzzle" }.freeze
+  # In the order the two are listed wherever they appear side by side: the
+  # Puzzle, which is the home page, then the Daily Deal.
+  KINDS = %w[puzzle daily].freeze
+  NAMES = { "puzzle" => "Puzzle", "daily" => "Daily Deal" }.freeze
   # A day number as it appears in a URL: digits only, no sign, no leading
   # zero, so every day has exactly one address.
   NUMBER = /\A[1-9][0-9]{0,5}\z/

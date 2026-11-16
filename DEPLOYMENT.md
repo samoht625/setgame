@@ -71,7 +71,7 @@ A `SETGAME_MAIL_FROM` line wins over the default, so one written for an earlier 
 
 ## What SQLite holds
 
-Accounts, signed-in sessions and sign-in tokens; Practice and Daily Deal games with their move logs and scores; Puzzle runs; player settings; reminder deliveries; and one snapshot of the multiplayer table, so a restart does not lose the round.
+Accounts, signed-in sessions and sign-in tokens; Puzzle runs; Practice and Daily Deal games with their move logs and scores; player settings; reminder deliveries; and one snapshot of the multiplayer table, so a restart does not lose the round.
 
 ### Backups
 
@@ -101,7 +101,7 @@ journalctl --user -u setgame-reminders -n 50
 
 ## Clocks
 
-- The Daily Deal and the Puzzle roll over at midnight Pacific (`DailyPuzzle::TIME_ZONE`).
+- The Puzzle and the Daily Deal roll over at midnight Pacific (`DailyPuzzle::TIME_ZONE`).
 - Practice leaderboards use daily, weekly and monthly windows in Eastern time (`config.time_zone`).
 - The stats page groups days and hours in Central time (`SetStats::ZONE`).
 - Reminders go out in each account's own time zone.

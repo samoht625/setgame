@@ -275,8 +275,11 @@ class ArchiveControllerTest < ActionDispatch::IntegrationTest
       assert_select "h1", "Archive"
       assert_select "main ol > li", 30
       assert_select "main ol > li:first-child time[datetime='2026-11-14']"
-      assert_select "main ol > li:first-child a[href='/daily/43']", /Daily Deal #43\s+1 finisher · best 3:05/
       assert_select "main ol > li:first-child a[href='/puzzle/21']", /Puzzle #21\s+2 finishers · best 0:42/
+      assert_select "main ol > li:first-child a[href='/daily/43']", /Daily Deal #43\s+1 finisher · best 3:05/
+      assert_equal %w[/puzzle/21 /daily/43], css_select("main ol > li:first-child a").map { |link| link["href"] }, "the Puzzle's tile comes first"
+      assert_includes css_select("main header p").first.text, "Every past Puzzle and Daily Deal"
+      assert_match(/\AEvery past daily Set Puzzle and Set Daily Deal/, css_select("meta[name=description]").first["content"])
       assert_select "a[href='/puzzle/20']", /Puzzle #20\s+No finishers/
       assert_select "a[href='/puzzle/22']", 0, "today's is not listed"
       assert_select "a[href='/daily/44']", 0

@@ -59,8 +59,8 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Most found"
     assert_includes response.body, "Most games finished"
     assert_select "table.players thead th", 7
-    assert_equal ["Rank", "Player", "Games", "Practice", "Daily Deal", "Best Daily Deal", "Best Puzzle"], css_select("table.players thead th").map { |th| th.text.squish }
-    assert_equal [["1", "Ada", "1", "0", "1", "5.0s", "38.0s"]], player_rows, "one row per named player: rank, name, games, the practice and daily split, best times"
+    assert_equal ["Rank", "Player", "Games", "Practice", "Daily Deal", "Best Puzzle", "Best Daily Deal"], css_select("table.players thead th").map { |th| th.text.squish }
+    assert_equal [["1", "Ada", "1", "0", "1", "38.0s", "5.0s"]], player_rows, "one row per named player: rank, name, games, the practice and daily split, best times"
     assert_equal [["Fastest find", "1.5s", ""], ["Practice games", "1", "Median time 9.0s"], ["Daily Deal games", "1", "Median time 5.0s"],
       ["Busiest day", Date.current.strftime("%b %-d"), "3 games"], ["Busiest hour", "11 AM", "Central time"]], facts,
       "every fun fact is a label, a value and a note"
@@ -102,7 +102,7 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
 
     get "/stats"
     assert_response :success
-    assert_equal [["1", "Rose", "1,230", "1,229", "1", "1:11", "23.2s"], ["2", "Practice only", "3", "3", "0", "–none", "–none"]], player_rows
+    assert_equal [["1", "Rose", "1,230", "1,229", "1", "23.2s", "1:11"], ["2", "Practice only", "3", "3", "0", "–none", "–none"]], player_rows
     assert_select "table.players[role=table] tbody tr[role=row]:first-child" do
       assert_select "th[scope=row][role=rowheader]", "Rose"
       assert_select "td[role=cell]", 6

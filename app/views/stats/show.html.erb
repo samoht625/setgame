@@ -52,7 +52,7 @@
   <section class="sec" aria-labelledby="h-players">
     <div class="sec-head">
       <h2 id="h-players">Most games finished</h2>
-      <p id="d-players">Named players by games finished in Practice and the Daily Deal, with each one's best Daily Deal and Puzzle times.</p>
+      <p id="d-players">Named players by games finished in Practice and the Daily Deal, with each one's best Puzzle and Daily Deal times.</p>
     </div>
     <% if s[:most_games].present? %>
       <%# Rows are laid out with CSS grid (two lines on phones), so every table role is spelled out for screen readers. %>
@@ -65,8 +65,8 @@
               <th role="columnheader" scope="col" class="total">Games</th>
               <th role="columnheader" scope="col" class="prac">Practice</th>
               <th role="columnheader" scope="col" class="dly">Daily Deal</th>
-              <th role="columnheader" scope="col" class="bdd">Best <span>Daily<i> Deal</i></span></th>
               <th role="columnheader" scope="col" class="bpz">Best <span>Puzzle</span></th>
+              <th role="columnheader" scope="col" class="bdd">Best <span>Daily<i> Deal</i></span></th>
             </tr>
           </thead>
           <tbody role="rowgroup">
@@ -77,8 +77,8 @@
                 <td role="cell" class="total"><%= num(p[:total]) %></td>
                 <td role="cell" class="prac"><%= count_cell(p[:solo]) %></td>
                 <td role="cell" class="dly"><%= count_cell(p[:daily]) %></td>
-                <td role="cell" class="bdd"><%= time_cell(p[:best_daily_ms]) %></td>
                 <td role="cell" class="bpz"><%= time_cell(p[:best_puzzle_ms]) %></td>
+                <td role="cell" class="bdd"><%= time_cell(p[:best_daily_ms]) %></td>
               </tr>
             <% end %>
           </tbody>
