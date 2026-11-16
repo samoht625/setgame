@@ -26,13 +26,27 @@ test('the post is all there without scripts: headline, text, both charts and the
 
   await expect(page).toHaveTitle(`${TITLE} | Set Daily`)
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(TITLE)
-  await expect(page.getByRole('heading', { level: 2 })).toHaveText(['Each extra difference costs time', 'Not all features are equal', 'People skip the hard ones'])
+  await expect(page.getByRole('heading', { level: 2 })).toHaveText([
+    'Every difference costs seconds',
+    'Color and shading do the work',
+    'The hard ones get left on the board',
+    'The quickest and the rarest',
+    'How this was counted'
+  ])
+  await expect(page.locator('main .deck')).toContainText('which sets people see at once')
+  await expect(page.locator('main .versus .side')).toHaveCount(2)
+  await expect(page.locator('main .versus .time b')).toHaveText(['3.0s', '15.0s'])
   await expect(page.locator('main .kind')).toHaveCount(15)
   await expect(page.locator('main .kind').first()).toBeVisible()
+  await expect(page.locator('main .stairs dd')).toHaveText(['3–4s', '4–8s', '7–11s', '15s'])
+  await expect(page.locator('main .shared li')).toHaveCount(10)
   await expect(page.locator('main table.shares tbody tr')).toHaveCount(4)
-  await expect(page.locator('main .prose > p').first()).toContainText('three cards make a set')
+  await expect(page.locator('main .pair ol.sets')).toHaveCount(2)
+  await expect(page.locator('main .pair ol.sets li')).toHaveCount(20)
+  await expect(page.locator('main .prose > p').first()).toContainText('Both of these are sets')
+  await expect(page.locator('main .notes li')).toHaveCount(5)
   await expect(page.locator('main .prose a[href="/"]').first()).toBeVisible()
-  await expect(page.locator('main .prose a[href="/daily"]')).toBeVisible()
+  await expect(page.locator('main .play a[href="/daily"]')).toHaveText(['Daily Deal', 'Play the Daily Deal'])
   await expect(page.locator('main .prose a[href="/stats"]').first()).toBeVisible()
   await context.close()
 })
@@ -47,9 +61,55 @@ for (const [name, width, height] of [['a phone', 390, 844], ['a small phone', 32
     expect(column.width).toBeLessThanOrEqual(760)
 
     const text = page.locator('main .prose > p').first()
-    expect(await text.evaluate(node => parseFloat(getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(16)
-    // A comfortable measure: the text never runs the width of a wide screen.
-    expect((await text.boundingBox())!.width).toBeLessThanOrEqual(720)
+    const size = (selector: string) => page.locator(selector).first().evaluate(node => parseFloat(getComputedStyle(node).fontSize))
+    const body = await size('main .prose > p')
+    expect(body).toBeGreaterThanOrEqual(17)
+    // An article's measure: about 75 characters at most, and room either side of the text on a phone.
+    const measure = (await text.boundingBox())!
+    expect(measure.width / body).toBeLessThanOrEqual(38)
+    expect(measure.x).toBeGreaterThanOrEqual(16)
+    expect(measure.x + measure.width).toBeLessThanOrEqual(width - 16)
+    // The headline leads, then the section headings, then the text; the small print is smaller than the text.
+    const [headline, section, deck, notes] = [await size('main h1'), await size('main .prose > h2'), await size('main .deck'), await size('main .notes li')]
+    expect(headline).toBeGreaterThanOrEqual(width >= 760 ? 40 : 28)
+    expect(headline).toBeGreaterThan(section * 1.25)
+    expect(section).toBeGreaterThan(body * 1.2)
+    expect(deck).toBeGreaterThan(body)
+    expect(notes).toBeLessThan(body)
+
+    // Everything drawn sits inside the screen, and its numbers inside it.
+    for (const selector of ['.versus .card', '.stairs', '.shared .card', '.card.shares-card', '.pair ol.sets', '.fact .card', '.play']) {
+      const figures = page.locator(`main ${selector}`)
+      for (let index = 0; index < (await figures.count()); index++) {
+        const frame = (await figures.nth(index).boundingBox())!
+        expect(frame.x, selector).toBeGreaterThanOrEqual(0)
+        expect(frame.x + frame.width, selector).toBeLessThanOrEqual(width)
+        const inner = figures.nth(index).locator('b, dd, .val, svg.c, .btn')
+        for (let part = 0; part < (await inner.count()); part++) {
+          const box = (await inner.nth(part).boundingBox())!
+          expect(box.x, `${selector} part ${part}`).toBeGreaterThanOrEqual(frame.x)
+          expect(box.x + box.width, `${selector} part ${part}`).toBeLessThanOrEqual(frame.x + frame.width + 0.5)
+        }
+      }
+    }
+    // The two example sets and the two lists sit side by side where there is room, and one above the other on a phone.
+    const sides = page.locator('main .versus .side')
+    const lists = page.locator('main .pair ol.sets')
+    const [first, second] = [(await sides.nth(0).boundingBox())!, (await sides.nth(1).boundingBox())!]
+    const [quickest, least] = [(await lists.nth(0).boundingBox())!, (await lists.nth(1).boundingBox())!]
+    if (width >= 760) {
+      expect(second.x).toBeGreaterThanOrEqual(first.x + first.width - 1)
+      expect(least.x).toBeGreaterThanOrEqual(quickest.x + quickest.width)
+      expect(Math.abs(least.y - quickest.y)).toBeLessThan(1)
+    } else {
+      expect(second.y).toBeGreaterThanOrEqual(first.y + first.height - 1)
+      expect(least.y).toBeGreaterThanOrEqual(quickest.y + quickest.height)
+    }
+    // The bar under the harder set is the full width; the easier one's is a fifth of it.
+    const bars = await page.locator('main .versus .len i').evaluateAll(fills => fills.map(fill => fill.getBoundingClientRect().width / fill.parentElement!.getBoundingClientRect().width))
+    expect(bars[0]).toBeGreaterThan(0.19)
+    expect(bars[0]).toBeLessThan(0.21)
+    expect(bars[1]).toBeCloseTo(1, 2)
 
     // Every row of the chart is whole: label, three drawn cards, the bar and its median, all inside the card.
     const chart = (await page.locator('main .card.kinds').boundingBox())!
@@ -109,6 +169,16 @@ for (const scheme of ['light', 'dark'] as const) {
     expect(contrast(colors.heading, colors.page)).toBeGreaterThanOrEqual(7)
     expect(contrast(colors.caption, colors.page)).toBeGreaterThanOrEqual(4.5)
     expect(luminance(colors.card) < 0.2).toBe(scheme === 'dark')
+
+    // The highlighted labels stand out from the plain ones, and both can be read.
+    const chips = await page.evaluate(() => {
+      const style = (selector: string) => getComputedStyle(document.querySelector(selector)!)
+      const [strong, plain] = [style('main .chips .strong'), style('main .chips span:not(.sr):not(.strong)')]
+      return { strong: [strong.color, strong.backgroundColor], plain: [plain.color, plain.backgroundColor] }
+    })
+    expect(contrast(chips.strong[0]!, chips.strong[1]!)).toBeGreaterThanOrEqual(7)
+    expect(contrast(chips.plain[0]!, chips.plain[1]!)).toBeGreaterThanOrEqual(4.5)
+    expect(contrast(chips.strong[1]!, chips.plain[1]!)).toBeGreaterThanOrEqual(3)
   })
 }
 
@@ -149,4 +219,10 @@ test('the blog’s index fits a phone', async ({ page }) => {
   const link = page.getByRole('link', { name: TITLE })
   await expect(link).toBeVisible()
   await expect(link).toHaveAttribute('href', POST)
+  await expect(page.locator('main .elsewhere a')).toHaveText(['Puzzle', 'Daily Deal', 'stats'])
+
+  // The whole card opens the post, not only its headline.
+  const card = (await page.locator('main .posts li').first().boundingBox())!
+  await page.mouse.click(card.x + card.width - 14, card.y + card.height - 14)
+  await expect(page).toHaveURL(new RegExp(`${POST}$`))
 })

@@ -12,7 +12,11 @@
 #     page's bar where the page drew it (bars are placed to 0.01% of the 20 s
 #     scale, which is 2 ms) and prints the page's tenth of a second;
 #   - a time past the end of the scale has no bar position to read, so it is
-#     the printed tenth of a second alone.
+#     the printed tenth of a second alone;
+#   - the times in Quickest to spot and Fastest find have no bar at all, so
+#     they too are the printed tenth of a second.
+# Players' names are left behind: of Most games finished it keeps only the
+# games each of the listed players finished.
 # It stops rather than guess when the page isn't what it expects.
 
 require "json"
@@ -69,10 +73,24 @@ def card_id(label)
   1 + digits.each_with_index.sum { |digit, place| digit * 3**place }
 end
 
+# The three cards drawn in a piece of the page, which have to be a set.
+def set_in(html, what)
+  cards = html.scan(/<svg class="c"[^>]*aria-label="([^"]+)"/).flatten.map { |card| card_id(card) }
+  stop "#{what}: #{cards.inspect} is not a set" unless cards.length == 3 && Rules.is_set?(*cards.sort)
+  cards
+end
+
+# The rows of one of the page's ranked lists of sets, each given to the block as its cards and its value's HTML.
+def ranked_sets(html, heading, name)
+  section = html[%r{<section class="sec" aria-labelledby="#{heading}">(.*?)</section>}m, 1] || stop("no #{name} list")
+  rows = section.scan(%r{<li><span class="rk"[^>]*>(\d+)</span>(.*?)<span class="val">(.*?)</span></li>}m)
+  stop "#{name}: not a list of ten sets" unless rows.map(&:first) == (1..10).map(&:to_s)
+  rows.map { |rank, cards, value| yield set_in(cards, "#{name} #{rank}"), value }
+end
+
 def kind(row)
   label = row[%r{<span class="kind-label">([^<]+)</span>}, 1] || stop("a row without a label")
-  cards = row.scan(/<svg class="c"[^>]*aria-label="([^"]+)"/).flatten.map { |card| card_id(card) }
-  stop "#{label}: #{cards.inspect} is not a set" unless cards.length == 3 && Rules.is_set?(*cards.sort)
+  cards = set_in(row, label)
   track = row.match(/aria-label="middle half (\S+) to (\S+)" title="(\S+) – (\S+) · ([\d,]+) finds"/) || stop("#{label}: no middle half")
   stop "#{label}: the bar's label and its title disagree" unless track[1] == track[3] && track[2] == track[4]
   bar = row.match(/<span class="kind-iqr" style="left:([\d.]+)%;width:([\d.]+)%">/) || stop("#{label}: no bar")
@@ -108,7 +126,30 @@ shares = found.scan(%r{<th scope="row">(\d) different</th>.*?<td class="n">([\d.
 stop "the shares are not of 1 to 4 differences" unless shares.map(&:first) == %w[1 2 3 4]
 stop "the shares among all sets have changed" unless shares.to_h { |n, _, all| [n.to_i, all.to_i] } == CHANCE
 
-rows = kinds.map { |k| "    #{JSON.generate(k)}" }.join(",\n")
+spread = html.match(/aria-label="Histogram of sets by times found, from (\d+)× to (\d+)×, median (\d+)×"/) || stop("no Finds per set chart")
+stop "Finds per set: the tile and the chart disagree" unless tiles.fetch("Finds per set, min–max") == "#{spread[1]}–#{spread[2]}×"
+stop "Finds per set: the chart and its caption disagree" unless html.include?("Median: #{spread[3]}×.")
+
+quickest = ranked_sets(html, "h-fastest", "Quickest to spot") do |cards, value|
+  time = value.match(%r{\A([\d.]+s)<small>([\d,]+) finds?</small>\z}) || stop("Quickest to spot: not a time and a count: #{value.inspect}")
+  { cards: cards, median_ms: printed_ms(time[1]), n: count(time[2]) }
+end
+stop "Quickest to spot is not in order" unless quickest.each_cons(2).all? { |a, b| a[:median_ms] <= b[:median_ms] }
+
+least = ranked_sets(html, "h-least", "Least found") do |cards, value|
+  { cards: cards, n: count(value[/\A([\d,]+)×\z/, 1] || stop("Least found: not a count: #{value.inspect}")) }
+end
+stop "Least found is not in order" unless least.each_cons(2).all? { |a, b| a[:n] <= b[:n] }
+stop "Least found does not start at the fewest finds" unless least.first[:n] == spread[1].to_i
+
+fastest = html.match(%r{<dt>Fastest find</dt>\s*<dd class="val">([\d.]+s)</dd>\s*<dd class="note">(.*?)</dd>}m) || stop("no Fastest find")
+
+players_table = html[%r{<table class="players".*?</table>}m] || stop("no Most games finished table")
+most_games = players_table.scan(%r{<td role="cell" class="total">([\d,]+)</td>}).flatten.map { |games| count(games) }
+stop "Most games finished: not a ranked list" unless most_games.any? && most_games == most_games.sort.reverse
+stop "Most games finished: more games than were finished" unless most_games.sum <= count(tiles.fetch("Games finished"))
+
+rows = ->(list) { list.map { |row| "    #{JSON.generate(row)}" }.join(",\n") }
 puts <<~JSON
   {
     "source": "https://setdaily.app/stats",
@@ -117,8 +158,17 @@ puts <<~JSON
     "players": #{count(tiles.fetch("Players"))},
     "games_finished": #{count(tiles.fetch("Games finished"))},
     "kinds": [
-  #{rows}
+  #{rows.(kinds)}
     ],
-    "shares": #{JSON.generate(shares.to_h { |n, pct, _| [n, pct.to_f] })}
+    "shares": #{JSON.generate(shares.to_h { |n, pct, _| [n, pct.to_f] })},
+    "finds_per_set": #{JSON.generate(min: spread[1].to_i, max: spread[2].to_i, median: spread[3].to_i)},
+    "quickest": [
+  #{rows.(quickest)}
+    ],
+    "least_found": [
+  #{rows.(least)}
+    ],
+    "fastest_find": #{JSON.generate(cards: set_in(fastest[2], "Fastest find"), ms: printed_ms(fastest[1]))},
+    "most_games": #{JSON.generate(most_games)}
   }
 JSON
