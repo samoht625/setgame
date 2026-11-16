@@ -10,6 +10,8 @@
   main.blog .crumb a{text-decoration:none}
   main.blog .crumb a:hover{text-decoration:underline}
   main.blog h1{font-size:31px;font-weight:750;line-height:1.12;letter-spacing:-.028em;text-wrap:balance}
+  /* A post's headline runs to about 45 characters: sized so it breaks into two even lines on a phone, down to 320px, and sits on one line once the column is wide enough. */
+  main.blog article h1{font-size:clamp(25px,8vw,31px)}
   main.blog .deck{margin:12px 0 0;color:var(--muted);font-size:18.5px;line-height:1.45;text-wrap:pretty}
   main.blog .dateline{margin:14px 0 0;color:var(--faint);font-size:13px}
 
@@ -122,6 +124,7 @@
     main.blog{padding:14px 20px 88px}
     main.blog .top{margin:22px 0 34px}
     main.blog h1{font-size:42px;line-height:1.08}
+    main.blog article h1{font-size:32px;line-height:1.12}
     main.blog .deck{margin-top:16px;font-size:21px}
     main.blog .dateline{margin-top:18px;font-size:13.5px}
     .prose>p{font-size:18.5px;line-height:1.65}
