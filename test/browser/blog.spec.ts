@@ -19,6 +19,29 @@ function contrast(a: string, b: string) {
   return (light! + 0.05) / (dark! + 0.05)
 }
 
+/** How a heading's text falls into lines: each line's width, the room it has, and the width the text would take on a single line. */
+function wrapping(page: Page, selector: string) {
+  return page.locator(selector).first().evaluate(node => {
+    const heading = node as HTMLElement
+    const range = document.createRange()
+    range.selectNodeContents(heading.querySelector('a') ?? heading)
+    const lines: { top: number, left: number, right: number }[] = []
+    for (const rect of range.getClientRects()) {
+      const line = lines.find(other => Math.abs(other.top - rect.top) < rect.height / 2)
+      if (line) [line.left, line.right] = [Math.min(line.left, rect.left), Math.max(line.right, rect.right)]
+      else lines.push({ top: rect.top, left: rect.left, right: rect.right })
+    }
+    const room = heading.getBoundingClientRect().width
+    heading.style.cssText = 'white-space:nowrap;width:max-content'
+    const single = heading.getBoundingClientRect().width
+    heading.style.cssText = ''
+    return { lines: lines.map(line => line.right - line.left), room, single }
+  })
+}
+
+/** The shortest line as a share of the longest: 1 for a single line, near 1 for an even wrap. */
+const evenness = (lines: number[]) => Math.min(...lines) / Math.max(...lines)
+
 test('the post is all there without scripts: headline, text, both charts and the way to the game', async ({ browser, baseURL }) => {
   const context = await browser.newContext({ javaScriptEnabled: false, baseURL })
   const page = await context.newPage()
@@ -71,8 +94,11 @@ for (const [name, width, height] of [['a phone', 390, 844], ['a small phone', 32
     expect(measure.x + measure.width).toBeLessThanOrEqual(width - 16)
     // The headline leads, then the section headings, then the text; the small print is smaller than the text.
     const [headline, section, deck, notes] = [await size('main h1'), await size('main .prose > h2'), await size('main .deck'), await size('main .notes li')]
-    expect(headline).toBeGreaterThanOrEqual(width >= 760 ? 40 : 28)
-    expect(headline).toBeGreaterThan(section * 1.25)
+    // The headline is sized to its own length (see the wrapping tests below), so it leads by weight as much as by size.
+    expect(headline).toBeGreaterThanOrEqual(width >= 760 ? 30 : 25)
+    expect(headline).toBeGreaterThan(section * 1.1)
+    const weight = (selector: string) => page.locator(selector).first().evaluate(node => Number(getComputedStyle(node).fontWeight))
+    expect(await weight('main h1')).toBeGreaterThan(await weight('main .prose > h2'))
     expect(section).toBeGreaterThan(body * 1.2)
     expect(deck).toBeGreaterThan(body)
     expect(notes).toBeLessThan(body)
@@ -209,6 +235,61 @@ test('the post sits under the site’s header, and its links go where they say',
   await page.getByRole('link', { name: 'Play today’s Puzzle' }).click()
   await expect(page).toHaveURL(/\/$/)
   await expect(page).toHaveTitle('Set Daily')
+})
+
+// The headline is the title the post was submitted under, so the type has to fit the words, not the other way round.
+// The sizes are set for the usual system fonts. With an unusually wide one the headline may not fit a line; then it must still wrap evenly.
+test('from tablet to wide desktop the headline sits on one line of the reading column', async ({ page }) => {
+  for (const width of [768, 860, 1024, 1280, 1440, 1920]) {
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto(POST)
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(TITLE)
+
+    const headline = await wrapping(page, 'main h1')
+    const text = (await page.locator('main .prose > p').first().boundingBox())!
+    expect(headline.room, `${width}px: the headline keeps to the text's column`).toBeCloseTo(text.width, 0)
+    if (headline.single <= headline.room) expect(headline.lines, `${width}px`).toHaveLength(1)
+    else expect(evenness(headline.lines), `${width}px, in a wide font`).toBeGreaterThan(0.75)
+    // The sizes leave room for fonts as wide as Noto Sans, about 20.3 times the font size for this title.
+    const size = await page.locator('main h1').evaluate(node => parseFloat(getComputedStyle(node).fontSize))
+    expect(headline.room / size, `${width}px`).toBeGreaterThan(20.5)
+    expect(await overflow(page)).toBeLessThanOrEqual(0)
+  }
+})
+
+test('on phones the headline breaks into two even lines, down to the smallest', async ({ browser, baseURL }) => {
+  for (const width of [320, 360, 375, 390, 430, 600]) {
+    const context = await browser.newContext({ baseURL, viewport: { width, height: 800 }, hasTouch: true, isMobile: true })
+    const page = await context.newPage()
+    await page.goto(POST)
+
+    const headline = await wrapping(page, 'main h1')
+    // Half the title on each line needs a little over 10 times the font size.
+    const size = await page.locator('main h1').evaluate(node => parseFloat(getComputedStyle(node).fontSize))
+    expect(headline.room / size, `${width}px`).toBeGreaterThan(10.8)
+    expect(size, `${width}px`).toBeGreaterThanOrEqual(25)
+    if (headline.single <= headline.room * 1.9) expect(headline.lines, `${width}px`).toHaveLength(2)
+    expect(headline.lines.length, `${width}px`).toBeLessThanOrEqual(3)
+    expect(evenness(headline.lines), `${width}px`).toBeGreaterThan(0.75)
+    expect(await overflow(page)).toBeLessThanOrEqual(0)
+    await context.close()
+  }
+})
+
+test('the index’s card carries the same headline on one line, or two even ones on a phone', async ({ browser, baseURL }) => {
+  for (const [width, phone] of [[320, true], [390, true], [768, false], [1024, false], [1440, false]] as const) {
+    const context = await browser.newContext({ baseURL, viewport: { width, height: 800 }, hasTouch: phone, isMobile: phone })
+    const page = await context.newPage()
+    await page.goto('/blog')
+    await expect(page.locator('main .posts h2').first()).toHaveText(TITLE)
+
+    const headline = await wrapping(page, 'main .posts h2')
+    if (headline.single <= headline.room) expect(headline.lines, `${width}px`).toHaveLength(1)
+    else expect(headline.lines.length, `${width}px`).toBeLessThanOrEqual(phone ? 3 : 2)
+    if (!phone) expect(headline.room / headline.single, `${width}px: room to spare on a desktop`).toBeGreaterThan(1.1)
+    expect(evenness(headline.lines), `${width}px`).toBeGreaterThan(0.75)
+    await context.close()
+  }
 })
 
 test('the blog’s index fits a phone', async ({ page }) => {
