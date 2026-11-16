@@ -376,6 +376,48 @@ class ArchiveControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "a day's row has the Puzzle on the left and the Daily Deal on the right, each tile with its own key, date and slot for the played mark" do
+    travel_to NOON do
+      player = SecureRandom.uuid
+      create_daily_score(Date.new(2026, 10, 3), elapsed_ms: 200_000)
+      create_puzzle_run(DAY, elapsed_ms: 65_432, player_id: player)
+      create_daily_score(DAY, elapsed_ms: 185_432, player_id: player)
+
+      # The two cells of each row's grid, in the order served: a tile's key, or nil for the gap a missing game leaves.
+      cells = -> { css_select("main ol > li").map { |row| row.at_css("div").element_children.map { |cell| cell["data-archive-tile"] } } }
+      assert_tiles_are_their_days = lambda do
+        css_select("main ol > li").each do |row|
+          row.css("a[data-archive-tile]").each do |tile|
+            kind, number = tile["data-archive-tile"].split(":")
+            assert_equal "/#{kind}/#{number}", tile["href"], "the tile's key is the day it links to"
+            assert_equal row.at_css("time")["datetime"], tile["data-archive-date"], "and its date is the row's"
+            assert_equal 1, tile.css("[data-archive-status]").size, "with one slot of its own for the mark"
+          end
+        end
+      end
+
+      get "/archive"
+      assert_response :success
+      both = (0...21).map { |i| ["puzzle:#{21 - i}", "daily:#{43 - i}"] }
+      before_the_puzzle = (0...9).map { |i| [nil, "daily:#{22 - i}"] }
+      assert_equal both + before_the_puzzle, cells.call, "the Daily Deal stays on the right on days before the Puzzle launched"
+      assert_tiles_are_their_days.call
+
+      get "/archive", params: { page: "2" }
+      assert_response :success
+      older = (0...13).map { |i| [nil, "daily:#{13 - i}"] }
+      assert_equal older, cells.call
+      assert_tiles_are_their_days.call
+
+      # What the script is told this player played is named by those same keys, whichever side the tile is on.
+      get "/api/archive", headers: { "X-Player-Id" => player }
+      assert_response :success
+      played = JSON.parse(response.body)
+      assert_equal({ "page" => 1, "puzzle" => { "21" => { "elapsed_ms" => 65_432 } }, "daily" => { "43" => { "elapsed_ms" => 185_432 } } }, played)
+      assert_equal both.first, ["puzzle:#{played.fetch('puzzle').keys.first}", "daily:#{played.fetch('daily').keys.first}"]
+    end
+  end
+
   test "every game page has a link to the archive that a crawler can follow" do
     travel_to NOON do
       ["/", "/puzzle", "/daily", "/practice", "/m"].each do |path|

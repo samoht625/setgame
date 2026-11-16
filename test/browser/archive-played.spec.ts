@@ -271,5 +271,77 @@ for (const [name, viewport] of [['a phone', { width: 390, height: 844 }], ['a de
         expect(inner!.y + inner!.height).toBeLessThanOrEqual(box!.y + box!.height)
       }
     })
+
+    test('the Puzzle’s tile is on the left and the Daily Deal’s on the right, and each game’s mark lands on its own tile', async ({ page }) => {
+      await playAsNewPlayer(page)
+      await page.goto('/archive')
+      await puzzleTiles(page)
+
+      // Every row's tiles as served: which cell of the row's grid each is in, and where that puts it on screen.
+      const rows = await page.locator('main ol > li').evaluateAll(items => items.map(item => Array.from(item.querySelectorAll('a[data-archive-tile]'), link => {
+        const grid = link.parentElement!
+        const [box, around] = [link.getBoundingClientRect(), grid.getBoundingClientRect()]
+        return {
+          key: link.getAttribute('data-archive-tile')!,
+          date: link.getAttribute('data-archive-date')!,
+          cell: Array.from(grid.children).indexOf(link),
+          cells: grid.children.length,
+          fromLeft: box.left - around.left,
+          fromRight: around.right - box.right,
+          width: box.width
+        }
+      })))
+      for (const tiles of rows) {
+        for (const placed of tiles) {
+          expect(placed.cells, placed.key).toBe(2)
+          if (placed.key.startsWith('puzzle:')) {
+            expect(placed.cell, placed.key).toBe(0)
+            expect(Math.abs(placed.fromLeft), placed.key).toBeLessThanOrEqual(1)
+            expect(placed.fromRight, placed.key).toBeGreaterThanOrEqual(placed.width)
+          } else {
+            expect(placed.cell, placed.key).toBe(1)
+            expect(Math.abs(placed.fromRight), placed.key).toBeLessThanOrEqual(1)
+            expect(placed.fromLeft, placed.key).toBeGreaterThanOrEqual(placed.width)
+          }
+        }
+        expect(new Set(tiles.map(placed => placed.date)).size, 'a row is one day').toBeLessThanOrEqual(1)
+      }
+
+      // A day with both games when this database has one (its Puzzle on the left), else the newest Puzzle.
+      const row = rows.find(tiles => tiles.length === 2) ?? rows.find(tiles => tiles.some(placed => placed.key.startsWith('puzzle:')))!
+      const puzzle = row.find(placed => placed.key.startsWith('puzzle:'))!.key
+      const daily = row.find(placed => placed.key.startsWith('daily:'))?.key
+      // Without a Daily Deal that day, the answer still names one, by the Puzzle's own number: a mark goes by game as well as number.
+      const dailyNumber = (daily ?? puzzle).split(':')[1]!
+      await page.route('**/api/archive?page=*', route => route.fulfill({
+        json: { page: 1, puzzle: { [puzzle.split(':')[1]!]: { elapsed_ms: 31_000 } }, daily: { [dailyNumber]: { elapsed_ms: 190_000 } } }
+      }))
+      await page.reload()
+
+      const count = await page.locator('a[data-archive-tile]').count()
+      await expect(page.locator('a[data-archive-tile][data-played]')).toHaveCount(count)
+      await expect(status(page, puzzle)).toHaveText('Your time 0:31 On the day')
+      if (daily) await expect(status(page, daily)).toHaveText('Your time 3:10 On the day')
+
+      // Those marks and no others: the Puzzle's time is on no Daily Deal tile, nor the Daily Deal's on a Puzzle's.
+      const keys = rows.flat().map(placed => placed.key)
+      const expected: Record<string, string> = { [puzzle]: 'Your time 0:31 On the day' }
+      if (keys.includes(`daily:${dailyNumber}`)) expected[`daily:${dailyNumber}`] = 'Your time 3:10 On the day'
+      const marked = await page.locator('a[data-archive-tile][data-played="ranked"]').evaluateAll(links => Object.fromEntries(links.map(link => [
+        link.getAttribute('data-archive-tile')!,
+        link.querySelector('[data-archive-status]')!.textContent
+      ])))
+      expect(marked).toEqual(expected)
+      await expect(page.locator('a[data-archive-tile][data-played="unplayed"]')).toHaveCount(count - Object.keys(expected).length)
+
+      // On screen, the Puzzle's time is in the left tile and the Daily Deal's in the right one.
+      if (daily) {
+        const [left, right] = await Promise.all([status(page, puzzle).boundingBox(), status(page, daily).boundingBox()])
+        const [puzzleBox, dailyBox] = await Promise.all([tile(page, puzzle).boundingBox(), tile(page, daily).boundingBox()])
+        expect(puzzleBox!.x + puzzleBox!.width).toBeLessThanOrEqual(dailyBox!.x)
+        expect(left!.x + left!.width).toBeLessThanOrEqual(puzzleBox!.x + puzzleBox!.width)
+        expect(right!.x).toBeGreaterThanOrEqual(dailyBox!.x)
+      }
+    })
   })
 }
