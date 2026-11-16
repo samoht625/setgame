@@ -11,18 +11,34 @@ class BlogControllerTest < ActionDispatch::IntegrationTest
   # The saved numbers as they are on disk, read without SpottingSets.
   SAVED = JSON.parse(Rails.root.join("config/blog/spotting_sets.json").read)
   WORDS = %w[zero one two three four five six seven eight nine ten].freeze
+  FEATURES = %w[number color shape shading].freeze
 
   def text_of(selector)
     css_select(selector).map { |node| node.text.squish }
   end
 
-  # The post's running text: its paragraphs, without the charts and their captions.
+  # The post's running text: its standfirst, paragraphs and notes, without the charts and their captions.
   def prose
-    text_of("main .prose > p").join(" ")
+    text_of("main .deck, main .prose > p, main .notes li").join(" ")
   end
 
   def tenths(ms)
     format("%.1fs", ms / 1000.0)
+  end
+
+  def count(number)
+    number_with_delimiter(number)
+  end
+
+  # The features that are all different across three cards, worked out from the cards themselves.
+  def differing(cards)
+    attributes = cards.map { |card| Rules.card_attributes(card) }
+    FEATURES.select { |feature| attributes.map { |card| card.fetch(feature.to_sym) }.uniq.length == 3 }
+  end
+
+  # The features three cards have in common, color and shading first, as the post lists them.
+  def shared(cards)
+    %w[color shading number shape] - differing(cards)
   end
 
   # Median times of the saved kinds with this many features all different, read off their labels.
@@ -81,14 +97,36 @@ class BlogControllerTest < ActionDispatch::IntegrationTest
   test "the post links to the game and to the live numbers, and says when its own were taken" do
     get "/blog/spotting-sets"
 
-    assert_select "main .prose p a[href='/']", "Puzzle"
-    assert_select "main .prose p a[href='/daily']", "Daily Deal"
+    assert_select "main .play p a[href='/']", "Puzzle"
+    assert_select "main .play p a[href='/daily']", "Daily Deal"
+    assert_select "main .play a.btn[href='/']", "Play today’s Puzzle"
+    assert_select "main .play a.btn[href='/daily']", "Play the Daily Deal"
     assert_select "main .prose a[href='/stats']", minimum: 2
-    assert_includes prose, "a new Puzzle every day (12 cards hiding exactly 6 sets) and a Daily Deal everyone plays from the same cards"
+    assert_includes text_of("main .play p").first, "a new Puzzle every day (12 cards hiding exactly 6 sets) and a Daily Deal everyone plays from the same cards"
     assert_select "main header time[datetime='2026-11-15T23:09:00-08:00']", "Nov 15, 2026"
     assert_includes text_of("main header .dateline").first, "Numbers as of Nov 15, 2026"
-    text_of("main figcaption").each { |caption| assert_includes caption, "Numbers as of Nov 15, 2026" }
-    assert_equal ["Each extra difference costs time", "Not all features are equal", "People skip the hard ones"], text_of("main article h2")
+    # Every chart that shows the saved numbers says when they were taken; so does the small print.
+    %w[figure.wide:not(.pair) figure.pair figure:not([class])].each { |figure| assert_includes text_of("main #{figure} figcaption").first, "Numbers as of Nov 15, 2026", figure }
+    assert_includes text_of("main .notes li").last, "Everything here was frozen on Nov 15, 2026."
+    assert_equal ["Every difference costs seconds", "Color and shading do the work", "The hard ones get left on the board", "The quickest and the rarest", "How this was counted"],
+                 text_of("main article h2")
+  end
+
+  test "the post opens on the two ends of the chart: the easiest kind of set and the hardest, each drawn with its time" do
+    get "/blog/spotting-sets"
+    easiest, hardest = SAVED.fetch("kinds").minmax_by { |kind| kind.fetch("median_ms") }
+
+    assert_equal ["shape", "all four"], [easiest, hardest].map { |kind| kind.fetch("label") }
+    assert_equal ["#{tenths(easiest.fetch('median_ms'))} Only shape differs", "#{tenths(hardest.fetch('median_ms'))} All four features differ"], text_of("main .versus .time")
+    assert_equal ["3.0s Only shape differs", "15.0s All four features differ"], text_of("main .versus .time")
+    sides = css_select("main .versus .side")
+    [easiest, hardest].zip(sides).each do |kind, side|
+      assert_equal css_select("main .kind").find { |row| row.at_css(".kind-label").text == kind.fetch("label") }.css("svg.c").map { |card| card["aria-label"] },
+                   side.css("svg.c").map { |card| card["aria-label"] }, "the example the chart draws for #{kind.fetch('label')}"
+    end
+    # Each bar is that kind's median against the slowest.
+    assert_equal ["width:#{(easiest.fetch('median_ms') * 100.0 / hardest.fetch('median_ms')).round(1)}%", "width:100.0%"], sides.map { |side| side.at_css(".len i")["style"] }
+    assert_equal "width:20.0%", sides.first.at_css(".len i")["style"]
   end
 
   test "the chart is the stats page's How fast, drawn from the saved numbers" do
@@ -120,7 +158,7 @@ class BlogControllerTest < ActionDispatch::IntegrationTest
     get "/blog/spotting-sets"
 
     assert_select "main table.shares[aria-labelledby='h-skipped']", 1
-    assert_select "main h2#h-skipped", "People skip the hard ones"
+    assert_select "main h2#h-skipped", "The hard ones get left on the board"
     rows = css_select("main table.shares tbody tr").map { |row| row.css("th, td.n").map { |cell| cell.text.squish } }
     assert_equal [["1 different", "13.4%", "10%"], ["2 different", "34.0%", "30%"], ["3 different", "38.1%", "40%"], ["4 different", "14.4%", "20%"]], rows
     assert_equal SAVED.fetch("shares").values.map { |share| format("%.1f%%", share) }, rows.map { |row| row[1] }
@@ -130,63 +168,200 @@ class BlogControllerTest < ActionDispatch::IntegrationTest
     get "/blog/spotting-sets"
     text = prose
 
-    assert_includes text, "That’s now #{number_with_delimiter(SAVED.fetch('sets_found'))} finds from #{number_with_delimiter(SAVED.fetch('players'))} players"
+    kinds = SAVED.fetch("kinds")
+    found, players = SAVED.values_at("sets_found", "players")
+    timed = kinds.sum { |kind| kind.fetch("n") }
+    easiest, hardest = kinds.minmax_by { |kind| kind.fetch("median_ms") }
 
-    fastest = SAVED.fetch("kinds").map { |k| k.fetch("median_ms") }.min
-    all_four = saved_median("all four")
-    assert_includes text, "When one feature differs, the median find takes #{whole_range(saved_medians(1))} seconds. " \
-                          "Two differences take #{whole_range(saved_medians(2))}, three take #{whole_range(saved_medians(3))}. " \
-                          "All four different takes #{(all_four / 1000.0).round} seconds, #{WORDS.fetch((all_four.to_f / fastest).round)} times the easiest."
+    # The opening: what the numbers are, and how many of them there are.
+    assert_includes text, "Timing from #{count(timed)} finds on Set Daily"
+    assert_includes text, "sets like the first are found in a median of #{tenths(easiest.fetch('median_ms'))}. Sets like the second take #{tenths(hardest.fetch('median_ms'))}."
+    assert_includes text, "there are #{kinds.length} kinds, depending on which"
+    assert_includes text, "So far that is #{count(found)} sets found by #{count(players)} players, and #{count(timed)} of those finds have a usable time. Here are all #{kinds.length} kinds, fastest first."
 
-    # What the sentences say beyond their numbers has to be so, too.
-    one = SAVED.fetch("kinds").select { |k| saved_medians(1).include?(k.fetch("median_ms")) }.map { |k| k.fetch("label") }
-    assert_equal %w[number shape], one.first(2).sort, "shape and number are the fastest"
-    assert_equal tenths(saved_median("shape")), tenths(saved_median("number")), "and print the same, so “each” is right"
-    assert_equal (saved_median("color") / 1000.0).round, (saved_median("shading") / 1000.0).round, "color and shading round to the same second"
-    three = SAVED.fetch("kinds").select { |k| k.fetch("label").start_with?("all but ") }.map { |k| k.fetch("label") }
-    assert_equal ["all but number", "all but shape"], three.last(2).sort, "keeping shape or number the same is slowest"
-    assert_equal tenths(saved_median("all but shape")), tenths(saved_median("all but number"))
-    assert_includes text, "Shape and number are fastest (#{tenths(saved_median('shape'))} each), color and shading about #{(saved_median('color') / 1000.0).round}s. " \
-                          "Among three-difference sets the slowest are the ones that keep shape or number the same (#{tenths(saved_median('all but shape'))} each)"
+    # Every difference costs seconds.
+    assert_equal (1..4).map { |differences| "#{differences} different #{whole_range(saved_medians(differences))}s" }, text_of("main .stairs > div")
+    assert_equal [1, 2, 3, 4], css_select("main .stairs > div").map { |step| step.css(".dots .on").length }, "one dot for each feature that differs"
+    assert_includes text, "All four different takes #{WORDS.fetch((hardest.fetch('median_ms').to_f / easiest.fetch('median_ms')).round)} times as long as the easiest kind: " \
+                          "#{tenths(hardest.fetch('median_ms'))} against #{tenths(easiest.fetch('median_ms'))}."
+    assert_includes text, "A quarter of “all different” finds take longer than #{tenths(hardest.fetch('p75_ms'))}. For the easiest kind, three quarters are over within #{tenths(easiest.fetch('p75_ms'))}."
+    assert_equal "all four", hardest.fetch("label"), "the slowest kind is the one the sentences name"
+    assert saved_medians(1).max < saved_medians(2).max && saved_medians(2).max < saved_medians(3).max && saved_medians(3).max < saved_medians(4).min, "the medians do climb"
+    assert saved_medians(1).min < saved_medians(2).min && saved_medians(2).min < saved_medians(3).min, "from the bottom of each step too"
 
+    # Color and shading do the work.
+    assert_includes text, "With two features shared, color and shading together are the fastest pair at #{tenths(saved_median('number + shape'))}, " \
+                          "and number and shape together the slowest at #{tenths(saved_median('color + shading'))}. Every kind that shares color beats every kind that does not, " \
+                          "though the four in the middle sit within a second of each other."
+    assert_includes text, "With one feature shared, color (#{tenths(saved_median('all but color'))}) and shading (#{tenths(saved_median('all but shading'))}) help. " \
+                          "Number and shape help less: #{tenths(saved_median('all but shape'))} each, against #{tenths(saved_median('all four'))} for sharing nothing."
+    # What those sentences say beyond their numbers has to be so, too.
+    two = kinds.select { |kind| shared(kind.fetch("cards")).length == 2 }
+    assert_equal [%w[color shading], %w[number shape]], [two.first, two.last].map { |kind| shared(kind.fetch("cards")) }, "the fastest and the slowest pair"
+    with_color, without = two.partition { |kind| shared(kind.fetch("cards")).include?("color") }.map { |part| part.map { |kind| kind.fetch("median_ms") } }
+    assert_equal [3, 3], [with_color.length, without.length]
+    assert_operator with_color.max, :<, without.min, "every kind that shares color beats every kind that does not"
+    middle = two[1..4].map { |kind| kind.fetch("median_ms") }
+    assert_operator middle.max - middle.min, :<, 1000, "and the four between the fastest and the slowest are within a second"
+    one = kinds.select { |kind| shared(kind.fetch("cards")).length == 1 }
+    assert_equal [%w[color], %w[shading]], one.first(2).map { |kind| shared(kind.fetch("cards")) }, "color helps most, then shading"
+    assert_equal [%w[number], %w[shape]], one.last(2).map { |kind| shared(kind.fetch("cards")) }
+    assert_equal tenths(saved_median("all but shape")), tenths(saved_median("all but number")), "they print the same, so “each” is right"
+    assert_operator saved_median("all but shading"), :<, [saved_median("all but shape"), saved_median("all but number")].min
+    assert_operator [saved_median("all but shape"), saved_median("all but number")].max, :<, saved_median("all four")
+
+    # The hard ones get left on the board.
     shares = SAVED.fetch("shares")
-    assert_includes text, "20% of the 1,080 possible sets have all four features different, but they’re only #{shares.fetch('4').round}% of finds; " \
-                          "one-difference sets are #{shares.fetch('1').round}% of finds vs 10% by chance."
+    assert_includes text, "There are 1,080 possible sets, and 20% of them have all four features different. They are only #{shares.fetch('4').round}% of the sets people find. " \
+                          "One-difference sets are 10% of the possibilities and #{shares.fetch('1').round}% of the finds."
     assert_equal [10, 20, 1080], [SetStats::CHANCE[1], SetStats::CHANCE[4], SetStats::TOTAL_SETS]
     assert_operator shares.fetch("4"), :<, SetStats::CHANCE[4], "found less often than chance"
     assert_operator shares.fetch("1"), :>, SetStats::CHANCE[1], "found more often than chance"
+
+    # The quickest and the rarest.
+    quickest, least, per_set = SAVED.values_at("quickest", "least_found", "finds_per_set")
+    assert_includes text, "Quickest to spot is the #{WORDS.fetch(quickest.length)} individual sets with the lowest median time. " \
+                          "Least found is #{WORDS.fetch(least.length)} sets that have each been found only #{least.map { |set| set.fetch('n') }.minmax.join(' to ')} times, " \
+                          "when the median set has been found #{per_set.fetch('median')} times and the most popular #{per_set.fetch('max')}."
+    alike = quickest.count { |set| (%w[color shading] - shared(set.fetch("cards"))).empty? }
+    assert_includes text, "All #{WORDS.fetch(quickest.length)} of the quickest differ in a single feature, and in #{WORDS.fetch(alike)} of them the three cards share both color and shading. " \
+                          "All #{WORDS.fetch(least.length)} of the least found differ in all four."
+    assert quickest.all? { |set| differing(set.fetch("cards")).length == 1 }, "all of the quickest differ in a single feature"
+    assert least.all? { |set| differing(set.fetch("cards")).length == 4 }, "all of the least found differ in all four"
+    assert_equal ["The fastest single find so far #{tenths(SAVED.fetch('fastest_find').fetch('ms'))}"], text_of("main .fact p")
+
+    # How this was counted.
+    assert_includes text, "#{count(found)} sets were found in all, and #{count(timed)} of them have a time. The other #{count(found - timed)} either came more than " \
+                          "#{WORDS.fetch(SetStats::IDLE_MS / 60_000)} minutes after the previous find, most likely a tab left open, or were in unfinished games that kept only a count."
+    most = SAVED.fetch("most_games")
+    assert_includes text, "the #{WORDS.fetch(most.length)} most active named players finished #{count(most.sum)} of the #{count(SAVED.fetch('games_finished'))} completed games."
+  end
+
+  test "the count in the headline sentence adds up, and nothing says the Puzzle is timed" do
+    get "/blog/spotting-sets"
+    text = prose
+
+    # 35,959 sets found; 35,335 of them timed and in the chart; the rest accounted for.
+    assert_equal 35_959, 35_335 + 624
+    assert_includes text, "35,959 sets found by 313 players, and 35,335 of those finds have a usable time"
+    assert_includes text, "35,959 sets were found in all, and 35,335 of them have a time. The other 624"
+    assert_equal 35_335, css_select("main .kind .kind-track").sum { |track| track["title"][/· ([\d,]+) finds\z/, 1].delete(",").to_i }, "the chart's rows add up to the timed finds"
+
+    assert_includes text, "Set Daily records how long each find takes in its Daily Deal and Practice games"
+    assert_includes text, "The numbers cover Set Daily’s Daily Deal and Practice games. Finds in the daily Puzzle are not in them."
+    [text, SpottingSets::DESCRIPTION, css_select("meta[name=description]").first["content"]].each do |words|
+      refute_match(/every (find|set)|all finds/i, words, "not every find is timed: the Puzzle's are not in these numbers")
+    end
+    assert_includes SpottingSets::DESCRIPTION, "Daily Deal and Practice"
+
+    get "/blog"
+    refute_match(/every (find|set)/i, css_select("meta[name=description]").first["content"])
+  end
+
+  test "the kinds are shown again by what their cards share, color and shading picked out" do
+    get "/blog/spotting-sets"
+    kinds = SAVED.fetch("kinds")
+
+    assert_equal ["Two features shared", "One feature shared"], text_of("main .shared h3")
+    expected = [2, 1].flat_map { |features| kinds.select { |kind| shared(kind.fetch("cards")).length == features } }
+    assert_equal 10, expected.length
+    assert_equal expected.map { |kind| "Same #{shared(kind.fetch('cards')).join(' ')} #{tenths(kind.fetch('median_ms'))}" }, text_of("main .shared li")
+    assert_equal ["Same color shading 4.1s", "Same color shape 5.4s", "Same color number 5.8s", "Same shading shape 5.9s", "Same shading number 6.1s", "Same number shape 7.7s",
+                  "Same color 6.8s", "Same shading 8.0s", "Same number 11.0s", "Same shape 11.0s"], text_of("main .shared li")
+    rows = css_select("main .shared li")
+    expected.zip(rows).each do |kind, row|
+      assert_equal shared(kind.fetch("cards")) & %w[color shading], row.css(".chips .strong").map(&:text), kind.fetch("label")
+      assert_equal 3, row.css("svg.c").length
+      assert_equal "width:#{(kind.fetch('median_ms') * 100.0 / kinds.last.fetch('median_ms')).round(1)}%", row.at_css(".len i")["style"]
+    end
+  end
+
+  test "the two lists are the stats page's Quickest to spot and Least found, as saved" do
+    get "/blog/spotting-sets"
+    quickest, least = SAVED.values_at("quickest", "least_found")
+
+    assert_equal ["Quickest to spot", "Least found"], text_of("main .pair h3")
+    lists = css_select("main .pair ol.sets")
+    assert_equal [10, 10], lists.map { |list| list.css("li").length }
+    assert_equal quickest.map { |set| "#{tenths(set.fetch('median_ms'))}#{count(set.fetch('n'))} finds" }, lists.first.css(".val").map { |value| value.text.squish }
+    assert_equal least.map { |set| "#{set.fetch('n')}×" }, lists.last.css(".val").map { |value| value.text.squish }
+    assert_equal %w[10× 10× 10× 11× 12× 13× 14× 14× 14× 14×], lists.last.css(".val").map(&:text)
+    assert_equal "2.1s46 finds", lists.first.at_css(".val").text
+    # The cards drawn are the saved sets: the first of each list, as the stats page had them.
+    assert_equal ["3 solid green squiggles", "3 solid green diamonds", "3 solid green ovals"], lists.first.at_css("li").css("svg.c").map { |card| card["aria-label"] }
+    assert_equal ["2 solid red diamonds", "3 striped purple squiggles", "1 open green oval"], lists.last.at_css("li").css("svg.c").map { |card| card["aria-label"] }
+    assert_equal ["1 solid purple diamond", "2 solid purple diamonds", "3 solid purple diamonds"], css_select("main .fact svg.c").map { |card| card["aria-label"] }
   end
 
   test "the post as published: the figures a reader sees" do
     get "/blog/spotting-sets"
     text = prose
 
-    assert_includes text, "That’s now 35,959 finds from 313 players"
-    assert_includes text, "the median find takes 3–4 seconds. Two differences take 4–8, three take 7–11. All four different takes 15 seconds, five times the easiest."
-    assert_includes text, "Shape and number are fastest (3.0s each), color and shading about 4s."
-    assert_includes text, "keep shape or number the same (11.0s each)"
-    assert_includes text, "they’re only 14% of finds; one-difference sets are 13% of finds vs 10% by chance."
+    assert_includes text, "Timing from 35,335 finds on Set Daily shows which sets people see at once and which they leave on the board."
+    assert_includes text, "Both of these are sets. On Set Daily, sets like the first are found in a median of 3.0s. Sets like the second take 15.0s."
+    assert_includes text, "So far that is 35,959 sets found by 313 players, and 35,335 of those finds have a usable time. Here are all 15 kinds, fastest first."
+    assert_equal ["1 different 3–4s", "2 different 4–8s", "3 different 7–11s", "4 different 15s"], text_of("main .stairs > div"), "two differences take 4 to 8 seconds"
+    assert_includes text, "All four different takes five times as long as the easiest kind: 15.0s against 3.0s."
+    assert_includes text, "A quarter of “all different” finds take longer than 28.0s. For the easiest kind, three quarters are over within 5.7s."
+    assert_includes text, "color and shading together are the fastest pair at 4.1s, and number and shape together the slowest at 7.7s."
+    assert_includes text, "color (6.8s) and shading (8.0s) help. Number and shape help less: 11.0s each, against 15.0s for sharing nothing."
+    assert_includes text, "They are only 14% of the sets people find. One-difference sets are 10% of the possibilities and 13% of the finds."
+    assert_includes text, "Least found is ten sets that have each been found only 10 to 14 times, when the median set has been found 31 times and the most popular 80."
+    assert_includes text, "All ten of the quickest differ in a single feature, and in nine of them the three cards share both color and shading. All ten of the least found differ in all four."
+    assert_equal ["The fastest single find so far 0.8s"], text_of("main .fact p")
+    assert_includes text, "The other 624 either came more than five minutes after the previous find"
+    assert_includes text, "the ten most active named players finished 749 of the 1,312 completed games."
     assert_equal %w[3.0s 3.0s 3.9s 4.0s 4.1s 5.4s 5.8s 5.9s 6.1s 6.8s 7.7s 8.0s 11.0s 11.0s 15.0s], text_of("main .kind .kind-med")
   end
 
   test "no figure is typed into the text: with other numbers saved, the text and the charts follow" do
-    kinds = SAVED.fetch("kinds").map { |k| k.transform_keys(&:to_sym).merge(median_ms: k.fetch("median_ms") * 2, p25_ms: k.fetch("p25_ms") * 2, p75_ms: k.fetch("p75_ms") * 2) }
-    other = SpottingSets.new(sets_found: 1_234_567, players: 89, taken_at: "2027-02-03T04:05:00-08:00", kinds: kinds, shares: { "1": 16.6, "2": 31.2, "3": 41.1, "4": 11.1 })
+    kinds = SAVED.fetch("kinds").map do |k|
+      k.transform_keys(&:to_sym).merge(n: k.fetch("n") + 1, median_ms: k.fetch("median_ms") * 2, p25_ms: k.fetch("p25_ms") * 2, p75_ms: k.fetch("p75_ms") * 2)
+    end
+    # The quickest list loses its one set that differs in color; the least found loses three.
+    quickest = SAVED.fetch("quickest").reject.with_index { |_, index| index == 8 }.map { |set| set.transform_keys(&:to_sym).merge(median_ms: set.fetch("median_ms") + 5000) }
+    least = SAVED.fetch("least_found").first(7).map { |set| set.transform_keys(&:to_sym).merge(n: set.fetch("n") + 20) }
+    other = SpottingSets.new(
+      sets_found: 1_234_567, players: 89, games_finished: 456, taken_at: "2027-02-03T04:05:00-08:00", kinds: kinds, shares: { "1": 16.6, "2": 31.2, "3": 41.1, "4": 11.1 },
+      finds_per_set: { min: 30, max: 99, median: 52 }, quickest: quickest, least_found: least, fastest_find: { cards: [1, 2, 3], ms: 1200 }, most_games: [70, 60, 50]
+    )
 
     SpottingSets.stub(:current, other) do
       get "/blog/spotting-sets"
     end
     text = prose
 
-    assert_includes text, "That’s now 1,234,567 finds from 89 players"
-    assert_includes text, "the median find takes 6–8 seconds. Two differences take 8–15, three take 14–22. All four different takes 30 seconds, five times the easiest."
-    assert_includes text, "Shape and number are fastest (6.0s each), color and shading about 8s."
-    assert_includes text, "keep shape or number the same (22.0s each)"
-    assert_includes text, "they’re only 11% of finds; one-difference sets are 17% of finds vs 10% by chance."
+    assert_includes text, "Timing from 35,350 finds on Set Daily"
+    assert_includes text, "sets like the first are found in a median of 6.0s. Sets like the second take 30.0s."
+    assert_includes text, "So far that is 1,234,567 sets found by 89 players, and 35,350 of those finds have a usable time."
+    assert_equal ["6.0s Only shape differs", "30.0s All four features differ"], text_of("main .versus .time")
+    assert_equal ["1 different 6–8s", "2 different 8–15s", "3 different 14–22s", "4 different 30s"], text_of("main .stairs > div")
+    assert_includes text, "All four different takes five times as long as the easiest kind: 30.0s against 6.0s."
+    assert_includes text, "take longer than 56.0s. For the easiest kind, three quarters are over within 11.4s."
+    assert_includes text, "the fastest pair at 8.1s, and number and shape together the slowest at 15.4s."
+    assert_includes text, "color (13.7s) and shading (16.0s) help. Number and shape help less: 22.0s each, against 30.0s for sharing nothing."
+    assert_includes text, "They are only 11% of the sets people find. One-difference sets are 10% of the possibilities and 17% of the finds."
+    assert_includes text, "Quickest to spot is the nine individual sets with the lowest median time. Least found is seven sets that have each been found only 30 to 34 times, " \
+                          "when the median set has been found 52 times and the most popular 99."
+    assert_includes text, "All nine of the quickest differ in a single feature, and in nine of them the three cards share both color and shading. All seven of the least found differ in all four."
+    assert_equal ["The fastest single find so far 1.2s"], text_of("main .fact p")
+    assert_includes text, "1,234,567 sets were found in all, and 35,350 of them have a time. The other 1,199,217 either came"
+    assert_includes text, "the three most active named players finished 180 of the 456 completed games."
+    assert_includes text, "Everything here was frozen on Feb 3, 2027."
+
     assert_equal "30.0s", text_of("main .kind .kind-med").last
+    assert_equal "Same color shading 8.1s", text_of("main .shared li").first
     assert_equal %w[16.6% 31.2% 41.1% 11.1%], text_of("main table.shares td.n:not(.all)")
+    assert_equal [9, 7], css_select("main .pair ol.sets").map { |list| list.css("li").length }
+    assert_equal "7.1s46 finds", css_select("main .pair ol.sets").first.at_css(".val").text
     assert_includes text_of("main header .dateline").first, "Numbers as of Feb 3, 2027"
-    %w[35,959 313 3–4 4–8 7–11 3.0s 11.0s 14% 13%].each { |figure| refute_includes text, figure, "#{figure} was the saved number, not this one" }
+
+    # Nothing of the saved numbers is left anywhere in the article.
+    article = text_of("main article").first
+    %w[35,959 35,335 313 624 749 1,312 3–4 4–8 7–11 3.0s 15.0s 28.0s 5.7s 4.1s 7.7s 6.8s 11.0s 0.8s 14% 13% 13.4% 14.4%].each do |figure|
+      refute_includes article, figure, "#{figure} was the saved number, not this one"
+    end
+    refute_match(/\bten\b|10 to 14|31 times|most popular 80/, text)
   end
 
   test "the blog lists its posts, each with its headline, date and what it is about" do
@@ -204,6 +379,7 @@ class BlogControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, %(<a href="/blog/spotting-sets">#{TITLE}</a>)
     assert_select "main ol.posts > li:first-child time[datetime=?]", SpottingSets::PUBLISHED_ON.iso8601
     assert_select "main ol.posts > li:first-child p", SpottingSets::DESCRIPTION
+    assert_equal %w[/ /daily /stats], css_select("main .elsewhere a").map { |link| link["href"] }, "and the way to the game, Puzzle first"
   end
 
   test "a post is found by its slug alone" do

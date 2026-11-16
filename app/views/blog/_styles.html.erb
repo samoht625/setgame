@@ -1,34 +1,145 @@
-<%# The blog's own type, on top of the stats layout's colors and charts: one readable column at every width. %>
+<%# The blog's own type, on top of the stats layout's colors and charts: an article's column and scale rather than a dashboard's. Everything is scoped to main.blog, so /stats is untouched. %>
 <style>
-  main.blog{max-width:720px}
-  .prose a:not(.btn){text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
-  main.blog .top{margin-bottom:22px}
-  main.blog h1{font-size:26px;line-height:1.2;letter-spacing:-.02em;text-wrap:balance}
-  main.blog h2{font-size:19px;line-height:1.3}
-  .crumb{margin:0 0 10px;color:var(--muted);font-size:13.5px}
-  .crumb a{text-decoration:none}
-  .crumb a:hover{text-decoration:underline}
-  main.blog .dateline{margin-top:8px;font-size:13.5px;text-wrap:balance}
-  .prose{margin:0 2px}
-  .prose p{margin:0;font-size:16.5px;line-height:1.6;text-wrap:pretty}
-  .prose p+p{margin-top:14px}
-  .prose h2{margin:34px 0 8px}
-  .prose figure{margin:26px -2px 0}
-  .prose figcaption{margin:9px 2px 0;color:var(--muted);font-size:13px;line-height:1.45}
-  .prose .closing{margin-top:30px;padding-top:24px;border-top:1px solid var(--line)}
-  .prose .more{display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;margin-top:26px;font-size:14.5px}
-  .prose .more .btn{font-size:14.5px;min-height:40px;padding:0 18px}
-  .posts{list-style:none;margin:0;padding:0}
-  .posts li{padding:16px 18px 17px}
-  .posts li+li{border-top:1px solid var(--hair)}
-  .posts h2 a{text-decoration:none}
-  .posts h2 a:hover{text-decoration:underline}
-  .posts p{margin:5px 0 0;color:var(--muted);font-size:14.5px;line-height:1.5}
-  .posts time{display:block;margin-bottom:4px;color:var(--faint);font-size:12.5px}
+  main.blog{max-width:704px;padding:6px 20px calc(env(safe-area-inset-bottom,0px) + 64px)}
+  main.blog a:not(.btn){text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px;text-decoration-color:var(--faint)}
+  main.blog a:not(.btn):hover{text-decoration-color:currentColor}
+
+  /* Headline, standfirst and dateline */
+  main.blog .top{margin:14px 0 26px}
+  main.blog .crumb{margin:0 0 12px;color:var(--muted);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+  main.blog .crumb a{text-decoration:none}
+  main.blog .crumb a:hover{text-decoration:underline}
+  main.blog h1{font-size:31px;font-weight:750;line-height:1.12;letter-spacing:-.028em;text-wrap:balance}
+  main.blog .deck{margin:12px 0 0;color:var(--muted);font-size:18.5px;line-height:1.45;text-wrap:pretty}
+  main.blog .dateline{margin:14px 0 0;color:var(--faint);font-size:13px}
+
+  /* Running text */
+  .prose>p{margin:0;font-size:17.5px;line-height:1.62;text-wrap:pretty}
+  .prose>p+p{margin-top:1.05em}
+  .prose h2{margin:48px 0 12px;font-size:23px;font-weight:700;line-height:1.2;letter-spacing:-.02em;text-wrap:balance}
+  .prose figure{margin:28px -8px}
+  .prose figcaption{margin:10px 8px 0;color:var(--muted);font-size:13px;line-height:1.5}
+
+  /* Two sets side by side: the easiest kind and the hardest */
+  .versus .card{display:grid;overflow:hidden}
+  .versus .side{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:12px 16px;padding:16px}
+  .versus .side+.side{border-top:1px solid var(--hair)}
+  .versus .set{gap:5px}
+  .versus .c{width:60px;height:auto;aspect-ratio:258/167;border-radius:7px}
+  .versus .time{margin:0;text-align:right;line-height:1.25}
+  .versus .time b{display:block;font-size:30px;font-weight:750;line-height:1.05;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+  .versus .time span{color:var(--muted);font-size:13px}
+  .len{grid-column:1 / -1;display:block;height:6px;border-radius:3px;background:var(--track)}
+  .len i{display:block;height:100%;border-radius:3px;background:var(--ink)}
+
+  /* Medians by number of differences */
+  .stairs{display:grid;grid-template-columns:1fr 1fr;gap:1px;margin:20px -8px 24px;overflow:hidden;background:var(--hair)}
+  .stairs>div{padding:14px 16px 15px;background:var(--surface)}
+  .stairs dt{color:var(--muted);font-size:13px}
+  .stairs dd{margin:2px 0 0;font-size:26px;font-weight:750;line-height:1.15;letter-spacing:-.025em;font-variant-numeric:tabular-nums}
+  .dots{display:flex;gap:4px;margin-bottom:9px}
+  .dots i{width:8px;height:8px;border-radius:50%;background:var(--track)}
+  .dots i.on{background:var(--ink)}
+
+  /* Kinds named for what their cards share */
+  .shared .card{padding:4px 14px 6px}
+  .shared h3{margin:0;padding:12px 0 8px;color:var(--muted);font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+  .shared ol+h3{margin-top:6px;border-top:1px solid var(--line)}
+  .shared ol{list-style:none;margin:0;padding:0}
+  .shared li{display:grid;grid-template-columns:minmax(0,1fr) auto 44px;align-items:center;column-gap:10px;min-height:44px;padding:6px 0;border-top:1px solid var(--hair)}
+  .shared .len{display:none}
+  .shared .c{width:35px;height:auto;aspect-ratio:258/167}
+  .shared b{text-align:right;font-size:15px;font-weight:650;font-variant-numeric:tabular-nums}
+  .chips{display:flex;flex-wrap:wrap;gap:4px}
+  .chips span:not(.sr){padding:2px 9px 3px;border-radius:999px;background:var(--track);color:var(--muted);font-size:12.5px;line-height:1.35}
+  .chips .strong:not(.sr){background:var(--ink);color:var(--surface);font-weight:550}
+
+  /* Two ranked lists from the stats page */
+  .pair{display:grid;gap:22px 16px}
+  .pair h3{margin:0 6px 8px;color:var(--muted);font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+  .pair .sets li{min-height:50px;padding:6px 0}
+  .pair figcaption{margin-top:0}
+
+  .fact .card{display:flex;align-items:center;justify-content:space-between;gap:10px 16px;padding:14px 16px}
+  .fact p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.3}
+  .fact b{display:block;color:var(--text);font-size:26px;font-weight:750;line-height:1.15;letter-spacing:-.025em;font-variant-numeric:tabular-nums}
+  .fact .c{width:52px;height:auto;aspect-ratio:258/167}
+
+  /* The small print, and the way to the game */
+  .notes{margin-top:52px;padding-top:26px;border-top:1px solid var(--line)}
+  .prose .notes h2{margin:0 0 12px;font-size:17px;letter-spacing:-.01em}
+  .notes ul{margin:0;padding:0 0 0 18px;list-style:disc;color:var(--muted);font-size:14.5px;line-height:1.55}
+  .notes li+li{margin-top:8px}
+  .notes li::marker{color:var(--faint)}
+  .play{margin:40px -8px 0;padding:20px 20px 22px}
+  .play p{margin:0;font-size:16.5px;line-height:1.55;text-wrap:pretty}
+  .play .more{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+  main.blog .btn{min-height:42px;padding:0 18px;font-size:14.5px}
+  main.blog .btn.ghost{background:transparent;color:var(--text);box-shadow:inset 0 0 0 1px var(--line)}
+  .prose>p.back{margin:26px 0 0;color:var(--muted);font-size:14.5px}
+
+  /* The index */
+  .posts{list-style:none;margin:0 -8px;padding:0}
+  .posts li{position:relative;padding:20px 20px 22px;transition:border-color .15s}
+  .posts li+li{margin-top:12px}
+  .posts time{display:block;margin-bottom:6px;color:var(--faint);font-size:13px}
+  main.blog .posts h2{font-size:21px;font-weight:700;line-height:1.22;letter-spacing:-.02em;text-wrap:balance}
+  main.blog .posts h2 a{text-decoration:none}
+  .posts h2 a::after{content:"";position:absolute;inset:0;border-radius:16px}
+  .posts p{margin:8px 0 0;color:var(--muted);font-size:15.5px;line-height:1.55;text-wrap:pretty}
+  .posts .read{display:inline-block;margin-top:12px;font-size:14px;font-weight:600}
+  @media (hover:hover){
+    .posts li:hover{border-color:var(--faint)}
+    .posts li:hover h2 a{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+  }
+  .elsewhere{margin:30px 0 0;color:var(--muted);font-size:14.5px;line-height:1.6}
+
+  @media (max-width:359px){
+    .versus .side{column-gap:10px;padding:14px 12px}
+    .versus .c{width:46px}
+    .versus .time b{font-size:25px}
+    .stairs dd{font-size:23px}
+  }
+  @media (min-width:560px){
+    .versus .card{grid-template-columns:1fr 1fr}
+    .versus .side{grid-template-columns:1fr;justify-items:center;gap:14px;padding:22px 20px 20px}
+    .versus .side+.side{border-top:0;border-left:1px solid var(--hair)}
+    .versus .c{width:72px;border-radius:8px}
+    .versus .time{text-align:center}
+    .versus .time b{font-size:36px}
+    .len{width:100%}
+    .stairs{grid-template-columns:repeat(4,1fr)}
+    .shared .card{padding:4px 16px 6px}
+    .shared li{grid-template-columns:168px auto minmax(0,1fr) 50px;column-gap:16px}
+    .shared .len{display:block;grid-column:auto}
+    .shared .c{width:44px}
+  }
+  @media (min-width:700px){
+    .pair{grid-template-columns:1fr 1fr}
+    .pair figcaption{grid-column:1 / -1}
+  }
   @media (min-width:760px){
-    main.blog h1{font-size:32px}
-    main.blog h2{font-size:21px}
-    .prose p{font-size:17px}
-    .prose h2{margin-top:40px}
+    main.blog{padding:14px 20px 88px}
+    main.blog .top{margin:22px 0 34px}
+    main.blog h1{font-size:42px;line-height:1.08}
+    main.blog .deck{margin-top:16px;font-size:21px}
+    main.blog .dateline{margin-top:18px;font-size:13.5px}
+    .prose>p{font-size:18.5px;line-height:1.65}
+    .prose h2{margin:60px 0 14px;font-size:27px}
+    .prose figure{margin:36px 0}
+    .prose figcaption{margin:12px 2px 0;font-size:13.5px}
+    .stairs{margin:24px 0 28px}
+    .stairs dd{font-size:30px}
+    .notes{margin-top:64px}
+    .prose .notes h2{font-size:18px}
+    .play{margin:48px 0 0;padding:26px 28px 28px}
+    .play p{font-size:17.5px}
+    .posts{margin:0}
+    .posts li{padding:26px 28px 28px}
+    main.blog .posts h2{font-size:25px}
+    .posts p{font-size:16.5px}
+  }
+  @media (min-width:860px){
+    .prose figure.wide{margin-left:-48px;margin-right:-48px}
   }
 </style>

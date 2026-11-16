@@ -1,20 +1,22 @@
 <%# The blog: its posts, newest first. %>
 <% content_for :title, "Blog" %>
-<% content_for :description, "Notes from Set Daily: what the timing of every set found on the site shows about how people play Set." %>
+<% content_for :description, "Notes from Set Daily: what the timing of the sets found on the site shows about how people play Set." %>
 <% content_for :site_page, "blog" %>
 <% content_for :head, render("blog/styles") %>
 <main class="blog">
   <header class="top">
     <h1>Blog</h1>
-    <p>Notes on Set, from the numbers behind Set Daily.</p>
+    <p class="deck">Notes on Set, from the numbers behind Set Daily.</p>
   </header>
-  <ol class="card posts" role="list">
+  <ol class="posts" role="list">
     <% @posts.each do |post| %>
-      <li>
+      <li class="card">
         <time datetime="<%= post::PUBLISHED_ON.iso8601 %>"><%= post_date(post::PUBLISHED_ON) %></time>
         <h2><a href="<%= Blog.path(post) %>"><%= post::TITLE %></a></h2>
         <p><%= post::DESCRIPTION %></p>
+        <span class="read" aria-hidden="true">Read the post →</span>
       </li>
     <% end %>
   </ol>
+  <p class="elsewhere">Set Daily is a daily Set game: play today’s <a href="/">Puzzle</a> or the <a href="/daily">Daily Deal</a>, or see the live <a href="/stats">stats</a>.</p>
 </main>

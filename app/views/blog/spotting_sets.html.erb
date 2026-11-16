@@ -1,4 +1,4 @@
-<%# Which kinds of set people spot fast, and which they miss. Every figure in the text and both charts come from one saved copy of the /stats numbers (SpottingSets), so they agree with each other; /stats has the live ones. %>
+<%# Which kinds of set people spot fast, and which they miss. Every figure in the text and every chart comes from one saved copy of the /stats numbers (SpottingSets), so they agree with each other; /stats has the live ones. %>
 <% post = SpottingSets.current %>
 <% url = "#{ApplicationHelper::SITE_URL}#{Blog.path(SpottingSets)}" %>
 <% site = "#{ApplicationHelper::SITE_URL}/" %>
@@ -23,42 +23,110 @@
   }.to_json) %></script>
 <% end %>
 <% as_of = post_date(post.taken_at) %>
+<% easiest, hardest = post.kinds.first, post.kinds.last %>
+<% per_set = post.finds_per_set %>
+<%# What a set's three cards have in common, the two features the eye seems to catch first leading. %>
+<% glance = %w[color shading] %>
+<% shared = ->(set) { (glance | SetStats::ATTRS) - post.differing(set[:cards]) } %>
 <%= render "shared/card_symbols" %>
 <main class="blog">
   <article>
     <header class="top">
       <p class="crumb"><a href="/blog">Blog</a></p>
       <h1><%= SpottingSets::TITLE %></h1>
+      <p class="deck">Timing from <%= num(post.timed_finds) %> finds on Set Daily shows which sets people see at once and which they leave on the board.</p>
       <p class="dateline"><time datetime="<%= SpottingSets::PUBLISHED_ON.iso8601 %>"><%= post_date(SpottingSets::PUBLISHED_ON) %></time> · Numbers as of <time datetime="<%= post.taken_at.iso8601 %>"><%= as_of %></time></p>
     </header>
 
     <div class="prose">
-      <p>
-        In Set, three cards make a set when each of their four features (number, color, shape, shading) is either all the same or all different across the three.
-        Set Daily times every find, anonymously. That’s now <%= num(post.finds) %> finds from <%= num(post.players) %> players, enough to see which kinds of sets people spot fast and which they miss.
-      </p>
-
-      <figure>
-        <%= render "stats/how_fast", kinds: post.kinds %>
-        <figcaption>Median time to find a set in the Daily Deal and Practice, by which features are all different. Bar: the middle half of finds. Line: the median. Numbers as of <%= as_of %>; <a href="/stats">the stats page</a> has them live.</figcaption>
+      <figure class="versus">
+        <div class="card">
+          <% [easiest, hardest].each do |kind| %>
+            <div class="side">
+              <%= set_cards(kind[:cards]) %>
+              <p class="time"><b><%= secs(kind[:median_ms]) %></b> <span><%= differing_phrase(post.differing(kind[:cards])) %></span></p>
+              <span class="len" aria-hidden="true"><i style="width:<%= (kind[:median_ms] * 100.0 / hardest[:median_ms]).round(1) %>%"></i></span>
+            </div>
+          <% end %>
+        </div>
+        <figcaption>Two sets, and the median time players take to find one of each kind.</figcaption>
       </figure>
 
-      <h2>Each extra difference costs time</h2>
       <p>
-        When one feature differs, the median find takes <%= seconds_range(post.median_range_ms(1)) %> seconds.
-        Two differences take <%= seconds_range(post.median_range_ms(2)) %>, three take <%= seconds_range(post.median_range_ms(3)) %>.
-        All four different takes <%= seconds_range(post.median_range_ms(4)) %> seconds, <%= number_word(post.slowdown) %> times the easiest.
+        Both of these are sets. On Set Daily, sets like the first are found in a median of <%= secs(easiest[:median_ms]) %>.
+        Sets like the second take <%= secs(hardest[:median_ms]) %>.
+      </p>
+      <p>
+        The rule of Set: three cards make a set when each of four features (number, color, shape, shading) is either the same on all three cards or different on all three.
+        So a set can differ in one, two, three or all four features, and there are <%= post.kinds.length %> kinds, depending on which.
+      </p>
+      <p>
+        Set Daily records how long each find takes in its Daily Deal and Practice games, anonymously.
+        So far that is <%= num(post.finds) %> sets found by <%= num(post.players) %> players, and <%= num(post.timed_finds) %> of those finds have a usable time.
+        Here are all <%= post.kinds.length %> kinds, fastest first.
       </p>
 
-      <h2>Not all features are equal</h2>
+      <figure class="wide">
+        <%= render "stats/how_fast", kinds: post.kinds %>
+        <figcaption>Median time to find a set, by which features are all different, with one example of each kind. Bar: the middle half of finds. Line: the median. Numbers as of <%= as_of %>; <a href="/stats">the stats page</a> has them live.</figcaption>
+      </figure>
+
+      <h2>Every difference costs seconds</h2>
+      <p>Group the <%= post.kinds.length %> kinds by how many features differ, and the medians climb like stairs.</p>
+      <dl class="card stairs">
+        <% (1..4).each do |differences| %>
+          <div>
+            <dt><span class="dots" aria-hidden="true"><% 4.times do |dot| %><i class="<%= "on" if dot < differences %>"></i><% end %></span><%= differences %> different</dt>
+            <dd><%= seconds_range(post.median_range_ms(differences)) %>s</dd>
+          </div>
+        <% end %>
+      </dl>
       <p>
-        Shape and number are fastest (<%= secs(post.median_ms("shape")) %> each), color and shading about <%= whole_seconds(post.median_ms("color")) %>s.
-        Among three-difference sets the slowest are the ones that keep shape or number the same (<%= secs(post.median_ms("all but shape")) %> each), as if people anchor on shape and number first.
+        All four different takes <%= number_word(post.slowdown) %> times as long as the easiest kind: <%= secs(hardest[:median_ms]) %> against <%= secs(easiest[:median_ms]) %>.
+        The slow finds stretch out too. A quarter of “all different” finds take longer than <%= secs(hardest[:p75_ms]) %>.
+        For the easiest kind, three quarters are over within <%= secs(easiest[:p75_ms]) %>.
       </p>
 
-      <h2 id="h-skipped">People skip the hard ones</h2>
+      <h2>Color and shading do the work</h2>
       <p>
-        <%= SetStats::CHANCE[4] %>% of the <%= num(SetStats::TOTAL_SETS) %> possible sets have all four features different, but they’re only <%= post.shares.fetch(4).round %>% of finds; one-difference sets are <%= post.shares.fetch(1).round %>% of finds vs <%= SetStats::CHANCE[1] %>% by chance.
+        The number of differences is not the whole story. Which features differ matters too.
+        It is easier to see with the chart turned around, so that each kind is named for what its three cards share.
+      </p>
+
+      <figure class="shared">
+        <div class="card">
+          <% { 2 => "Two features shared", 1 => "One feature shared" }.each do |count, heading| %>
+            <h3><%= heading %></h3>
+            <ol role="list">
+              <% post.kinds.select { |kind| shared.(kind).length == count }.each do |kind| %>
+                <li>
+                  <span class="chips"><span class="sr">Same </span><% shared.(kind).each do |feature| %><span class="<%= "strong" if glance.include?(feature) %>"><%= feature %></span> <% end %></span>
+                  <%= set_cards(kind[:cards]) %>
+                  <span class="len" aria-hidden="true"><i style="width:<%= (kind[:median_ms] * 100.0 / hardest[:median_ms]).round(1) %>%"></i></span>
+                  <b><%= secs(kind[:median_ms]) %></b>
+                </li>
+              <% end %>
+            </ol>
+          <% end %>
+        </div>
+        <figcaption>The two- and three-difference kinds from the chart above, named for the features the three cards have in common, with the median time to find each. Highlighted: color and shading.</figcaption>
+      </figure>
+
+      <p>
+        With two features shared, color and shading together are the fastest pair at <%= secs(post.median_ms("number + shape")) %>, and number and shape together the slowest at <%= secs(post.median_ms("color + shading")) %>.
+        Every kind that shares color beats every kind that does not, though the four in the middle sit within a second of each other.
+      </p>
+      <p>
+        With one feature shared, color (<%= secs(post.median_ms("all but color")) %>) and shading (<%= secs(post.median_ms("all but shading")) %>) help.
+        Number and shape help less: <%= secs(post.median_ms("all but shape")) %> each, against <%= secs(post.median_ms("all four")) %> for sharing nothing.
+      </p>
+      <p>One reading: color and shading are what the eye groups by at a glance, while matching shapes and counts takes a closer look.</p>
+
+      <h2 id="h-skipped">The hard ones get left on the board</h2>
+      <p>
+        There are <%= num(SetStats::TOTAL_SETS) %> possible sets, and <%= SetStats::CHANCE[4] %>% of them have all four features different.
+        They are only <%= post.shares.fetch(4).round %>% of the sets people find.
+        One-difference sets are <%= SetStats::CHANCE[1] %>% of the possibilities and <%= post.shares.fetch(1).round %>% of the finds.
       </p>
 
       <figure>
@@ -66,11 +134,63 @@
         <figcaption>Share of finds by how many features are all different. Tick: the share among all <%= num(SetStats::TOTAL_SETS) %> possible sets. Numbers as of <%= as_of %>.</figcaption>
       </figure>
 
-      <p class="closing">
-        Set Daily has a new <a href="/">Puzzle</a> every day (12 cards hiding exactly 6 sets) and a <a href="/daily">Daily Deal</a> everyone plays from the same cards.
-        These numbers keep moving on <a href="/stats">the stats page</a>.
+      <p>A likely reason: a board often holds more than one set, and two sets can share a card. Take the easy one and the hard one may be gone with it.</p>
+
+      <h2>The quickest and the rarest</h2>
+      <p>
+        Two lists from the stats page make the same point without any arithmetic.
+        Quickest to spot is the <%= number_word(post.quickest.length) %> individual sets with the lowest median time.
+        Least found is <%= number_word(post.least_found.length) %> sets that have each been found only <%= post.least_found.map { |set| set[:n] }.minmax.uniq.join(" to ") %> times, when the median set has been found <%= per_set[:median] %> times and the most popular <%= per_set[:max] %>.
       </p>
-      <p class="more"><a class="btn" href="/">Play today’s Puzzle</a><a href="/blog">All posts</a></p>
+
+      <figure class="wide pair">
+        <section aria-labelledby="h-quickest">
+          <h3 id="h-quickest">Quickest to spot</h3>
+          <ol class="card sets" role="list">
+            <% post.quickest.each_with_index do |set, index| %>
+              <li><span class="rk" aria-hidden="true"><%= index + 1 %></span><%= set_cards(set[:cards]) %><span class="val"><%= secs(set[:median_ms]) %><small><%= pluralize(num(set[:n]), "find") %></small></span></li>
+            <% end %>
+          </ol>
+        </section>
+        <section aria-labelledby="h-least">
+          <h3 id="h-least">Least found</h3>
+          <ol class="card sets" role="list">
+            <% post.least_found.each_with_index do |set, index| %>
+              <li><span class="rk" aria-hidden="true"><%= index + 1 %></span><%= set_cards(set[:cards]) %><span class="val"><%= num(set[:n]) %>×</span></li>
+            <% end %>
+          </ol>
+        </section>
+        <figcaption>Quickest to spot: the median time to find that exact set, and the number of finds behind it. Least found: how many times that exact set has been found. Numbers as of <%= as_of %>.</figcaption>
+      </figure>
+
+      <p>
+        All <%= number_word(post.quickest.length) %> of the quickest differ in a single feature, and in <%= number_word(post.quickest.count { |set| (glance - shared.(set)).empty? }) %> of them the three cards share both color and shading.
+        All <%= number_word(post.least_found.length) %> of the least found differ in all four.
+      </p>
+
+      <figure class="fact">
+        <div class="card">
+          <p>The fastest single find so far <b><%= secs(post.fastest_find[:ms]) %></b></p>
+          <%= set_cards(post.fastest_find[:cards]) %>
+        </div>
+      </figure>
+
+      <section class="notes" aria-labelledby="h-notes">
+        <h2 id="h-notes">How this was counted</h2>
+        <ul>
+          <li>The numbers cover Set Daily’s Daily Deal and Practice games. Finds in the daily Puzzle are not in them.</li>
+          <li>A find’s time runs from the previous find, or from the deal, to the moment the set is taken. It is how long a player looked before taking that set, on a board that may have held others.</li>
+          <li><%= num(post.finds) %> sets were found in all, and <%= num(post.timed_finds) %> of them have a time. The other <%= num(post.untimed_finds) %> either came more than <%= number_word(SetStats::IDLE_MS / 60_000) %> minutes after the previous find, most likely a tab left open, or were in unfinished games that kept only a count.</li>
+          <li>This is not a controlled experiment. The players are whoever showed up, and regulars play a lot: the <%= number_word(post.most_games.length) %> most active named players finished <%= num(post.most_games.sum) %> of the <%= num(post.games) %> completed games.</li>
+          <li>Everything here was frozen on <%= as_of %>. <a href="/stats">The stats page</a> has the live numbers.</li>
+        </ul>
+      </section>
+
+      <aside class="card play">
+        <p>Set Daily has a new <a href="/">Puzzle</a> every day (12 cards hiding exactly 6 sets) and a <a href="/daily">Daily Deal</a> everyone plays from the same cards.</p>
+        <p class="more"><a class="btn" href="/">Play today’s Puzzle</a><a class="btn ghost" href="/daily">Play the Daily Deal</a></p>
+      </aside>
+      <p class="back"><a href="/blog">← All posts</a></p>
     </div>
   </article>
 </main>

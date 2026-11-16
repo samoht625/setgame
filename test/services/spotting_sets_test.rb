@@ -33,6 +33,41 @@ class SpottingSetsTest < ActiveSupport::TestCase
     assert_equal "https://setdaily.app/stats", SAVED.fetch("source")
   end
 
+  test "the saved lists are the stats page's: ten sets quickest to spot, ten least found, and the fastest find" do
+    quickest, least, per_set = SAVED.values_at("quickest", "least_found", "finds_per_set")
+
+    [quickest, least].each do |list|
+      assert_equal 10, list.length
+      assert_equal 10, list.map { |set| set.fetch("cards").sort }.uniq.length, "ten different sets"
+      list.each { |set| assert Rules.is_set?(*set.fetch("cards").sort), "#{set.fetch('cards')} is a set" }
+    end
+    assert_equal quickest.map { |set| set.fetch("median_ms") }.sort, quickest.map { |set| set.fetch("median_ms") }, "quickest first"
+    quickest.each do |set|
+      assert_equal 0, set.fetch("median_ms") % 100, "the page prints these to a tenth of a second, and that is all that is kept"
+      assert_operator set.fetch("n"), :>=, SetStats::MIN_SAMPLE
+    end
+    assert_equal least.map { |set| set.fetch("n") }.sort, least.map { |set| set.fetch("n") }, "least found first"
+    assert_equal per_set.fetch("min"), least.first.fetch("n")
+    assert_operator per_set.fetch("min"), :<=, per_set.fetch("median")
+    assert_operator per_set.fetch("median"), :<=, per_set.fetch("max")
+    assert_operator least.last.fetch("n"), :<, per_set.fetch("median")
+
+    fastest = SAVED.fetch("fastest_find")
+    assert Rules.is_set?(*fastest.fetch("cards").sort)
+    assert_operator fastest.fetch("ms"), :<=, quickest.first.fetch("median_ms"), "no set's median beats the one fastest find"
+    assert_operator fastest.fetch("ms"), :<=, SAVED.fetch("kinds").map { |k| k.fetch("p25_ms") }.min
+  end
+
+  test "the saved list of who finished the most games keeps the counts and no names" do
+    most = SAVED.fetch("most_games")
+
+    assert_equal 10, most.length
+    assert most.all?(Integer), "games finished, nothing else"
+    assert_equal most.sort.reverse, most
+    assert_operator most.sum, :<=, SAVED.fetch("games_finished")
+    refute_match(/[A-Za-z]{3,}/, SAVED.except("source", "kinds", "taken_at").to_json.gsub(/"[a-z_0-9]+":/, ""), "no player is named anywhere in the saved numbers")
+  end
+
   test "it says when the numbers were taken" do
     assert_equal "2026-11-15T23:09:00-08:00", SAVED.fetch("taken_at")
     taken = SpottingSets.current.taken_at
@@ -46,7 +81,24 @@ class SpottingSetsTest < ActiveSupport::TestCase
     assert_equal SAVED.fetch("players"), post.players
     assert_equal SAVED.fetch("kinds").map { |k| k.transform_keys(&:to_sym) }, post.kinds, "in the shape SetStats gives the chart"
     assert_equal({ 1 => 13.4, 2 => 34.0, 3 => 38.1, 4 => 14.4 }, post.shares)
+    assert_equal SAVED.fetch("games_finished"), post.games
+    assert_equal SAVED.fetch("most_games"), post.most_games
+    assert_equal SAVED.fetch("finds_per_set").transform_keys(&:to_sym), post.finds_per_set
+    assert_equal SAVED.fetch("quickest").map { |set| set.transform_keys(&:to_sym) }, post.quickest
+    assert_equal SAVED.fetch("least_found").map { |set| set.transform_keys(&:to_sym) }, post.least_found
+    assert_equal SAVED.fetch("fastest_find").transform_keys(&:to_sym), post.fastest_find
     assert_same post, SpottingSets.current, "read once"
+  end
+
+  test "the finds with a time are the chart's, and the rest of the sets found have none" do
+    post = SpottingSets.current
+    timed = SAVED.fetch("kinds").sum { |k| k.fetch("n") }
+
+    assert_equal 35_335, timed
+    assert_equal timed, post.timed_finds
+    assert_equal SAVED.fetch("sets_found") - timed, post.untimed_finds
+    assert_equal 624, post.untimed_finds
+    assert_equal post.finds, post.timed_finds + post.untimed_finds
   end
 
   test "the figures the text quotes are worked out from the kinds" do
@@ -64,6 +116,12 @@ class SpottingSetsTest < ActiveSupport::TestCase
     assert_equal 9100, post.median_ms("all but shape")
     assert_raises(KeyError) { post.median_ms("all but shading") }
     assert_equal 7, post.slowdown, "13.1s over 2.0s, to the nearest whole"
+    assert_equal 4400, post.kind("number + shape").fetch(:p75_ms) / 2
+    assert_equal 60, post.timed_finds, "ten finds of each of six kinds"
+    assert_equal 40, post.untimed_finds
+    assert_equal %w[shape], post.differing([31, 40, 49])
+    assert_equal %w[number shape shading], post.differing([8, 54, 70])
+    assert_equal %w[number color shape shading], post.differing([23, 28, 72])
   end
 
   test "the headline's multiple is the saved numbers'" do
