@@ -72,6 +72,19 @@ class SpottingSetsTest < ActiveSupport::TestCase
     assert_equal "2026-11-15T23:09:00-08:00", SAVED.fetch("taken_at")
     taken = SpottingSets.current.taken_at
     assert_equal [2026, 11, 15, 23, 9], [taken.year, taken.month, taken.day, taken.hour, taken.min], "in Pacific time, as it was taken"
+    assert_equal "2026-11-15T23:09:00-08:00", taken.iso8601
+  end
+
+  test "the day the numbers were taken is the dailies' day, whatever offset it was saved with" do
+    saved = JSON.parse(SAVED.to_json, symbolize_names: true)
+    # The same moment, written the way a server on UTC would: the 16th there, 11:09 PM on the 15th Pacific.
+    in_utc = SpottingSets.new(saved.merge(taken_at: "2026-11-16T07:09:00Z"))
+
+    assert_equal SpottingSets.current.taken_at, in_utc.taken_at
+    assert_equal Date.new(2026, 11, 15), in_utc.taken_at.to_date
+    assert_equal "2026-11-15T23:09:00-08:00", in_utc.taken_at.iso8601
+    assert_equal Date.new(2026, 11, 16), SpottingSets.new(saved.merge(taken_at: "2026-11-16T08:09:00Z")).taken_at.to_date, "an hour later, past midnight Pacific"
+    Time.use_zone("Asia/Tokyo") { assert_equal Date.new(2026, 11, 15), SpottingSets.current.taken_at.to_date }
   end
 
   test "the post reads the saved numbers as they are" do

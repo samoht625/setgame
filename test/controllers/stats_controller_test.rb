@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "minitest/mock"
 
 class StatsControllerTest < ActionDispatch::IntegrationTest
   test "stats page counts finished and unfinished finds" do
@@ -62,7 +63,7 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     assert_equal ["Rank", "Player", "Games", "Practice", "Daily Deal", "Best Puzzle", "Best Daily Deal"], css_select("table.players thead th").map { |th| th.text.squish }
     assert_equal [["1", "Ada", "1", "0", "1", "38.0s", "5.0s"]], player_rows, "one row per named player: rank, name, games, the practice and daily split, best times"
     assert_equal [["Fastest find", "1.5s", ""], ["Practice games", "1", "Median time 9.0s"], ["Daily Deal games", "1", "Median time 5.0s"],
-      ["Busiest day", Date.current.strftime("%b %-d"), "3 games"], ["Busiest hour", "11 AM", "Central time"]], facts,
+      ["Busiest day", DailyPuzzle.today.date.strftime("%b %-d"), "3 games"], ["Busiest hour", "11 AM", "Pacific time"]], facts,
       "every fun fact is a label, a value and a note"
     assert_select ".facts .wide .note svg.c", 3, "the fastest find shows its three cards"
     assert_includes response.body, "kind-iqr"
@@ -145,6 +146,134 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     assert_select "ol.sets", 2, "most found and least found still list sets"
   end
 
+  # Tido's report: at 11:55 PM Pacific on Nov 15, 2026 the chart's "Today" was
+  # already the 16th. It is 07:55 on the 16th in UTC then, and 1:55 AM Central.
+  LATE = Time.utc(2026, 11, 16, 7, 55)
+
+  test "a day on the stats page is the dailies' day: 11:30 PM Pacific and 12:30 AM are a day apart" do
+    reset_games
+    finish(pacific(2026, 11, 14, 23, 30), "ada")
+    finish(pacific(2026, 11, 15, 0, 30), "bo")
+    finish(pacific(2026, 11, 15, 23, 30), "ada")
+    found_a_set(pacific(2026, 11, 15, 23, 40), "cy")
+
+    travel_to LATE do
+      days = SetStats.new.compute[:activity_by_day]
+      assert_equal Date.new(2026, 11, 15), days.last[:date], "five minutes to midnight Pacific is still the 15th"
+      assert_equal DailyPuzzle.today.date, days.last[:date], "the same today as the Puzzle's and the Daily Deal's"
+      assert_equal SetStats::CHART_DAYS, days.length
+      assert_equal [[Date.new(2026, 11, 14), 1, 1], [Date.new(2026, 11, 15), 2, 3]], days.last(2).map { |day| day.values_at(:date, :games, :players) }
+      assert_equal 3, days.sum { |day| day[:games] }
+
+      get "/stats"
+      assert_response :success
+      assert_includes response.body, %(data-tip="Today · 2 games")
+      assert_includes response.body, %(data-tip="Sat, Nov 14 · 1 game")
+      assert_includes response.body, %(data-tip="Today · 3 players")
+      refute_includes response.body, "Nov 16"
+      assert_equal ["2 on Nov 15", "3 on Nov 15"], css_select(".chart-stats > div:first-child dd").map { |peak| peak.text.squish }, "the busiest day of each chart"
+    end
+
+    travel_to LATE + 5.minutes do
+      days = SetStats.new.compute[:activity_by_day]
+      assert_equal [[Date.new(2026, 11, 15), 2, 3], [Date.new(2026, 11, 16), 0, 0]], days.last(2).map { |day| day.values_at(:date, :games, :players) }, "midnight Pacific: a new, empty day"
+
+      get "/stats"
+      assert_includes response.body, %(data-tip="Today · 0 games")
+      assert_includes response.body, %(data-tip="Sun, Nov 15 · 2 games")
+    end
+
+    finish(pacific(2026, 11, 16, 0, 30), "ada")
+    travel_to pacific(2026, 11, 16, 0, 31) do
+      assert_equal [[Date.new(2026, 11, 15), 2], [Date.new(2026, 11, 16), 1]], SetStats.new.compute[:activity_by_day].last(2).map { |day| day.values_at(:date, :games) }
+    end
+  end
+
+  test "the busiest day and hour are counted on the dailies' clock, and the hour says so" do
+    reset_games
+    # Three games within 80 minutes, either side of midnight Pacific. They are
+    # one day in UTC (07:10 to 08:30) and one in Central (1:10 to 2:30 AM).
+    finish(pacific(2026, 11, 14, 23, 12), "ada")
+    finish(pacific(2026, 11, 14, 23, 42), "bo")
+    finish(pacific(2026, 11, 15, 0, 32), "cy")
+
+    travel_to LATE do
+      stats = SetStats.new.compute
+      assert_equal [Date.new(2026, 11, 14), 2], stats[:busiest_day]
+      assert_equal 23, stats[:busiest_hour]
+
+      get "/stats"
+      assert_equal [["Busiest day", "Nov 14", "2 games"], ["Busiest hour", "11 PM", "Pacific time"]], facts.last(2)
+    end
+  end
+
+  test "the stats' days follow daylight time: the day the clocks go back is 25 hours long" do
+    reset_games
+    finish(Time.utc(2026, 11, 1, 6, 30), "ada")  # 11:30 PM PDT on Oct 31
+    finish(Time.utc(2026, 11, 1, 7, 30), "ada")  # 12:30 AM PDT on Nov 1
+    finish(Time.utc(2026, 11, 2, 7, 30), "ada")  # 11:30 PM PST on Nov 1, 24 hours later
+    finish(Time.utc(2026, 11, 2, 8, 30), "ada")  # 12:30 AM PST on Nov 2
+
+    travel_to LATE do
+      days = SetStats.new.compute[:activity_by_day].to_h { |day| [day[:date], day[:games]] }
+      assert_equal [1, 2, 1], [Date.new(2026, 10, 31), Date.new(2026, 11, 1), Date.new(2026, 11, 2)].map { |date| days.fetch(date) }
+    end
+  end
+
+  test "the stats' days don't depend on the zone the server or the app is set to" do
+    reset_games
+    finish(pacific(2026, 11, 14, 23, 30), "ada")
+    finish(pacific(2026, 11, 15, 0, 30), "bo")
+    finish(pacific(2026, 11, 15, 23, 30), "ada")
+
+    travel_to LATE do
+      expected = comparable_stats
+      assert_equal [1, 2], expected[:activity_by_day].last(2).map { |day| day[:games] }
+      page = dated_parts_of_the_page
+      assert_equal ["Fri, Nov 13 · 0 games", "Sat, Nov 14 · 1 game", "Today · 2 games"], page.first.first(SetStats::CHART_DAYS).last(3)
+      %w[UTC America/Chicago America/New_York Asia/Tokyo Pacific/Kiritimati].each do |zone|
+        Time.use_zone(zone) do
+          assert_equal expected, comparable_stats, "with the app in #{zone}"
+          assert_equal page, dated_parts_of_the_page, "the page, with the app in #{zone}"
+        end
+        with_server_zone(zone) do
+          assert_equal expected, comparable_stats, "with the server in #{zone}"
+          assert_equal page, dated_parts_of_the_page, "the page, with the server in #{zone}"
+        end
+      end
+    end
+  end
+
+  test "stats kept for a few minutes are never kept past midnight: today is always today" do
+    reset_games
+    finish(pacific(2026, 11, 15, 12, 0), "ada")
+
+    Rails.stub(:cache, ActiveSupport::Cache::MemoryStore.new) do
+      travel_to pacific(2026, 11, 15, 23, 57) do
+        assert_equal [Date.new(2026, 11, 15), 1], SetStats.cached[:activity_by_day].last.values_at(:date, :games)
+      end
+      finish(pacific(2026, 11, 15, 23, 58), "bo")
+      travel_to pacific(2026, 11, 15, 23, 59) do
+        assert_equal [Date.new(2026, 11, 15), 1], SetStats.cached[:activity_by_day].last.values_at(:date, :games), "kept: the same day, two minutes on"
+      end
+
+      travel_to pacific(2026, 11, 16, 0, 0, 30) do
+        days = SetStats.cached[:activity_by_day]
+        assert_equal [[Date.new(2026, 11, 15), 2], [Date.new(2026, 11, 16), 0]], days.last(2).map { |day| day.values_at(:date, :games) }, "worked out again for the new day"
+        get "/stats"
+        assert_includes response.body, %(data-tip="Today · 0 games")
+        assert_includes response.body, %(data-tip="Sun, Nov 15 · 2 games")
+      end
+      finish(pacific(2026, 11, 16, 0, 1), "cy")
+      travel_to pacific(2026, 11, 16, 0, 2) do
+        assert_equal 0, SetStats.cached[:activity_by_day].last[:games], "and the new day's numbers are kept in turn"
+      end
+      travel_to pacific(2026, 11, 16, 0, 7) do
+        assert_equal 1, SetStats.cached[:activity_by_day].last[:games]
+      end
+    end
+  end
+
   test "the header menu's How to play has its dialog on the stats page" do
     Rails.cache.clear
 
@@ -163,6 +292,43 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+  def pacific(*args)
+    ActiveSupport::TimeZone[DailyPuzzle::TIME_ZONE].local(*args)
+  end
+
+  def reset_games
+    Rails.cache.clear
+    [SoloScore, SoloGame, PuzzleRun].each(&:delete_all)
+  end
+
+  # A Practice game this player finished at `at`, two minutes after starting it.
+  def finish(at, player)
+    game = SoloGame.create!(id: SecureRandom.uuid, player_id: player, seed: "1", started_at: at - 2.minutes, status: "completed", completed_at: at)
+    SoloScore.create!(solo_game: game, player_id: player, elapsed_ms: 120_000, completed_at: at, events: [])
+  end
+
+  # A game started at `at` that found a set and was never finished.
+  def found_a_set(at, player)
+    SoloGame.create!(id: SecureRandom.uuid, player_id: player, seed: "2", started_at: at, sets_found: 1,
+      events: [{ "type" => "claim", "cards" => [1, 2, 3], "t_ms" => 1500 }])
+  end
+
+  # Everything on /stats that names a day or an hour: the charts' bars, their busiest days and axes, and the fun facts.
+  def dated_parts_of_the_page
+    get "/stats"
+    assert_response :success
+    [css_select(".days i").map { |bar| bar["data-tip"] }, css_select(".chart-stats, .axis, .days").map { |part| [part.text.squish, part["aria-label"]] }, facts]
+  end
+
+  # Runs the block as if the machine's own clock were set to `zone`.
+  def with_server_zone(zone)
+    before = ENV["TZ"]
+    ENV["TZ"] = zone
+    yield
+  ensure
+    ENV["TZ"] = before
+  end
 
   # The players table as text: one array of cells per row.
   def player_rows

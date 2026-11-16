@@ -92,6 +92,60 @@ module Api
       end
     end
 
+    test "the practice day, week and month turn over at midnight Pacific, with the dailies" do
+      # Sunday, Nov 15, 2026. 8:30 PM Pacific is 11:30 PM in New York, where the
+      # day (and the week) used to end; 11:30 PM Pacific is 07:30 UTC on Monday.
+      evening = create_score(elapsed_ms: 70_000, completed_at: pacific(2026, 11, 15, 20, 30))
+      late = create_score(elapsed_ms: 60_000, completed_at: pacific(2026, 11, 15, 23, 30))
+      periods = ->(now) { travel_to(now) { SoloScore::PERIODS.to_h { |period| [period, SoloScore.leaderboard(period: period).map(&:id)] } } }
+
+      before_midnight = periods.call(pacific(2026, 11, 15, 23, 55))
+      assert_equal({ "daily" => [late.id, evening.id], "weekly" => [late.id, evening.id], "monthly" => [late.id, evening.id] }, before_midnight,
+        "five to midnight Pacific on Sunday: still today, and still this week")
+      travel_to pacific(2026, 11, 15, 23, 55) do
+        assert_equal Date.new(2026, 11, 15), DailyPuzzle.today.date, "the same day as the dailies'"
+        get "/api/solo/leaderboard", params: { period: "daily" }, headers: @headers
+        assert_equal [60_000, 70_000], JSON.parse(response.body).fetch("entries").map { |entry| entry.fetch("elapsed_ms") }
+        assert_equal late.id, SoloScore.personal_best(player_id: @player_id, period: "daily").id
+      end
+      # Whatever zone the app or the server is set to.
+      %w[UTC America/New_York Asia/Tokyo].each do |zone|
+        Time.use_zone(zone) { assert_equal before_midnight, periods.call(pacific(2026, 11, 15, 23, 55)), "with the app in #{zone}" }
+      end
+
+      assert_equal({ "daily" => [], "weekly" => [], "monthly" => [late.id, evening.id] }, periods.call(pacific(2026, 11, 16, 0, 5)),
+        "past midnight on Monday: a new day and a new week, the same month")
+      travel_to pacific(2026, 11, 16, 0, 5) do
+        assert_nil SoloScore.personal_best(player_id: @player_id, period: "daily")
+        get "/api/solo/leaderboard", params: { period: "weekly" }, headers: @headers
+        assert_equal [], JSON.parse(response.body).fetch("entries")
+      end
+
+      early = create_score(elapsed_ms: 50_000, completed_at: pacific(2026, 11, 16, 0, 30))
+      assert_equal({ "daily" => [early.id], "weekly" => [early.id], "monthly" => [early.id, late.id, evening.id] }, periods.call(pacific(2026, 11, 16, 0, 35)))
+
+      # The month: 11:30 PM on Nov 30 is November's; 12:30 AM on Dec 1 is December's.
+      last = create_score(elapsed_ms: 40_000, completed_at: pacific(2026, 11, 30, 23, 30))
+      assert_includes periods.call(pacific(2026, 11, 30, 23, 55)).fetch("monthly"), last.id
+      assert_equal({ "daily" => [], "weekly" => [last.id], "monthly" => [] }, periods.call(pacific(2026, 12, 1, 0, 5)), "Nov 30 was a Monday: the week runs on")
+    end
+
+    test "a practice day is midnight to midnight Pacific, in daylight time too" do
+      day = SoloScore.period_range("daily", Time.utc(2026, 11, 16, 7, 55))
+      assert_equal [Time.utc(2026, 11, 15, 8), Time.utc(2026, 11, 16, 8)], [day.begin.utc, day.end.utc.round]
+      # The day the clocks go back is 25 hours long.
+      long = SoloScore.period_range("daily", Time.utc(2026, 11, 1, 20))
+      assert_equal [Time.utc(2026, 11, 1, 7), Time.utc(2026, 11, 2, 8)], [long.begin.utc, long.end.utc.round]
+      summer = SoloScore.period_range("daily", Time.utc(2026, 10, 4, 6, 59))
+      assert_equal [Time.utc(2026, 10, 3, 7), Time.utc(2026, 10, 4, 7)], [summer.begin.utc, summer.end.utc.round]
+
+      week = SoloScore.period_range("weekly", Time.utc(2026, 11, 16, 7, 55))
+      assert_equal [Time.utc(2026, 11, 9, 8), Time.utc(2026, 11, 16, 8)], [week.begin.utc, week.end.utc.round], "Monday to Sunday"
+      month = SoloScore.period_range("monthly", Time.utc(2026, 12, 1, 7, 55))
+      assert_equal [Time.utc(2026, 11, 1, 7), Time.utc(2026, 12, 1, 8)], [month.begin.utc, month.end.utc.round], "November, which starts in daylight time"
+      assert_raises(ArgumentError) { SoloScore.period_range("yearly") }
+    end
+
     test "a finished run reports the player's previous all-time practice best" do
       create_score(elapsed_ms: 90_000, completed_at: 2.months.ago)
       create_score(elapsed_ms: 120_000, completed_at: 1.hour.ago)
@@ -132,6 +186,10 @@ module Api
       post "/api/solo/scores", headers: headers, params: { game_id: game.id, elapsed_ms: elapsed_ms, events: events }, as: :json
       assert_response :success
       JSON.parse(response.body)
+    end
+
+    def pacific(*args)
+      ActiveSupport::TimeZone[DailyPuzzle::TIME_ZONE].local(*args)
     end
 
     def create_score(elapsed_ms:, completed_at:, player_id: @player_id, created_at: completed_at)
