@@ -24,12 +24,13 @@ class SitemapControllerTest < ActionDispatch::IntegrationTest
       assert_nil response.headers["Set-Cookie"], "the same document for everyone"
 
       listed = urls
-      site = %w[/ /puzzle /practice /m /stats /archive].map { |path| "https://setdaily.app#{path}" }
+      site = %w[/ /daily /practice /m /stats /archive].map { |path| "https://setdaily.app#{path}" }
       assert_equal site, listed.keys.first(6)
       past_puzzles = (1..21).map { |number| "https://setdaily.app/puzzle/#{number}" }
       past_deals = (1..3).map { |number| "https://setdaily.app/daily/#{number}" }
       assert_equal (site + past_puzzles + past_deals).sort, listed.keys.sort
-      (past_puzzles + past_deals + ["https://setdaily.app/", "https://setdaily.app/archive"]).each do |loc|
+      refute_includes listed.keys, "https://setdaily.app/puzzle", "the Puzzle is listed once, as the home page"
+      (past_puzzles + past_deals + ["https://setdaily.app/", "https://setdaily.app/daily", "https://setdaily.app/archive"]).each do |loc|
         assert_match(/\A2026-\d\d-\d\d\z/, listed.fetch(loc), "#{loc} has a lastmod")
       end
       assert_equal "2026-11-15", listed.fetch("https://setdaily.app/puzzle/21")

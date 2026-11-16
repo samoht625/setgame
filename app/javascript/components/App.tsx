@@ -17,33 +17,25 @@ import { signedInEmail } from '../lib/player_id'
 import ReminderDialog from './ReminderDialog'
 import Tour, { useTourOpener } from '../rules/Tour'
 import { REMINDER_TIMES, reminderLabel } from '../lib/reminder'
+import { PATHS, SITE_NAME, type GameMode } from '../lib/site'
 
-// 'solo' is Practice: timed games against the clock.
-export type GameMode = 'daily' | 'puzzle' | 'solo' | 'multiplayer'
-
-export const PATHS: Record<GameMode, string> = {
-  daily: '/',
-  puzzle: '/puzzle',
-  solo: '/practice',
-  multiplayer: '/m'
-}
-
-// The Daily Deal is the front door (/ and the old /daily), the Puzzle is at
-// /puzzle, Practice at /practice and multiplayer at /m.
+// The Puzzle is the front door (/, and /puzzle), the Daily Deal is at /daily,
+// Practice at /practice and multiplayer at /m.
 function modeFromPath(pathname: string): GameMode {
   const path = pathname.replace(/\/+$/, '')
   if (path === '/m' || path.startsWith('/m/')) return 'multiplayer'
-  if (path === '/puzzle') return 'puzzle'
+  if (path === '/daily') return 'daily'
   if (path === '/practice') return 'solo'
-  return 'daily'
+  return 'puzzle'
 }
 
-// Must match the <title> each route renders in app/views/home.
+// Must match the <title> each route renders (ApplicationHelper#page_title):
+// the home page's is the site's name, every other page's names the page first.
 const TITLES: Record<GameMode, string> = {
-  daily: 'Daily Set Puzzle: find 6 sets in 12 cards, or clear the deck | Set Daily',
-  puzzle: 'Today’s Set Puzzle: 12 cards, 6 sets, one try | Set Daily',
-  solo: 'Set Practice · Timed Set Card Game',
-  multiplayer: 'Set Multiplayer · Play Set Online with Friends'
+  daily: `Daily Deal | ${SITE_NAME}`,
+  puzzle: SITE_NAME,
+  solo: `Practice | ${SITE_NAME}`,
+  multiplayer: `Multiplayer | ${SITE_NAME}`
 }
 
 /** The page behind every game; the prerendered header (script/prerender.tsx) sits in the same box. */

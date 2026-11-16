@@ -28,7 +28,7 @@ When the environment's Network Access is restricted, a host missing from this li
 curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/
 ```
 
-Expect `200`. Daily Deal: `/`, Puzzle: `/puzzle`, Practice: `/practice`, multiplayer: `/m`, stats: `/stats`.
+Expect `200`. Puzzle: `/` (and `/puzzle`), Daily Deal: `/daily`, Practice: `/practice`, multiplayer: `/m`, stats: `/stats`.
 
 ### Tests
 

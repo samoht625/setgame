@@ -50,7 +50,7 @@ test('without scripts, the archive lists past days and a day’s page has its bo
   const page = await context.newPage()
   try {
     await page.goto('/archive')
-    await expect(page).toHaveTitle('Set Archive · Every Past Daily Deal and Puzzle')
+    await expect(page).toHaveTitle('Archive | Set Daily')
     await expect(page.locator('link[rel=canonical]')).toHaveAttribute('href', 'https://setdaily.app/archive')
     const newest = page.locator('main a[href^="/puzzle/"]').first()
     const href = await newest.getAttribute('href')
@@ -60,7 +60,7 @@ test('without scripts, the archive lists past days and a day’s page has its bo
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(`Set Puzzle #${href!.split('/').pop()}`)
 
     await page.goto(FIRST)
-    await expect(page).toHaveTitle(/^Set Puzzle #1 · Oct 25, 2026 · Board, Solution and Leaderboard/)
+    await expect(page).toHaveTitle('Puzzle #1 | Set Daily')
     await expect(page.locator('link[rel=canonical]')).toHaveAttribute('href', 'https://setdaily.app/puzzle/1')
     await expect(page.locator('meta[name=description]')).toHaveAttribute('content', /^Set Puzzle #1, the daily Set puzzle for Sunday, October 25, 2026/)
     await expect(page.locator('#archive-board')).toBeVisible()
@@ -68,7 +68,7 @@ test('without scripts, the archive lists past days and a day’s page has its bo
     await expect(page.locator('#archive-solution ol > li')).toHaveCount(6)
     await expect(page.getByRole('heading', { name: 'Leaderboard', exact: true })).toBeVisible()
     await expect(page.getByRole('link', { name: 'All past days', exact: true })).toHaveAttribute('href', '/archive')
-    await expect(page.getByRole('link', { name: 'Today’s Puzzle', exact: true })).toHaveAttribute('href', '/puzzle')
+    await expect(page.getByRole('link', { name: 'Today’s Puzzle', exact: true })).toHaveAttribute('href', '/')
   } finally {
     await context.close()
   }
@@ -193,7 +193,7 @@ test('today’s number goes to the live game, and neither it nor a later day has
   const today = (await (await page.request.get('/api/puzzle')).json() as Status).number
   const live = await page.request.get(`/puzzle/${today}`, { maxRedirects: 0 })
   expect(live.status()).toBe(302)
-  expect(new URL(live.headers()['location']!).pathname).toBe('/puzzle')
+  expect(new URL(live.headers()['location']!).pathname).toBe('/')
   for (const path of [`/puzzle/${today + 1}`, `/puzzle/${today + 400}`, '/puzzle/0', '/puzzle/01', '/puzzle/2026-10-25', `/daily/${today + 400}`]) {
     const res = await page.request.get(path, { maxRedirects: 0 })
     expect(res.status(), path).toBe(404)

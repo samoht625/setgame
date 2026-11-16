@@ -55,20 +55,19 @@ It runs `set-prod.sh` without the restart, enables and starts `setgame.service`,
 | `DATABASE_PATH` | Absolute path to the SQLite file, outside the checkout. |
 | `WEB_CONCURRENCY` | Must stay `1`. One Puma process owns the multiplayer table and the SQLite writes. |
 | `RESEND_API_KEY` | Sends sign-in links and reminders through Resend. Without it, sign-in is switched off in production. |
-| `SETGAME_MAIL_FROM` | The From address for that email. Defaults to `Set <deal@set.tido.site>`. See [Email sender](#email-sender). |
+| `SETGAME_MAIL_FROM` | The From address for that email. Defaults to `Set Daily <deal@setdaily.app>`. See [Email sender](#email-sender). |
 | `SETGAME_SIGN_IN` | Set to `off` to switch sign-in off even with a key. |
 | `NODE_BINARY` | Path to `node`, used to render share images. systemd's PATH may not include it. |
 
 ### Email sender
 
-The links in every email point at `setdaily.app`, but the default From address is still `Set <deal@set.tido.site>` (`ResendMail::DEFAULT_FROM`). Resend only sends from a verified domain, and `setdaily.app` is not verified there yet, so changing the sender first would make Resend refuse every sign-in link and reminder.
+Every email is sent from `Set Daily <deal@setdaily.app>` (`ResendMail::DEFAULT_FROM`) unless `SETGAME_MAIL_FROM` in `deploy/setgame.env` names another sender. Resend only sends from a verified domain: if `setdaily.app` is not verified there, Resend refuses every sign-in link and reminder.
 
-To move the sender:
+A `SETGAME_MAIL_FROM` line wins over the default, so one written for an earlier sender keeps that sender until it is changed or removed. To change the sender:
 
-1. Add `setdaily.app` as a domain in Resend, publish the DNS records it asks for, and wait for it to show as verified.
-2. Add the line `SETGAME_MAIL_FROM=Set <deal@setdaily.app>` to `deploy/setgame.env`, without quotes, and run `./scripts/set-prod.sh`.
-3. Ask for a sign-in link on the site and check that it arrives from the new address.
-4. Then change `DEFAULT_FROM` in `app/services/resend_mail.rb` to match.
+1. Check that the address's domain shows as verified in Resend. To add one, publish the DNS records Resend asks for and wait.
+2. Set the line in `deploy/setgame.env`, without quotes, for example `SETGAME_MAIL_FROM=Set Daily <deal@setdaily.app>`, or remove the line to use the default. Run `./scripts/set-prod.sh`.
+3. Ask for a sign-in link on the site and check that it arrives from the new sender.
 
 ## What SQLite holds
 

@@ -1,7 +1,7 @@
 import { test, expect, type Locator, type Page } from '@playwright/test'
 
 // Every page with the header menu.
-const PAGES = ['/', '/practice', '/puzzle', '/m', '/stats']
+const PAGES = ['/', '/practice', '/daily', '/m', '/stats']
 
 const box = async (locator: Locator) => (await locator.boundingBox())!
 const overflow = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)

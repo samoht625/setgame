@@ -441,7 +441,7 @@ const PuzzleGame: React.FC = () => {
           onNextDeal={goToToday}
           stale={staleRun}
           onNameScore={namedRun && status?.me.result && !myScoreName ? nameRun : undefined}
-          next={dailyDone ? PRACTICE_LINK : { href: '/', label: 'Daily Deal' }}
+          next={dailyDone ? PRACTICE_LINK : { href: '/daily', label: 'Daily Deal' }}
           noun="puzzle"
           marksLabel="Your attempts"
           emptyText="No times yet — find all 6 sets to take the top spot."

@@ -15,7 +15,7 @@ class Sitemap
 
   Entry = Struct.new(:path, :lastmod)
 
-  CACHE_KEY = "sitemap/v1"
+  CACHE_KEY = "sitemap/v2"
 
   # The whole document, built again only when a day starts or closes. One
   # cache entry, replaced in place, so the cache doesn't grow by a file a day.
@@ -57,8 +57,9 @@ class Sitemap
 
   # The two dailies and /stats change every day. Practice and multiplayer
   # are the same page every day, so they carry no lastmod rather than a made-up one.
+  # The Puzzle is listed once, as the home page: /puzzle is the same page and names / as its canonical address.
   def pages
-    list = [Entry.new("/", @today), Entry.new("/puzzle", @today), Entry.new("/practice", nil), Entry.new("/m", nil), Entry.new("/stats", @today)]
+    list = [Entry.new("/", @today), Entry.new("/daily", @today), Entry.new("/practice", nil), Entry.new("/m", nil), Entry.new("/stats", @today)]
     newest = @archives.map(&:last_date).max
     list << Entry.new("/archive", newest + 1) if newest
     list

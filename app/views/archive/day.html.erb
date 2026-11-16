@@ -1,6 +1,6 @@
 <%# One closed day of the Daily Deal or the Puzzle. Everything here is the same for every visitor and readable without JavaScript; ArchivePlay (app/javascript/archive) adds the practice game over the board. %>
 <% day = @day %>
-<% content_for :title, archive_day_title(day) %>
+<% content_for :title, day.name %>
 <% content_for :description, archive_day_description(day) %>
 <% content_for :canonical, "#{ApplicationHelper::SITE_URL}#{day.path}" %>
 <% content_for :head, render("home/identity") %>
@@ -90,7 +90,7 @@
     <% if (previous = day.previous_day) %><a rel="prev" href="<%= previous.path %>" class="<%= pill %>"><span aria-hidden="true" class="mr-1">←</span><%= previous.name %></a><% end %>
     <% if (following = day.next_day) %><a rel="next" href="<%= following.path %>" class="<%= pill %>"><%= following.name %><span aria-hidden="true" class="ml-1">→</span></a><% end %>
     <% if (sibling = day.sibling) %><a href="<%= sibling.path %>" class="<%= pill %>">That day’s <%= sibling.name %></a><% end %>
-    <a href="<%= day.puzzle? ? puzzle_path : root_path %>" class="<%= pill %>">Today’s <%= day.puzzle? ? "Puzzle" : "Daily Deal" %></a>
+    <a href="<%= day.puzzle? ? root_path : daily_path %>" class="<%= pill %>">Today’s <%= day.puzzle? ? "Puzzle" : "Daily Deal" %></a>
     <a href="<%= archive_path %>" class="<%= pill %>">All past days</a>
   </nav>
 </main>

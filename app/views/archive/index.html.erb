@@ -1,6 +1,6 @@
 <%# Every closed day of the Daily Deal and the Puzzle, newest first, a page at a time. %>
 <% page_path = ->(page) { page == 1 ? archive_path : archive_path(page: page) } %>
-<% content_for :title, @page == 1 ? "Set Archive · Every Past Daily Deal and Puzzle" : "Set Archive · Past Daily Deals and Puzzles, Page #{@page}" %>
+<% content_for :title, @page == 1 ? "Archive" : "Archive, page #{@page}" %>
 <% content_for :description, "Every past Set Daily Deal and daily Set Puzzle, with each day’s board, solution and final leaderboard. Play any day again as practice, free in your browser." %>
 <% content_for :canonical, "#{ApplicationHelper::SITE_URL}#{page_path.(@page)}" %>
 <% content_for :head, render("home/identity") %>
@@ -18,7 +18,7 @@
     <div class="mt-6 rounded-2xl border border-dashed border-neutral-300 px-4 py-10 text-center dark:border-neutral-600">
       <p class="text-sm font-medium">No past days yet</p>
       <p class="mt-1 text-sm text-neutral-600 dark:text-neutral-300">Days end at midnight Pacific and land here two hours later.</p>
-      <a href="<%= root_path %>" class="<%= pill %> mt-4">Play today’s Daily Deal</a>
+      <a href="<%= root_path %>" class="<%= pill %> mt-4">Play today’s Puzzle</a>
     </div>
   <% else %>
     <ol class="mt-5 overflow-hidden rounded-2xl border border-neutral-200 bg-white dark:border-neutral-600 dark:bg-neutral-900">

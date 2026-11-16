@@ -69,7 +69,7 @@ const InstallPrompt: React.FC<{ kind: InstallKind }> = ({ kind }) => {
       <div className="px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:pb-5 sm:pt-6">
         <div aria-hidden="true" className="mx-auto mb-4 h-1 w-9 rounded-full bg-neutral-300 dark:bg-neutral-700 sm:hidden" />
         <img src="/icon-192.png" alt="" width={56} height={56} className="mx-auto mb-3 h-14 w-14 rounded-[14px] shadow-sm" />
-        <h2 id={titleId} className="text-lg font-semibold tracking-tight">Add Set to your Home Screen</h2>
+        <h2 id={titleId} className="text-lg font-semibold tracking-tight">Add Set Daily to your Home Screen</h2>
         <p className="mt-1 text-balance text-sm text-neutral-500 dark:text-neutral-400">Tomorrow’s deal, one tap away.</p>
         {kind === 'ios' ? (
           <>

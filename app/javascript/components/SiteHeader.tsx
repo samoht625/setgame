@@ -1,6 +1,6 @@
 import React from 'react'
 import Header from './Header'
-import { PATHS } from './App'
+import { PATHS } from '../lib/site'
 import { CardSymbols } from './CardFace'
 import { SoundProvider } from './SoundProvider'
 import { GameMenuProvider } from './GameMenu'

@@ -11,13 +11,17 @@ class RemindersController < ApplicationController
   # signed token in the URL is the authorization.
   skip_forgery_protection only: %i[unsubscribe resubscribe]
 
-  PLAY_PATHS = %w[/ /puzzle].freeze
+  # Where a Play link's `to` opens: it names the game. Emails sent while the
+  # Daily Deal was the home page said "/" for the Deal and "/puzzle" for the
+  # Puzzle, and still open the same game. Anything else opens the home page.
+  PLAY_PATHS = { "daily" => "/daily", "puzzle" => "/", "/" => "/daily", "/puzzle" => "/" }.freeze
 
   # A browser already signed in to the account goes straight to the game.
   # Any other browser is asked first, naming the account, so nobody can sign
   # a stranger in to theirs by sending them their own Play link.
   def play
     @path = play_path
+    @to = params[:to].to_s
     @token = params[:t].to_s
     account = Reminder.account_for(:play, @token)
     return redirect_to @path, status: :see_other if account.nil? || current_account == account
@@ -67,6 +71,6 @@ class RemindersController < ApplicationController
   private
 
   def play_path
-    PLAY_PATHS.include?(params[:to]) ? params[:to] : "/"
+    PLAY_PATHS.fetch(params[:to].to_s, "/")
   end
 end

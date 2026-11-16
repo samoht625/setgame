@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import type { GameMode } from './App'
+import { PATHS, SITE_NAME, type GameMode } from '../lib/site'
 import CardFace from './CardFace'
 import { useSound } from './SoundProvider'
 import { openHowToPlay } from '../rules/HowToPlay'
@@ -55,15 +55,30 @@ const Header: React.FC<HeaderProps> = ({ mode, page, onSwitchMode, othersOnline 
   // Practice and multiplayer live in the menu; the switch only shows one while you're in it.
   const secondary = mode === 'solo' || mode === 'multiplayer'
 
+  // The logo is the site's name and three dots (or, once found, its little
+  // set). Where a phone has no room for both, one stands for the logo: the
+  // name beside a two-segment switch, and beside a third segment the name
+  // too, down to the narrowest phones, which get the dots.
+  const wordRoom = secondary ? (showLogoSet ? 'max-[460px]:hidden' : 'max-[360px]:hidden') : showLogoSet ? 'max-[360px]:hidden' : ''
+  const dotsRoom = showLogoSet ? 'flex' : secondary ? 'flex min-[360px]:max-[460px]:hidden' : 'hidden min-[360px]:flex'
+
+  // Real links, so a crawler (or a new tab) can follow them; a plain click switches in place.
+  const follow = (event: React.MouseEvent<HTMLAnchorElement>, value: GameMode) => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    event.preventDefault()
+    onSwitchMode(value)
+  }
+
   const segment = (value: GameMode, label: string, narrowLabel?: string) => {
     const isActive = mode === value
 
     return (
-      <button
-        type="button"
-        onClick={() => onSwitchMode(value)}
-        aria-pressed={isActive}
-        className={`relative min-h-8 whitespace-nowrap rounded-full px-2.5 text-sm transition-colors sm:px-3 ${
+      <a
+        href={PATHS[value]}
+        onClick={event => follow(event, value)}
+        aria-current={isActive ? 'page' : undefined}
+        draggable={false}
+        className={`relative inline-flex min-h-8 items-center whitespace-nowrap rounded-full px-2.5 text-sm transition-colors sm:px-3 ${
           isActive
             ? 'bg-white font-medium text-neutral-900 shadow-sm dark:bg-neutral-700 dark:text-neutral-100'
             : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white'
@@ -75,18 +90,16 @@ const Header: React.FC<HeaderProps> = ({ mode, page, onSwitchMode, othersOnline 
             <span className="max-[420px]:sr-only">{label}</span>
           </>
         ) : label}
-      </button>
+      </a>
     )
   }
 
   return (
     <header>
       <div className="mx-auto flex h-12 w-full max-w-screen-2xl items-center justify-between gap-1 px-3 md:px-6 lg:px-10">
-        <LogoTag {...(mode === null ? { href: '/', 'aria-label': 'Set home' } : { type: 'button' as const, 'aria-label': 'Set logo', onClick: tapLogo })} className="flex min-h-11 shrink-0 items-center gap-1 rounded-lg sm:gap-2">
-          {/* On narrow phones with a third segment, the logo's little set shows in place of the word. */}
-          <span className={`text-base font-semibold tracking-tight ${secondary && showLogoSet ? 'max-[419px]:hidden' : ''}`}>Set</span>
-          {/* Gives way on narrow phones when the switch has a third segment (Practice, Multiplayer). */}
-          <span className={`h-6 w-11 items-center justify-center gap-1 ${secondary && !showLogoSet ? 'hidden min-[420px]:flex' : 'flex'}`} aria-hidden="true">
+        <LogoTag {...(mode === null ? { href: '/', 'aria-label': `${SITE_NAME} home` } : { type: 'button' as const, 'aria-label': `${SITE_NAME} logo`, onClick: tapLogo })} className="flex min-h-11 shrink-0 items-center gap-1 rounded-lg sm:gap-2">
+          <span className={`whitespace-nowrap text-base font-semibold tracking-tight ${wordRoom}`}>{SITE_NAME}</span>
+          <span className={`h-6 w-11 items-center justify-center gap-1 ${dotsRoom}`} aria-hidden="true">
             {showLogoSet ? (
               <span data-logo-set className="flex w-full gap-0.5 animate-logo-reveal">
                 {[1, 4, 7].map(cardId => <CardFace key={cardId} cardId={cardId} decorative className="h-auto min-w-0 flex-1 rounded-sm" />)}

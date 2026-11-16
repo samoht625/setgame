@@ -34,7 +34,7 @@ class ArchiveController < ApplicationController
     @day = ArchivedDay.find(kind, params[:number])
     unless @day
       live = kind == "puzzle" ? ClassicPuzzle.today : DailyPuzzle.today
-      return redirect_to(kind == "puzzle" ? puzzle_path : root_path) if params[:number].to_s == live.number.to_s
+      return redirect_to(kind == "puzzle" ? root_path : daily_path) if params[:number].to_s == live.number.to_s
 
       return not_found
     end

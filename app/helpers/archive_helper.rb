@@ -46,11 +46,6 @@ module ArchiveHelper
     "#{pluralize(day.total, 'player')} finished it; the fastest took #{archive_time(day.best_ms)}."
   end
 
-  def archive_day_title(day)
-    what = day.puzzle? ? "Board, Solution and Leaderboard" : "Opening Board and Leaderboard"
-    "#{day.title} · #{archive_short_date(day.date)} · #{what}"
-  end
-
   def archive_day_description(day)
     intro = if day.puzzle?
       "#{day.title}, the daily Set puzzle for #{archive_long_date(day.date)}: the 12-card board, all 6 sets and the day's leaderboard."

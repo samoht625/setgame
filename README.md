@@ -1,13 +1,13 @@
-# Set
+# Set Daily
 
 **Play free in your browser:** [setdaily.app](https://setdaily.app/)
 
-The card game Set, for phones and desktops. No signup and no download.
+Set Daily is the card game Set, for phones and desktops. No signup and no download.
 
 | Mode | Path | What it is |
 | --- | --- | --- |
-| Daily Deal | `/` | Everyone gets the same deal. Clear the whole deck as fast as you can. One ranked try a day, a new deal at midnight Pacific, streaks, and a result you can share and compare. |
-| Puzzle | `/puzzle` | Twelve cards hold exactly six sets. Find all six. One a day, same for everyone. |
+| Puzzle | `/` | The home page. Twelve cards hold exactly six sets. Find all six. One a day, same for everyone. `/puzzle` opens it too. |
+| Daily Deal | `/daily` | Everyone gets the same deal. Clear the whole deck as fast as you can. One ranked try a day, a new deal at midnight Pacific, streaks, and a result you can share and compare. |
 | Practice | `/practice` | Timed games against the clock, as many as you like, with daily, weekly and monthly leaderboards. |
 | Multiplayer | `/m` | One shared live table. Whoever finds the most sets wins the round. |
 | Stats | `/stats` | Site-wide numbers: sets found, games per day, how fast each kind of set is found, and the most active named players. |

@@ -1,11 +1,14 @@
 import { test, expect, type Page } from '@playwright/test'
 
-// What the front door and the Puzzle page tell search engines. The same strings
-// are in app/views/home (served) and App.tsx (the tab title after a switch).
-const HOME_HEADING = 'Daily Set Puzzle: find 6 sets in 12 cards, or clear the deck'
-const HOME_TITLE = `${HOME_HEADING} | Set Daily`
-const PUZZLE_HEADING = 'Today’s Set Puzzle: 12 cards, 6 sets, one try'
-const PUZZLE_TITLE = `${PUZZLE_HEADING} | Set Daily`
+// What the front door (the Puzzle) and the Daily Deal's page tell search
+// engines, and what the tab says. The same strings are in app/views/home
+// (served) and App.tsx (the tab title after a switch).
+const SITE_NAME = 'Set Daily'
+const HOME_HEADING = 'Daily Set Puzzle: find all 6 sets in 12 cards'
+const HOME_DESCRIPTION = 'Play the daily Set puzzle free: 12 cards hold exactly 6 sets. Find all 6 and see how your time ranks. Same puzzle for everyone, new at midnight Pacific. No signup.'
+const DAILY_TITLE = 'Daily Deal | Set Daily'
+const DAILY_HEADING = 'Set Daily Deal: clear the whole deck, one ranked try a day'
+const DAILY_DESCRIPTION = 'The Daily Deal: one deck of Set, dealt the same for everyone. Clear all 81 cards as fast as you can, one ranked try a day. New at midnight Pacific. No signup.'
 
 /** The tags a search engine or a link preview reads from the page. */
 async function headTags(page: Page) {
@@ -14,6 +17,7 @@ async function headTags(page: Page) {
     return {
       description: content('meta[name="description"]'),
       canonical: document.querySelector('link[rel="canonical"]')?.getAttribute('href') ?? null,
+      siteName: content('meta[property="og:site_name"]'),
       ogTitle: content('meta[property="og:title"]'),
       ogDescription: content('meta[property="og:description"]'),
       ogUrl: content('meta[property="og:url"]'),
@@ -37,29 +41,34 @@ async function expectHiddenMainHeading(page: Page, text: string) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 }
 
-test('the front door leads with the daily Set puzzle for search and still opens the Daily Deal', async ({ page }) => {
-  await page.goto('/')
-  await expect(page).toHaveTitle(HOME_TITLE)
-  const tags = await headTags(page)
-  expect(tags.ogTitle).toBe(HOME_TITLE)
-  expect(tags.twitterTitle).toBe(HOME_TITLE)
-  // Honest about what opens: both dailies are named, the Puzzle first.
-  expect(tags.description).toBe('Play the daily Set puzzle free: find all 6 sets in 12 cards, or clear the whole deck in the Daily Deal. Same cards for everyone, new at midnight Pacific. No signup.')
-  expect(tags.ogDescription).toBe(tags.description)
-  expect(tags.twitterDescription).toBe(tags.description)
-  expect(tags.canonical).toBe('https://setdaily.app/')
-  expect(tags.ogUrl).toBe('https://setdaily.app/')
-  await expectHiddenMainHeading(page, HOME_HEADING)
+const modes = (page: Page) => page.getByRole('navigation', { name: 'Game mode' })
 
-  // The game is the Daily Deal, as before, with the Puzzle the title promises one tap away.
-  await expect(page.getByRole('button', { name: 'Daily Deal', exact: true })).toHaveAttribute('aria-pressed', 'true')
-  await expect(page.getByText(/^Daily Deal #\d+$/).first()).toBeVisible()
-  await expect(page.getByText('Same deal for everyone today.')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Puzzle', exact: true }).click()
-  await expect(page).toHaveURL(/\/puzzle$/)
-  await expect(page.getByText('12 cards. 6 sets. Find them all.')).toBeVisible()
-})
+for (const path of ['/', '/puzzle']) {
+  test(`${path} opens the Puzzle, titled with the site’s name, and tells search engines it is the daily Set puzzle at /`, async ({ page }) => {
+    await page.goto(path)
+    await expect(page).toHaveTitle(SITE_NAME)
+    const tags = await headTags(page)
+    expect(tags.siteName).toBe(SITE_NAME)
+    expect(tags.ogTitle).toBe(SITE_NAME)
+    expect(tags.twitterTitle).toBe(SITE_NAME)
+    // The words people search for are in the description and the heading, not the title.
+    expect(tags.description).toBe(HOME_DESCRIPTION)
+    expect(tags.ogDescription).toBe(HOME_DESCRIPTION)
+    expect(tags.twitterDescription).toBe(HOME_DESCRIPTION)
+    // Honest about what opens: this page is the Puzzle, so it doesn't say the Daily Deal is here.
+    expect(tags.description).not.toMatch(/Daily Deal/)
+    // /puzzle is the same page, so both name / as its one address.
+    expect(tags.canonical).toBe('https://setdaily.app/')
+    expect(tags.ogUrl).toBe('https://setdaily.app/')
+    await expectHiddenMainHeading(page, HOME_HEADING)
+
+    await expect(modes(page).getByRole('link', { name: 'Puzzle', exact: true })).toHaveAttribute('aria-current', 'page')
+    await expect(modes(page).getByRole('link', { name: 'Daily Deal', exact: true })).not.toHaveAttribute('aria-current')
+    await expect(page.getByText(/^Puzzle #\d+$/).first()).toBeVisible()
+    await expect(page.getByText('12 cards. 6 sets. Find them all.')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeVisible()
+  })
+}
 
 test('the front door’s structured data parses and says only what is true of the site', async ({ page }) => {
   await page.goto('/')
@@ -69,12 +78,12 @@ test('the front door’s structured data parses and says only what is true of th
   expect(data['@context']).toBe('https://schema.org')
   const [site, game] = data['@graph']
   expect(data['@graph']).toHaveLength(2)
-  expect(site).toEqual({ '@type': 'WebSite', '@id': 'https://setdaily.app/#website', name: 'Set Daily', alternateName: 'Set', url: 'https://setdaily.app/', inLanguage: 'en' })
+  expect(site).toEqual({ '@type': 'WebSite', '@id': 'https://setdaily.app/#website', name: SITE_NAME, alternateName: 'setdaily.app', url: 'https://setdaily.app/', inLanguage: 'en' })
   expect(game).toMatchObject({
     '@type': ['VideoGame', 'WebApplication'],
-    name: 'Set Daily',
+    name: SITE_NAME,
     url: 'https://setdaily.app/',
-    description: tags.description,
+    description: HOME_DESCRIPTION,
     image: 'https://setdaily.app/og-image.png',
     gamePlatform: 'Web browser',
     applicationCategory: 'GameApplication',
@@ -88,40 +97,151 @@ test('the front door’s structured data parses and says only what is true of th
   }
 })
 
-test('the Puzzle page says what that one game is and leaves the daily Set puzzle search to the front door', async ({ page }) => {
-  await page.goto('/puzzle')
-  await expect(page).toHaveTitle(PUZZLE_TITLE)
+test('the Daily Deal has its own page at /daily, with its own title, description and address', async ({ page }) => {
+  await page.goto('/daily')
+  await expect(page).toHaveTitle(DAILY_TITLE)
   const tags = await headTags(page)
-  expect(tags.ogTitle).toBe(PUZZLE_TITLE)
-  expect(tags.twitterTitle).toBe(PUZZLE_TITLE)
-  expect(tags.description).toBe('Today’s Set Puzzle: 12 cards hold exactly 6 sets. Find all 6 in one try and see how your time ranks. A new puzzle every midnight Pacific. Free, no signup.')
-  expect(tags.ogDescription).toBe(tags.description)
-  expect(tags.canonical).toBe('https://setdaily.app/puzzle')
-  for (const text of [PUZZLE_TITLE, tags.description!]) expect(text).not.toMatch(/daily set puzzle/i)
+  expect(tags.siteName).toBe(SITE_NAME)
+  expect(tags.ogTitle).toBe(DAILY_TITLE)
+  expect(tags.twitterTitle).toBe(DAILY_TITLE)
+  expect(tags.description).toBe(DAILY_DESCRIPTION)
+  expect(tags.ogDescription).toBe(DAILY_DESCRIPTION)
+  expect(tags.canonical).toBe('https://setdaily.app/daily')
+  expect(tags.ogUrl).toBe('https://setdaily.app/daily')
+  // The front door is the page for the daily Set puzzle search.
+  expect(tags.description).not.toMatch(/daily set puzzle/i)
   expect(tags.structuredData).toHaveLength(0)
-  await expectHiddenMainHeading(page, PUZZLE_HEADING)
-  await expect(page.getByRole('button', { name: 'Puzzle', exact: true })).toHaveAttribute('aria-pressed', 'true')
-  await expect(page.getByText(/^Puzzle #\d+$/).first()).toBeVisible()
+  await expectHiddenMainHeading(page, DAILY_HEADING)
+  await expect(modes(page).getByRole('link', { name: 'Daily Deal', exact: true })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByText(/^Daily Deal #\d+$/).first()).toBeVisible()
+  await expect(page.getByText('Same deal for everyone today.')).toBeVisible()
 })
 
-test('the tab title after switching games is the one that game’s page is served with', async ({ page, request }) => {
+test('the tab title is the site’s name at home and “Page | Set Daily” elsewhere, as served and after every switch', async ({ page, request }) => {
   const served = async (path: string) => (await (await request.get(path)).text()).match(/<title>(.*?)<\/title>/)![1]!
-  expect(await served('/')).toBe(HOME_TITLE)
-  expect(await served('/daily')).toBe(HOME_TITLE)
-  expect(await served('/puzzle')).toBe(PUZZLE_TITLE)
+  expect(await served('/')).toBe(SITE_NAME)
+  expect(await served('/puzzle')).toBe(SITE_NAME)
+  expect(await served('/daily')).toBe(DAILY_TITLE)
+  expect(await served('/practice')).toBe('Practice | Set Daily')
+  expect(await served('/m')).toBe('Multiplayer | Set Daily')
 
+  // No title on the way reads as the Daily Deal's name ("Set Daily Deal …").
+  const seen: string[] = []
+  const expectTitle = async (title: string) => {
+    await expect(page).toHaveTitle(title)
+    seen.push(await page.title())
+  }
   await page.goto('/')
-  await expect(page).toHaveTitle(HOME_TITLE)
-  await page.getByRole('button', { name: 'Puzzle', exact: true }).click()
-  await expect(page).toHaveTitle(PUZZLE_TITLE)
-  await page.getByRole('button', { name: 'Daily Deal', exact: true }).click()
-  await expect(page).toHaveTitle(HOME_TITLE)
+  await expectTitle(SITE_NAME)
+  await modes(page).getByRole('link', { name: 'Daily Deal', exact: true }).click()
+  await expectTitle(DAILY_TITLE)
+  await modes(page).getByRole('link', { name: 'Puzzle', exact: true }).click()
+  await expectTitle(SITE_NAME)
   await page.getByRole('button', { name: 'Menu', exact: true }).click()
   await page.getByRole('menuitem', { name: 'Practice', exact: true }).click()
-  await expect(page).toHaveTitle(await served('/practice'))
+  await expectTitle(await served('/practice'))
   await page.getByRole('button', { name: 'Menu', exact: true }).click()
   await page.getByRole('menuitem', { name: /^Multiplayer/ }).click()
-  await expect(page).toHaveTitle(await served('/m'))
+  await expectTitle(await served('/m'))
+  await page.goBack()
+  await page.goBack()
+  await expectTitle(SITE_NAME)
+  for (const title of seen) expect(title).not.toMatch(/^Set Daily Deal/)
+})
+
+test('the Daily Deal / Puzzle switch is two real links that switch in place', async ({ page, context }) => {
+  await page.goto('/')
+  const daily = modes(page).getByRole('link', { name: 'Daily Deal', exact: true })
+  const puzzle = modes(page).getByRole('link', { name: 'Puzzle', exact: true })
+  await expect(daily).toHaveAttribute('href', '/daily')
+  await expect(puzzle).toHaveAttribute('href', '/')
+  await expect(modes(page).getByRole('button')).toHaveCount(0)
+
+  // A plain click switches games without loading a page: what the page holds survives.
+  await page.evaluate(() => { (window as unknown as { stayed: boolean }).stayed = true })
+  await daily.click()
+  await expect(page).toHaveURL(/\/daily$/)
+  await expect(page.getByText('Same deal for everyone today.')).toBeVisible()
+  await expect(daily).toHaveAttribute('aria-current', 'page')
+  await expect(puzzle).not.toHaveAttribute('aria-current')
+  await puzzle.click()
+  await expect(page).toHaveURL(/\/$/)
+  await expect(page.getByText('12 cards. 6 sets. Find them all.')).toBeVisible()
+  expect(await page.evaluate(() => (window as unknown as { stayed?: boolean }).stayed)).toBe(true)
+  // Back and forward follow the switches.
+  await page.goBack()
+  await expect(page).toHaveURL(/\/daily$/)
+  await expect(page.getByText('Same deal for everyone today.')).toBeVisible()
+  await page.goForward()
+  await expect(page.getByText('12 cards. 6 sets. Find them all.')).toBeVisible()
+  // By keyboard too: a link takes Enter.
+  await daily.focus()
+  await page.keyboard.press('Enter')
+  await expect(page).toHaveURL(/\/daily$/)
+  expect(await page.evaluate(() => (window as unknown as { stayed?: boolean }).stayed)).toBe(true)
+
+  // A click meant for a new tab is the browser's: it opens the link's own page.
+  const opened = context.waitForEvent('page')
+  await puzzle.click({ modifiers: ['ControlOrMeta'] })
+  const tab = await opened
+  await expect(tab).toHaveURL(new URL('/', page.url()).href)
+  await expect(tab).toHaveTitle(SITE_NAME)
+  await expect(page).toHaveURL(/\/daily$/)
+  await tab.close()
+
+  // In Practice the third segment is a link as well.
+  await page.getByRole('button', { name: 'Menu', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Practice', exact: true }).click()
+  await expect(modes(page).getByRole('link', { name: 'Practice', exact: true })).toHaveAttribute('href', '/practice')
+  await expect(modes(page).getByRole('link', { name: 'Practice', exact: true })).toHaveAttribute('aria-current', 'page')
+})
+
+test('a crawler finds both dailies from every game page without running the script', async ({ browser, request }) => {
+  for (const path of ['/', '/daily', '/puzzle', '/practice', '/m']) {
+    const html = await (await request.get(path)).text()
+    const nav = html.match(/<nav aria-label="Game mode"[^>]*>(.*?)<\/nav>/s)?.[1] ?? ''
+    expect(nav, path).toMatch(/<a href="\/daily"/)
+    expect(nav, path).toMatch(/<a href="\/"/)
+    expect(nav, path).not.toContain('<button')
+  }
+
+  const context = await browser.newContext({ javaScriptEnabled: false })
+  try {
+    const page = await context.newPage()
+    await page.goto('/')
+    await modes(page).getByRole('link', { name: 'Daily Deal', exact: true }).click()
+    await expect(page).toHaveURL(/\/daily$/)
+    await expect(page).toHaveTitle(DAILY_TITLE)
+    await modes(page).getByRole('link', { name: 'Puzzle', exact: true }).click()
+    await expect(page).toHaveURL(/\/$/)
+    await expect(page).toHaveTitle(SITE_NAME)
+  } finally {
+    await context.close()
+  }
+})
+
+test.describe('on a small phone', () => {
+  test.use({ viewport: { width: 320, height: 640 }, hasTouch: true, isMobile: true })
+
+  test('the site’s name and the switch fit the header on every game page', async ({ page }) => {
+    for (const path of ['/', '/daily', '/practice', '/m']) {
+      await page.goto(path)
+      await expect(modes(page).getByRole('link').first()).toBeVisible()
+      const logo = (await page.getByRole('button', { name: 'Set Daily logo', exact: true }).boundingBox())!
+      const nav = (await modes(page).boundingBox())!
+      const menu = (await page.getByRole('button', { name: 'Menu', exact: true }).boundingBox())!
+      expect(logo.x + logo.width, path).toBeLessThanOrEqual(nav.x)
+      expect(nav.x + nav.width, path).toBeLessThanOrEqual(menu.x)
+      expect(menu.x + menu.width, path).toBeLessThanOrEqual(320)
+      // One row, and no segment's label is cut off.
+      expect(Math.abs(logo.y + logo.height / 2 - (nav.y + nav.height / 2)), path).toBeLessThan(4)
+      expect(await modes(page).evaluate(node => node.scrollWidth <= node.clientWidth), path).toBe(true)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), path).toBe(true)
+    }
+    // With two segments the name is spelled out, even here.
+    await page.goto('/')
+    await expect(page.getByRole('button', { name: 'Set Daily logo', exact: true })).toHaveText('Set Daily')
+  })
 })
 
 test('once today’s deal is played, the result card’s heading sits under the page’s one main heading', async ({ page }) => {
@@ -131,10 +251,10 @@ test('once today’s deal is played, the result card’s heading sits under the 
     const status = await response.json()
     await route.fulfill({ response, json: { ...status, me: { ...status.me, attempted: true } } })
   })
-  await page.goto('/')
+  await page.goto('/daily')
   const card = page.getByRole('region', { name: /^Daily Deal #\d+$/ })
   await expect(card).toBeVisible()
   await expect(card.getByRole('heading', { level: 2, name: /^Daily Deal #\d+$/ })).toBeVisible()
   await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1)
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(HOME_HEADING)
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(DAILY_HEADING)
 })

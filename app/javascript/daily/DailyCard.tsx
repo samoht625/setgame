@@ -53,7 +53,7 @@ interface DailyCardProps {
 /** What the Daily Deal (and the Puzzle) show once today's try is used: the result, today's leaderboard and what's next. */
 const DailyCard: React.FC<DailyCardProps> = ({
   number, result, streak, note, status, statusError, onRetryStatus, playerId, nowMs, onShare, shareNote, onNextDeal, stale = false, onNameScore,
-  title, next = { href: '/puzzle', label: 'Puzzle' }, noun = 'deal', emptyText, marksLabel = 'Your pace on each set', rivalMs
+  title, next = { href: '/', label: 'Puzzle' }, noun = 'deal', emptyText, marksLabel = 'Your pace on each set', rivalMs
 }) => {
   const titleId = useId()
   const reminder = useReminder()

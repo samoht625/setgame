@@ -24,7 +24,7 @@ class SignInFlowTest < ActionDispatch::IntegrationTest
 
     mail = SignInMailer.deliveries.first
     assert_equal ["rose@example.com"], mail[:to]
-    assert_equal "Sign in to Set", mail[:subject]
+    assert_equal "Sign in to Set Daily", mail[:subject]
     assert_match %r{/signin\?token=}, mail[:text]
     assert_match %r{/signin\?token=}, mail[:html]
     refute_match(/free/i, mail[:html])
@@ -87,7 +87,7 @@ class SignInFlowTest < ActionDispatch::IntegrationTest
 
     get "/signin", params: { token: token }
     assert_response :success
-    assert_select "h1", "Sign in to Set?"
+    assert_select "h1", "Sign in to Set Daily?"
     assert_select "strong", "mallory@example.com"
     assert_select "button[type=submit]", "Sign in"
     assert_select "meta[name='color-scheme'][content='light dark']"
