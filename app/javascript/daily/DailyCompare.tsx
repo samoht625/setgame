@@ -18,9 +18,10 @@ import { fetchDailyComparison, type DailyComparison, type DailyEntry, type Daily
 import { formatTime } from '../solitaire/time'
 
 // Orange and blue: the pair that stays apart for most kinds of colour blindness.
+// In dark mode a ringed card's border takes the ring's colour, so the ring hugs the light face.
 const TONES: Record<Side, { dot: string; ring: string; bar: string }> = {
-  me: { dot: 'bg-amber-500 dark:bg-amber-400', ring: 'ring-amber-500 dark:ring-amber-400', bar: 'bg-amber-400 dark:bg-amber-500' },
-  them: { dot: 'bg-sky-600 dark:bg-sky-400', ring: 'ring-sky-600 dark:ring-sky-400', bar: 'bg-sky-500 dark:bg-sky-500' }
+  me: { dot: 'bg-amber-500 dark:bg-amber-400', ring: 'ring-amber-500 dark:border-amber-400 dark:ring-amber-400', bar: 'bg-amber-400 dark:bg-amber-500' },
+  them: { dot: 'bg-sky-600 dark:bg-sky-400', ring: 'ring-sky-600 dark:border-sky-400 dark:ring-sky-400', bar: 'bg-sky-500 dark:bg-sky-500' }
 }
 
 // In real time, however fast the replay runs: long enough to see which set was taken.
@@ -90,14 +91,14 @@ const MiniBoard: React.FC<{ side: Side; label: string; frame: ReplayFrame; finis
       >
         {frame.board.map(cardId => {
           const highlight = frame.found
-            ? frame.found.includes(cardId) ? `relative z-[1] ring-2 ${TONES[side].ring}` : 'opacity-40'
-            : ''
+            ? frame.found.includes(cardId) ? `relative z-[1] ring-2 ${TONES[side].ring}` : 'opacity-40 dark:border-neutral-600'
+            : 'dark:border-neutral-600'
           return (
             <div
               key={cardId}
               data-replay-card={cardId}
               data-found={frame.found?.includes(cardId) ? 'true' : undefined}
-              className={`animate-card-in overflow-hidden rounded-md border border-neutral-200 bg-white dark:border-neutral-600 dark:bg-[#f1f0ec] ${highlight}`}
+              className={`animate-card-in overflow-hidden rounded-md border border-neutral-200 bg-white dark:bg-[#f1f0ec] ${highlight}`}
             >
               <CardFace cardId={cardId} decorative />
             </div>

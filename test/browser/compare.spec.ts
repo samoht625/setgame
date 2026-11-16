@@ -250,6 +250,40 @@ for (const [label, viewport] of [['desktop', { width: 1280, height: 900 }], ['mo
   })
 }
 
+test('in dark mode the ring on a set just taken hugs its card, with no darker line between ring and face', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' })
+  await finished(page)
+  await page.goto('/daily')
+  await page.getByRole('button', { name: 'Compare with Maya' }).click()
+  const dialog = page.getByRole('dialog', { name: 'You vs Maya' })
+  const slider = dialog.getByRole('slider', { name: 'Replay time' })
+
+  // The first moment on the timeline is Maya's set, the next one the player's.
+  const moments = [...new Set([...mine, ...runs.p1!.claims].map(claim => claim.t_ms))].sort((a, b) => a - b)
+  for (const [board, claim] of [[/^Your board:/, mine[0]!], [/^Maya’s board:/, runs.p1!.claims[0]!]] as const) {
+    await scrubTo(page, 0)
+    await slider.focus()
+    for (let i = 0; i <= moments.indexOf(claim.t_ms); i++) await slider.press('ArrowRight')
+    const found = page.getByRole('img', { name: board }).locator('[data-found="true"]')
+    await expect(found).toHaveCount(3)
+    const outlines = await found.evaluateAll(cards => cards.map(card => {
+      const style = getComputedStyle(card)
+      return { borderWidth: style.borderTopWidth, borderColor: style.borderTopColor, shadow: style.boxShadow }
+    }))
+    for (const outline of outlines) {
+      expect(outline.borderWidth).toBe('1px')
+      expect(outline.shadow, 'the border is the colour of the 2px ring around it').toContain(`${outline.borderColor} 0px 0px 0px 2px`)
+    }
+  }
+
+  // A card that wasn't taken keeps its quiet border, and no ring.
+  const others = await page.getByRole('img', { name: /^Maya’s board:/ }).locator('[data-replay-card]:not([data-found])').first().evaluate(card => {
+    const style = getComputedStyle(card)
+    return { borderWidth: style.borderTopWidth, ringed: / 0px 0px 0px [1-9]/.test(style.boxShadow) }
+  })
+  expect(others).toEqual({ borderWidth: '1px', ringed: false })
+})
+
 test('the replay plays itself when motion is welcome', async ({ page }) => {
   await finished(page)
   await page.goto('/daily')
