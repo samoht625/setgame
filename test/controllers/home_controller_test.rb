@@ -4,7 +4,15 @@ require "test_helper"
 require "minitest/mock"
 
 class HomeControllerTest < ActionDispatch::IntegrationTest
-  DAILY_TITLE = "Set Daily Deal · Play the Set Card Game Online"
+  # The front door plays the Daily Deal but leads with the daily Set puzzle for search, naming both dailies.
+  DAILY_HEADING = "Daily Set Puzzle: find 6 sets in 12 cards, or clear the deck"
+  DAILY_TITLE = "#{DAILY_HEADING} | Set Daily"
+  DAILY_DESCRIPTION = "Play the daily Set puzzle free: find all 6 sets in 12 cards, or clear the whole deck in the Daily Deal. " \
+                      "Same cards for everyone, new at midnight Pacific. No signup."
+  PUZZLE_HEADING = "Today’s Set Puzzle: 12 cards, 6 sets, one try"
+  PUZZLE_TITLE = "#{PUZZLE_HEADING} | Set Daily"
+  PUZZLE_DESCRIPTION = "Today’s Set Puzzle: 12 cards hold exactly 6 sets. Find all 6 in one try and see how your time ranks. " \
+                       "A new puzzle every midnight Pacific. Free, no signup."
   PREVIEW_BOTS = {
     "Slack" => "Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)",
     "iMessage / Facebook" => "facebookexternalhit/1.1 Facebot Twitterbot/1.0",
@@ -34,7 +42,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     {
       "/" => [DAILY_TITLE, "https://setdaily.app/"],
       "/daily" => [DAILY_TITLE, "https://setdaily.app/"],
-      "/puzzle" => ["Set Puzzle · The Daily Set Puzzle: Find All 6 Sets", "https://setdaily.app/puzzle"],
+      "/puzzle" => [PUZZLE_TITLE, "https://setdaily.app/puzzle"],
       "/practice" => ["Set Practice · Timed Set Card Game", "https://setdaily.app/practice"],
       "/m" => ["Set Multiplayer · Play Set Online with Friends", "https://setdaily.app/m"]
     }.each do |path, (title, url)|
@@ -46,6 +54,9 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
       assert_operator description.length, :>, 80, "#{path} says what the page is, not just its title"
       assert_select "link[rel=canonical][href=?]", url
       assert_select "meta[property='og:title'][content=?]", title
+      assert_select "meta[name='twitter:title'][content=?]", title
+      assert_select "meta[property='og:description'][content=?]", description
+      assert_select "meta[name='twitter:description'][content=?]", description
       assert_select "meta[property='og:url'][content=?]", url
       assert_select "meta[property='og:image'][content=?]", "https://setdaily.app/og-image.png"
       assert_select "meta[property='og:image:width'][content='1200']"
@@ -194,17 +205,114 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_nil boot.(response.body)["shared"]
   end
 
-  test "the front door tells search engines the site's name and that it's a free web game" do
-    get "/"
-    data = JSON.parse(css_select("script[type='application/ld+json']").first.text)
-    site, app = data.fetch("@graph")
-    assert_equal({ "@type" => "WebSite", "name" => "Set", "url" => "https://setdaily.app/" }, site)
-    assert_equal "WebApplication", app.fetch("@type")
-    assert_equal "GameApplication", app.fetch("applicationCategory")
-    assert_equal "0", app.dig("offers", "price")
-    assert_equal css_select("meta[name=description]").first["content"], app.fetch("description")
+  test "the front door leads with the daily Set puzzle for search and says both dailies are there" do
+    %w[/ /daily].each do |path|
+      get path
+      assert_select "title", text: DAILY_TITLE
+      assert_select "meta[name=description][content=?]", DAILY_DESCRIPTION
+      assert_select "meta[property='og:title'][content=?]", DAILY_TITLE
+      assert_select "meta[name='twitter:title'][content=?]", DAILY_TITLE
+      assert_select "meta[property='og:description'][content=?]", DAILY_DESCRIPTION
+      assert_select "meta[name='twitter:description'][content=?]", DAILY_DESCRIPTION
+      assert_select "link[rel=canonical][href=?]", "https://setdaily.app/", count: 1
+      # One main heading, out of sight like the About text; the game on screen is still the Daily Deal.
+      assert_select "h1", count: 1
+      assert_select "h1.sr-only", text: DAILY_HEADING
+    end
 
+    title = css_select("title").first.text
+    description = css_select("meta[name=description]").first["content"]
+    assert title.start_with?("Daily Set Puzzle"), "the phrase people search for comes first"
+    assert_equal 1, title.scan(/puzzle/i).size, "said once, not stuffed"
+    # Honest about what opens: the title, the heading and the description name the Daily Deal's game too.
+    [title, css_select("h1").first.text].each { |text| assert_match(/find 6 sets in 12 cards, or clear the deck/, text) }
+    assert_match(/6 sets in 12 cards/, description)
+    assert_match(/clear the whole deck in the Daily Deal/, description)
+    assert_operator description.length, :<=, 170, "long descriptions are cut off in search results"
+    # The hidden About text says the same, the daily puzzle first.
+    assert_select "section.sr-only p", text: /a daily Set puzzle \(find all 6 sets in 12 cards\) and a Daily Deal \(clear the whole deck\)/
+  end
+
+  test "the Puzzle page says what that one game is and doesn't compete with the front door" do
     get "/puzzle"
-    assert_select "script[type='application/ld+json']", count: 0
+    assert_select "title", text: PUZZLE_TITLE
+    assert_select "meta[name=description][content=?]", PUZZLE_DESCRIPTION
+    assert_select "meta[property='og:title'][content=?]", PUZZLE_TITLE
+    assert_select "meta[name='twitter:title'][content=?]", PUZZLE_TITLE
+    assert_select "meta[property='og:description'][content=?]", PUZZLE_DESCRIPTION
+    assert_select "link[rel=canonical][href=?]", "https://setdaily.app/puzzle", count: 1
+    assert_select "h1", count: 1
+    assert_select "h1.sr-only", text: PUZZLE_HEADING
+    title = css_select("title").first.text
+    description = css_select("meta[name=description]").first["content"]
+    assert_operator description.length, :<=, 170, "long descriptions are cut off in search results"
+    [title, description, css_select("h1").first.text].each do |text|
+      assert_no_match(/daily set puzzle/i, text, "the front door is the page for that search")
+    end
+
+    # A shared result keeps its own canonical page, whatever the link carries.
+    get "/puzzle", params: { r: DailyShare.token(kind: "puzzle", number: 5, elapsed_ms: 70_000) }
+    assert_select "title", text: PUZZLE_TITLE
+    assert_select "link[rel=canonical][href=?]", "https://setdaily.app/puzzle"
+    assert_select "meta[property='og:title'][content=?]", "Set Puzzle #5 · 1:10"
+  end
+
+  test "no two game pages share a title, a description or a canonical URL" do
+    pages = %w[/ /puzzle /practice /m].map do |path|
+      get path
+      [css_select("title").first.text, css_select("meta[name=description]").first["content"], css_select("link[rel=canonical]").first["href"]]
+    end
+    pages.transpose.each { |values| assert_equal values.uniq, values }
+  end
+
+  test "the front door tells search engines the site's name and that it's a free browser game" do
+    get "/"
+    scripts = css_select("script[type='application/ld+json']")
+    assert_equal 1, scripts.size
+    assert_no_match(/[<>&]/, scripts.first.text, "nothing in the JSON can close the script tag")
+    data = JSON.parse(scripts.first.text)
+    assert_equal "https://schema.org", data.fetch("@context")
+    site, game = data.fetch("@graph")
+    assert_equal 2, data.fetch("@graph").size
+
+    assert_equal(
+      { "@type" => "WebSite", "@id" => "https://setdaily.app/#website", "name" => "Set Daily", "alternateName" => "Set",
+        "url" => "https://setdaily.app/", "inLanguage" => "en" },
+      site
+    )
+
+    assert_equal %w[VideoGame WebApplication], game.fetch("@type")
+    assert_equal "https://setdaily.app/#game", game.fetch("@id")
+    assert_equal "Set Daily", game.fetch("name")
+    assert_equal "https://setdaily.app/", game.fetch("url")
+    assert_equal DAILY_DESCRIPTION, game.fetch("description")
+    assert_equal css_select("meta[name=description]").first["content"], game.fetch("description")
+    assert_equal css_select("meta[property='og:image']").first["content"], game.fetch("image")
+    assert_equal ["Puzzle", "Card game"], game.fetch("genre")
+    assert_equal "Web browser", game.fetch("gamePlatform")
+    assert_equal %w[https://schema.org/SinglePlayer https://schema.org/MultiPlayer], game.fetch("playMode")
+    assert_equal "GameApplication", game.fetch("applicationCategory")
+    assert_equal "Any", game.fetch("operatingSystem")
+    assert_equal true, game.fetch("isAccessibleForFree")
+    assert_equal({ "@type" => "Offer", "price" => "0", "priceCurrency" => "USD" }, game.fetch("offers"))
+    assert_equal({ "@id" => site.fetch("@id") }, game.fetch("isPartOf"))
+
+    # Only what is true of the site: it has no ratings, reviews, named author or search box.
+    [site, game].each do |node|
+      assert_empty node.keys & %w[aggregateRating review author publisher creator potentialAction], node.fetch("@type").inspect
+    end
+
+    # /daily is the same page under its canonical URL, so it says the same.
+    get "/daily"
+    assert_equal data, JSON.parse(css_select("script[type='application/ld+json']").first.text)
+
+    # A shared result changes the link preview, not what the site is.
+    get "/daily", params: { r: DailyShare.token(number: 12, elapsed_ms: 161_400) }
+    assert_equal data, JSON.parse(css_select("script[type='application/ld+json']").first.text)
+
+    %w[/puzzle /practice /m].each do |path|
+      get path
+      assert_select "script[type='application/ld+json']", count: 0
+    end
   end
 end

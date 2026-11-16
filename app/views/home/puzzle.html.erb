@@ -1,5 +1,7 @@
-<% content_for :title, "Set Puzzle · The Daily Set Puzzle: Find All 6 Sets" %>
-<% content_for :description, "The daily Set puzzle: 12 cards hold exactly 6 sets. Find all 6 as fast as you can and see how your time compares. A new puzzle every midnight Pacific. Free, no signup." %>
+<%# Says what this one game is; the front door (home/daily) is the page for a search for the daily Set puzzle. %>
+<% lead = "Today’s Set Puzzle: 12 cards, 6 sets, one try" %>
+<% content_for :title, "#{lead} | Set Daily" %>
+<% content_for :description, "Today’s Set Puzzle: 12 cards hold exactly 6 sets. Find all 6 in one try and see how your time ranks. A new puzzle every midnight Pacific. Free, no signup." %>
 <% content_for :head, render("home/identity") + render("home/boot") %>
 <% if @shared_result %>
   <% content_for :social_title, "#{@shared_result.title} · #{@shared_result.time}" %>
@@ -8,4 +10,5 @@
   <% content_for :social_image, "#{ApplicationHelper::SITE_URL}#{puzzle_og_image_path(@shared_result.token)}" %>
   <% content_for :social_image_alt, ["#{@shared_result.title} · #{@shared_result.time}", @shared_result.standing.presence].compact.join(" · ") %>
 <% end %>
+<h1 class="sr-only"><%= lead %></h1>
 <div id="root" data-online-ids="<%= GAME_ENGINE.online_player_ids_snapshot.to_json %>"><%= prerendered(:puzzle) %></div>

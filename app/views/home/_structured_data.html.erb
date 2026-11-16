@@ -1,18 +1,27 @@
-<%# What search engines show as the site's name and what it is. %>
+<%# What search engines show as the site's name and what it is. Only what is true of the site: no ratings, authors or search box, which it doesn't have. The game has both types because it is a game and an app that runs in the browser. %>
+<% site = "#{ApplicationHelper::SITE_URL}/" %>
 <script type="application/ld+json"><%= raw json_escape({
   "@context": "https://schema.org",
   "@graph": [
-    { "@type": "WebSite", name: "Set", url: "#{ApplicationHelper::SITE_URL}/" },
+    { "@type": "WebSite", "@id": "#{site}#website", name: "Set Daily", alternateName: "Set", url: site, inLanguage: "en" },
     {
-      "@type": "WebApplication",
-      name: "Set",
-      url: "#{ApplicationHelper::SITE_URL}/",
+      "@type": ["VideoGame", "WebApplication"],
+      "@id": "#{site}#game",
+      name: "Set Daily",
+      alternateName: "Set",
+      url: site,
       description: page_description,
+      image: "#{ApplicationHelper::SITE_URL}/og-image.png",
+      genre: ["Puzzle", "Card game"],
+      gamePlatform: "Web browser",
+      playMode: ["https://schema.org/SinglePlayer", "https://schema.org/MultiPlayer"],
       applicationCategory: "GameApplication",
       operatingSystem: "Any",
       browserRequirements: "Requires JavaScript",
+      inLanguage: "en",
       isAccessibleForFree: true,
-      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" }
+      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+      isPartOf: { "@id": "#{site}#website" }
     }
   ]
 }.to_json) %></script>

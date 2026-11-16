@@ -107,7 +107,7 @@ test('the daily is one shared deal: played once, clocked from first paint, then 
   await page.addInitScript(() => localStorage.setItem('setgame_name', 'Daily Tester'))
 
   await page.goto('/daily')
-  await expect(page).toHaveTitle('Set Daily Deal · Play the Set Card Game Online')
+  await expect(page).toHaveTitle('Daily Set Puzzle: find 6 sets in 12 cards, or clear the deck | Set Daily')
   await expect(page.getByRole('button', { name: 'Daily Deal', exact: true })).toHaveAttribute('aria-pressed', 'true')
   // The start card says what the deal is, and what a try costs, in two lines.
   await expect(page.getByText('Same deal for everyone today.')).toBeVisible()
