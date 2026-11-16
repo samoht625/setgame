@@ -15,8 +15,7 @@ import { useAutoCompleteReveal } from '../hooks/useAutoCompleteReveal'
 import { SoloTimer } from '../solitaire/SolitaireHud'
 import DailyPanel from '../daily/DailyPanel'
 import DailyCard, { primaryButton } from '../daily/DailyCard'
-import { Challenge, RulesOffer } from '../daily/StartNotes'
-import StreakPill from '../daily/StreakPill'
+import { Challenge, StartCard } from '../daily/StartNotes'
 import { missMessage, newToRules } from '../rules/Tour'
 import FoundSets from './FoundSets'
 import { afterNextPaint } from '../lib/after_paint'
@@ -458,20 +457,17 @@ const PuzzleGame: React.FC = () => {
     overlay = {
       label: `Puzzle #${status.number}`,
       content: (
-        <>
-          {shared && !resuming && <Challenge shared={shared} number={status.number} name="Puzzle" />}
-          <p className="mt-2 text-sm font-medium text-neutral-900 dark:text-neutral-100">12 cards. 6 sets. Find them all.</p>
-          <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-            {resuming
-              ? 'Pick up where you left off. Your clock kept running.'
-              : 'Same cards for everyone today. One try; the clock starts when the cards appear.'}
-          </p>
-          <button type="button" onClick={() => void begin()} disabled={starting} className={`${primaryButton} mt-4 w-full`}>
-            {resuming ? 'Continue' : 'Start'}
-          </button>
-          {newPlayer && !resuming && <RulesOffer />}
-          {streak > 0 && <StreakPill streak={streak} className="mt-3">· keep it going</StreakPill>}
-        </>
+        <StartCard
+          challenge={shared && !resuming && <Challenge shared={shared} number={status.number} name="Puzzle" />}
+          lines={resuming
+            ? ['Pick up where you left off.', 'Your clock kept running.']
+            : ['12 cards. 6 sets. Find them all.', 'One try, against the clock.']}
+          action={resuming ? 'Continue' : 'Start'}
+          onStart={() => void begin()}
+          starting={starting}
+          streak={streak}
+          offerRules={newPlayer && !resuming}
+        />
       )
     }
   } else if (!playing) {

@@ -15,8 +15,7 @@ import { useAutoCompleteReveal } from '../hooks/useAutoCompleteReveal'
 import { SoloTimer } from '../solitaire/SolitaireHud'
 import DailyPanel from './DailyPanel'
 import DailyCard, { primaryButton } from './DailyCard'
-import { Challenge, RulesOffer } from './StartNotes'
-import StreakPill from './StreakPill'
+import { Challenge, StartCard } from './StartNotes'
 import { missMessage, newToRules } from '../rules/Tour'
 import { autoCompletePick, twoCardModeOn, THIRD_CARD_MISSING } from '../lib/two_card_mode'
 import { afterNextPaint } from '../lib/after_paint'
@@ -521,18 +520,14 @@ const DailyGame: React.FC = () => {
     overlay = {
       label: `Daily Deal #${status.number}`,
       content: (
-        <>
-          {shared && !status.me.attempted && <Challenge shared={shared} number={status.number} name="Daily Deal" />}
-          <p className="mt-2 text-sm font-medium text-neutral-900 dark:text-neutral-100">Same deal for everyone today.</p>
-          <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-            One try. The clock starts when the cards appear and runs until you clear the deck.
-          </p>
-          <button type="button" onClick={() => void begin()} disabled={starting} className={`${primaryButton} mt-4 w-full`}>
-            Start
-          </button>
-          {newPlayer && <RulesOffer />}
-          {streak > 0 && <StreakPill streak={streak} className="mt-3">· keep it going</StreakPill>}
-        </>
+        <StartCard
+          challenge={shared && !status.me.attempted && <Challenge shared={shared} number={status.number} name="Daily Deal" />}
+          lines={['Same deal for everyone today.', 'One try, against the clock.']}
+          onStart={() => void begin()}
+          starting={starting}
+          streak={streak}
+          offerRules={newPlayer}
+        />
       )
     }
   } else {
