@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import App from './components/App'
 import SiteHeader from './components/SiteHeader'
 import ArchivePlay from './archive/ArchivePlay'
+import ArchivePlayed from './archive/ArchivePlayed'
 import { readArchiveDay } from './lib/archive'
 import { captureFirstTouch } from './lib/source'
 import { listenForInstall } from './lib/install'
@@ -27,9 +28,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // A past day's page also gets that day to play again, where the page left room for it.
     const playElement = document.getElementById('archive-play')
     const day = playElement && readArchiveDay(playElement.dataset.archive)
+    // The archive's list of days gets the player's own plays marked on it.
+    const listElement = document.querySelector('[data-archive-page]')
     createRoot(headerElement).render(
       <SiteHeader page={PAGES[headerElement.dataset.page]}>
         {day && createPortal(<ArchivePlay day={day} />, playElement)}
+        {listElement && <ArchivePlayed page={Number(listElement.dataset.archivePage) || 1} />}
       </SiteHeader>
     )
   }

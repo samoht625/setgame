@@ -111,7 +111,7 @@ export function savePracticeResult(day: ArchiveDay, result: PracticeResult): voi
 }
 
 /** The ranked run of this day that this browser still holds, if it was finished. Read only. */
-export function savedRankedResult(day: ArchiveDay): RankedResult | null {
+export function savedRankedResult(day: Pick<ArchiveDay, 'kind' | 'date'>): RankedResult | null {
   try {
     const saved = JSON.parse(localStorage.getItem(RANKED_SAVE_KEYS[day.kind]) || 'null') as unknown
     const run = day.kind === 'daily' && isObject(saved) ? saved.ranked : saved
@@ -147,4 +147,93 @@ export async function fetchRankedResult(day: ArchiveDay, signal?: AbortSignal): 
 export function practicePlace(elapsedMs: number, day: ArchiveDay): number | null {
   const ahead = day.times.filter(time => time <= elapsedMs).length
   return ahead < day.times.length || day.times.length >= day.total ? ahead + 1 : null
+}
+
+/** A day's tile on /archive: its key ('puzzle:21') and date (YYYY-MM-DD). */
+export type ArchiveTile = { key: string; kind: ArchiveKind; date: string }
+
+/**
+ * What the player has done with an archived day, as its tile shows it:
+ * finished it when it was live (ranked), finished a practice run of it since,
+ * left a practice run of it unfinished, or none of those.
+ */
+export type DayPlay =
+  | { state: 'ranked'; elapsedMs: number }
+  | { state: 'practice'; elapsedMs: number }
+  | { state: 'running' }
+  | { state: 'unplayed' }
+
+/** What this browser remembers of the tiles' days: times by day key, and the day of the unfinished practice run. */
+export type RememberedPlays = { ranked: Record<string, number>; practice: Record<string, number>; running: string | null }
+
+/** The player's ranked times on record with the server, by day key. */
+export type RankedTimes = Record<string, number>
+
+const TILE_KEY = /^(daily|puzzle):[1-9][0-9]{0,5}$/
+const TILE_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+/** A tile from its data-archive-tile and data-archive-date attributes; null when they aren't a day's. */
+export function readArchiveTile(key: string | undefined, date: string | undefined): ArchiveTile | null {
+  if (!key || !date || !TILE_KEY.test(key) || !TILE_DATE.test(date)) return null
+  return { key, kind: key.startsWith('puzzle') ? 'puzzle' : 'daily', date }
+}
+
+/** The plays of these days kept in this browser: finished ranked runs still saved, and practice. Read only. */
+export function rememberedPlays(tiles: ArchiveTile[]): RememberedPlays {
+  const save = load()
+  const remembered: RememberedPlays = { ranked: {}, practice: {}, running: null }
+  for (const tile of tiles) {
+    const ranked = savedRankedResult(tile)
+    if (ranked) remembered.ranked[tile.key] = ranked.elapsedMs
+    const practice = save.results[tile.key]
+    if (practice) remembered.practice[tile.key] = practice.elapsedMs
+    if (save.run?.day === tile.key && save.run.kind === tile.kind) remembered.running = tile.key
+  }
+  return remembered
+}
+
+/** The ranked times in the server's answer for a page of the archive (Api::ArchiveController#index). */
+export function readRankedTimes(body: unknown): RankedTimes {
+  const times: RankedTimes = {}
+  if (!isObject(body)) return times
+  for (const kind of ['daily', 'puzzle'] as const) {
+    const played = body[kind]
+    if (!isObject(played)) continue
+    for (const [number, result] of Object.entries(played)) {
+      const key = `${kind}:${number}`
+      if (TILE_KEY.test(key) && isObject(result) && isCount(result.elapsed_ms)) times[key] = result.elapsed_ms
+    }
+  }
+  return times
+}
+
+/**
+ * The player's ranked times for the days on one page of /archive, from the
+ * server, which remembers every day they played. A browser the server has
+ * never seen has none, so it isn't asked.
+ */
+export async function fetchRankedTimes(page: number, signal?: AbortSignal): Promise<RankedTimes> {
+  if (isNewPlayer()) return {}
+  const res = await apiFetch(`/api/archive?page=${page}`, { headers: headers(false), credentials: 'same-origin', signal })
+  if (!res.ok) throw new Error('Could not load the played days')
+  return readRankedTimes(await res.json())
+}
+
+/**
+ * Each tile's state. A ranked finish outranks practice, and the server's
+ * record of it outranks this browser's. `server` is undefined until it has
+ * answered and null when it couldn't be reached: until it answers, a day
+ * this browser knows nothing of is left unmarked rather than called unplayed.
+ */
+export function dayPlays(tiles: ArchiveTile[], remembered: RememberedPlays, server: RankedTimes | null | undefined): Record<string, DayPlay | undefined> {
+  const plays: Record<string, DayPlay | undefined> = {}
+  for (const { key } of tiles) {
+    const ranked = server?.[key] ?? remembered.ranked[key]
+    const practice = remembered.practice[key]
+    if (ranked !== undefined) plays[key] = { state: 'ranked', elapsedMs: ranked }
+    else if (practice !== undefined) plays[key] = { state: 'practice', elapsedMs: practice }
+    else if (remembered.running === key) plays[key] = { state: 'running' }
+    else if (server) plays[key] = { state: 'unplayed' }
+  }
+  return plays
 }
