@@ -13,7 +13,6 @@ module ReminderMailer
   end
 
   NAMES = { "daily" => "Daily Deal", "puzzle" => "Puzzle" }.freeze
-  PATHS = { "daily" => "/", "puzzle" => "/puzzle" }.freeze
 
   def self.finished_runs(player_id, kind)
     kind == "daily" ? SoloScore.where(player_id: player_id).where.not(daily_on: nil).count : PuzzleRun.finished.where(player_id: player_id).count
@@ -36,7 +35,7 @@ module ReminderMailer
     assigns = {
       headline: headline,
       line: streak.positive? ? "Play today’s #{NAMES[game]}." : nil,
-      play_url: "#{base}/play?#{{ t: Reminder.play_token(account, plan.deal_on), to: PATHS[game] }.to_query}",
+      play_url: "#{base}/play?#{{ t: Reminder.play_token(account, plan.deal_on), to: game }.to_query}",
       unsubscribe_url: unsubscribe_url
     }
     # The day's number makes every subject new, so mail apps never thread days together.

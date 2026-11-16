@@ -107,8 +107,8 @@ test('the daily is one shared deal: played once, clocked from first paint, then 
   await page.addInitScript(() => localStorage.setItem('setgame_name', 'Daily Tester'))
 
   await page.goto('/daily')
-  await expect(page).toHaveTitle('Daily Set Puzzle: find 6 sets in 12 cards, or clear the deck | Set Daily')
-  await expect(page.getByRole('button', { name: 'Daily Deal', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page).toHaveTitle('Daily Deal | Set Daily')
+  await expect(page.getByRole('navigation', { name: 'Game mode' }).getByRole('link', { name: 'Daily Deal', exact: true })).toHaveAttribute('aria-current', 'page')
   // The start card says what the deal is, and what a try costs, in two lines.
   await expect(page.getByText('Same deal for everyone today.')).toBeVisible()
   await expect(page.getByText('One try, against the clock.')).toBeVisible()
@@ -186,6 +186,11 @@ test('the daily is one shared deal: played once, clocked from first paint, then 
   const png = await page.request.get(image)
   expect(png.status()).toBe(200)
   expect(png.headers()['content-type']).toBe('image/png')
+  // The Daily Deal was the home page once: a result shared from there still lands on the Deal.
+  const old = await page.request.get(`/${link.search}`, { maxRedirects: 0 })
+  expect(old.status()).toBe(301)
+  const moved = new URL(old.headers()['location']!, 'https://setdaily.app')
+  expect(moved.pathname + moved.search).toBe(`/daily${link.search}`)
 
   // Coming back later shows the same card, not the game.
   await page.unroute('**/api/daily/games')
@@ -197,8 +202,9 @@ test('the daily is one shared deal: played once, clocked from first paint, then 
 
   // There is no second deal: the other way to keep playing is the solo game.
   await results.getByRole('link', { name: 'Puzzle', exact: true }).click()
-  await expect(page).toHaveURL(/\/puzzle$/)
-  await expect(page.getByRole('button', { name: 'Puzzle', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page).toHaveURL(/\/$/)
+  await expect(page.getByRole('navigation', { name: 'Game mode' }).getByRole('link', { name: 'Puzzle', exact: true })).toHaveAttribute('aria-current', 'page')
+  await expect(page).toHaveTitle('Set Daily')
   expect(errors).toEqual([])
 })
 
@@ -224,7 +230,7 @@ test('a started daily survives reloads, and losing it doesn’t buy another try'
   await expect(card.getByText('You’ve used today’s try.')).toBeVisible()
   await expect(page.locator('[data-card-id]')).toHaveCount(0)
   await expect(card.getByRole('button', { name: 'Share' })).toHaveCount(0)
-  await expect(card.getByRole('link', { name: 'Puzzle', exact: true })).toHaveAttribute('href', '/puzzle')
+  await expect(card.getByRole('link', { name: 'Puzzle', exact: true })).toHaveAttribute('href', '/')
   const playerId = await page.evaluate(() => localStorage.getItem('setgame_player_id')!)
   const again = await page.request.post('/api/daily/games', { headers: { 'X-Player-Id': playerId } })
   expect(again.status()).toBe(409)
@@ -273,7 +279,7 @@ test('the daily fits every width from intro to result', async ({ page }) => {
     await page.setViewportSize({ width, height })
     // The result's actions sit at the top of the card, on screen without scrolling.
     await expect(page.getByRole('button', { name: 'Share', exact: true })).toBeInViewport({ ratio: 1 })
-    await expect(page.getByRole('link', { name: 'Puzzle', exact: true })).toBeInViewport({ ratio: 1 })
+    await expect(page.getByRole('region', { name: /^Daily Deal #\d+$/ }).getByRole('link', { name: 'Puzzle', exact: true })).toBeInViewport({ ratio: 1 })
     await noOverflow(page)
   }
 })
@@ -295,7 +301,7 @@ test('the result card offers the Puzzle until it is done, then Practice, and not
   await page.reload()
 
   const results = page.getByRole('region', { name: 'Daily Deal #7' })
-  await expect(results.getByRole('link', { name: 'Puzzle', exact: true })).toHaveAttribute('href', '/puzzle')
+  await expect(results.getByRole('link', { name: 'Puzzle', exact: true })).toHaveAttribute('href', '/')
 
   // The Puzzle gets finished in another tab: its save lands in shared storage.
   puzzleFinished = true
@@ -313,9 +319,9 @@ test('the result card offers the Puzzle until it is done, then Practice, and not
   // Switching games and back paints from what the page already knows: no loading card, no Puzzle flash, even on a slow network.
   await page.route('**/api/{daily,puzzle}', async route => { await new Promise(r => setTimeout(r, 2000)); await route.fallback() })
   const modes = page.getByRole('navigation', { name: 'Game mode' })
-  await modes.getByRole('button', { name: 'Puzzle' }).click()
+  await modes.getByRole('link', { name: 'Puzzle' }).click()
   await expect(page.getByRole('link', { name: 'Practice', exact: true })).toBeVisible({ timeout: 1000 })
-  await modes.getByRole('button', { name: 'Daily Deal' }).click()
+  await modes.getByRole('link', { name: 'Daily Deal' }).click()
   await expect(results.getByRole('link', { name: 'Practice', exact: true })).toBeVisible({ timeout: 1000 })
   await expect(results.getByRole('link', { name: 'Puzzle', exact: true })).toHaveCount(0)
 })

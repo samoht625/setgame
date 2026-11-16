@@ -30,7 +30,7 @@ class ReminderTest < ActiveSupport::TestCase
     mail = ResendMail.deliveries.sole
     assert_equal "Set Daily Deal ##{DailyPuzzle.new(Date.new(2026, 10, 20)).number}", mail[:subject]
     assert_equal "Today’s Daily Deal is ready\n\nPlay:", mail[:text][/\A.*?Play:/m]
-    assert_match(/to=%2F$/, mail[:text])
+    assert_match(/to=daily$/, mail[:text])
     assert_match %r{/play\?}, mail[:text]
     assert_match %r{\A<https://setdaily\.app/reminders/unsubscribe\?t=.+>\z}, mail[:headers]["List-Unsubscribe"]
     assert_equal "List-Unsubscribe=One-Click", mail[:headers]["List-Unsubscribe-Post"]
@@ -50,7 +50,7 @@ class ReminderTest < ActiveSupport::TestCase
     assert_equal "Set Puzzle ##{ClassicPuzzle.new(Date.new(2026, 10, 20)).number} · 2-day streak", mail[:subject]
     assert_match "Keep your 2-day streak\nPlay today’s Puzzle.\n\nPlay:", mail[:text]
     refute_match "waiting too", mail[:text]
-    assert_match "to=%2Fpuzzle", mail[:text]
+    assert_match(/to=puzzle$/, mail[:text])
   end
 
   test "finished only the Puzzle: the email is about the Daily Deal, with its streak" do
@@ -62,7 +62,7 @@ class ReminderTest < ActiveSupport::TestCase
     mail = ResendMail.deliveries.sole
     assert_equal "Set Daily Deal ##{DailyPuzzle.new(Date.new(2026, 10, 20)).number} · 1-day streak", mail[:subject]
     assert_match "Play today’s Daily Deal.", mail[:html]
-    assert_match(/to=%2F$/, mail[:text])
+    assert_match(/to=daily$/, mail[:text])
   end
 
   test "finished both: skipped, and decided for the day" do
@@ -143,7 +143,7 @@ class ReminderTest < ActiveSupport::TestCase
     mail = ResendMail.deliveries.sole
     assert_equal "Set Puzzle ##{ClassicPuzzle.new(Date.new(2026, 10, 20)).number} · 1-day streak", mail[:subject]
     assert_match "Keep your 1-day streak\nPlay today’s Puzzle.\n", mail[:text]
-    assert_match "to=%2Fpuzzle", mail[:text]
+    assert_match(/to=puzzle$/, mail[:text])
     refute_match(/Daily Deal|waiting too|done today|Sent at/, mail[:text])
   end
 
@@ -177,7 +177,7 @@ class ReminderTest < ActiveSupport::TestCase
     mail = ResendMail.deliveries.sole
     assert_equal "Set Puzzle ##{ClassicPuzzle.new(Date.new(2026, 10, 20)).number}", mail[:subject]
     refute_match "streak", mail[:text]
-    assert_match "to=%2Fpuzzle", mail[:text]
+    assert_match(/to=puzzle$/, mail[:text])
   end
 
   test "the email is just a headline, an optional line, Play and the opt-out" do

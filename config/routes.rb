@@ -47,10 +47,11 @@ Rails.application.routes.draw do
   # Anonymous stats over every found set
   get '/stats' => 'stats#show', as: :stats
 
-  # Today's Daily Deal (also the home page). Shared result links point here.
+  # Today's Daily Deal. Its shared result links point here.
   get '/daily' => 'home#daily', as: :daily
 
-  # Today's classic Puzzle: 12 cards, find all 6 sets
+  # Today's classic Puzzle: 12 cards, find all 6 sets. Also the home page,
+  # which is the address search engines are given for it.
   get '/puzzle' => 'home#puzzle', as: :puzzle
 
   # Timed solo games against the clock
@@ -79,6 +80,6 @@ Rails.application.routes.draw do
   # Shortcut icon route (common favicon shortcut)
   get '/favicon.ico' => redirect('/icon-32.png')
 
-  # The Daily Deal is the front door
-  root "home#daily"
+  # The Puzzle is the front door
+  root "home#puzzle"
 end

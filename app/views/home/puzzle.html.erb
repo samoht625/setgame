@@ -1,14 +1,14 @@
-<%# Says what this one game is; the front door (home/daily) is the page for a search for the daily Set puzzle. %>
-<% lead = "Today’s Set Puzzle: 12 cards, 6 sets, one try" %>
-<% content_for :title, "#{lead} | Set Daily" %>
-<% content_for :description, "Today’s Set Puzzle: 12 cards hold exactly 6 sets. Find all 6 in one try and see how your time ranks. A new puzzle every midnight Pacific. Free, no signup." %>
-<% content_for :head, render("home/identity") + render("home/boot") %>
+<%# The front door (/, and /puzzle, which names / as its canonical address): today's Puzzle, the page for a search for the daily Set puzzle. Its title is the site's name alone; the search wording is in the description, the heading and the structured data. %>
+<% content_for :description, "Play the daily Set puzzle free: 12 cards hold exactly 6 sets. Find all 6 and see how your time ranks. Same puzzle for everyone, new at midnight Pacific. No signup." %>
+<% content_for :canonical, "#{ApplicationHelper::SITE_URL}/" %>
+<% content_for :head, render("home/identity") + render("home/boot") + render("home/structured_data") %>
 <% if @shared_result %>
   <% content_for :social_title, "#{@shared_result.title} · #{@shared_result.time}" %>
   <% content_for :social_description, @shared_result.standing.presence || @shared_result.title %>
-  <% content_for :social_url, "#{ApplicationHelper::SITE_URL}/puzzle?r=#{@shared_result.token}" %>
+  <% content_for :social_url, "#{ApplicationHelper::SITE_URL}/?r=#{@shared_result.token}" %>
   <% content_for :social_image, "#{ApplicationHelper::SITE_URL}#{puzzle_og_image_path(@shared_result.token)}" %>
   <% content_for :social_image_alt, ["#{@shared_result.title} · #{@shared_result.time}", @shared_result.standing.presence].compact.join(" · ") %>
 <% end %>
-<h1 class="sr-only"><%= lead %></h1>
+<%# The page's main heading, for search engines and screen readers; the game below names its own cards. %>
+<h1 class="sr-only">Daily Set Puzzle: find all 6 sets in 12 cards</h1>
 <div id="root" data-online-ids="<%= GAME_ENGINE.online_player_ids_snapshot.to_json %>"><%= prerendered(:puzzle) %></div>

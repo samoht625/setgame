@@ -4,15 +4,18 @@ require "test_helper"
 require "minitest/mock"
 
 class HomeControllerTest < ActionDispatch::IntegrationTest
-  # The front door plays the Daily Deal but leads with the daily Set puzzle for search, naming both dailies.
-  DAILY_HEADING = "Daily Set Puzzle: find 6 sets in 12 cards, or clear the deck"
-  DAILY_TITLE = "#{DAILY_HEADING} | Set Daily"
-  DAILY_DESCRIPTION = "Play the daily Set puzzle free: find all 6 sets in 12 cards, or clear the whole deck in the Daily Deal. " \
-                      "Same cards for everyone, new at midnight Pacific. No signup."
-  PUZZLE_HEADING = "Today’s Set Puzzle: 12 cards, 6 sets, one try"
-  PUZZLE_TITLE = "#{PUZZLE_HEADING} | Set Daily"
-  PUZZLE_DESCRIPTION = "Today’s Set Puzzle: 12 cards hold exactly 6 sets. Find all 6 in one try and see how your time ranks. " \
-                       "A new puzzle every midnight Pacific. Free, no signup."
+  # The front door is the Puzzle. Its title is the site's name alone; the
+  # heading and the description carry the words people search for.
+  HOME_TITLE = "Set Daily"
+  HOME_HEADING = "Daily Set Puzzle: find all 6 sets in 12 cards"
+  HOME_DESCRIPTION = "Play the daily Set puzzle free: 12 cards hold exactly 6 sets. Find all 6 and see how your time ranks. " \
+                     "Same puzzle for everyone, new at midnight Pacific. No signup."
+  HOME_URL = "https://setdaily.app/"
+  DAILY_TITLE = "Daily Deal | Set Daily"
+  DAILY_HEADING = "Set Daily Deal: clear the whole deck, one ranked try a day"
+  DAILY_DESCRIPTION = "The Daily Deal: one deck of Set, dealt the same for everyone. Clear all 81 cards as fast as you can, " \
+                      "one ranked try a day. New at midnight Pacific. No signup."
+  DAILY_URL = "https://setdaily.app/daily"
   PREVIEW_BOTS = {
     "Slack" => "Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)",
     "iMessage / Facebook" => "facebookexternalhit/1.1 Facebot Twitterbot/1.0",
@@ -32,24 +35,29 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_equal DailyStatus.for(SecureRandom.uuid).except(:leaderboard).deep_stringify_keys.except("leaderboard"), boot["daily"].except("leaderboard")
     assert_equal false, boot["puzzle"]["me"]["attempted"]
 
-    get "/puzzle"
-    assert_includes response.body, 'id="setgame-boot"'
+    %w[/puzzle /daily].each do |path|
+      get path
+      assert_includes response.body, 'id="setgame-boot"'
+    end
     get "/practice"
     refute_includes response.body, 'id="setgame-boot"'
   end
 
   test "each page has its own title, description, canonical URL and share preview" do
     {
-      "/" => [DAILY_TITLE, "https://setdaily.app/"],
-      "/daily" => [DAILY_TITLE, "https://setdaily.app/"],
-      "/puzzle" => [PUZZLE_TITLE, "https://setdaily.app/puzzle"],
-      "/practice" => ["Set Practice · Timed Set Card Game", "https://setdaily.app/practice"],
-      "/m" => ["Set Multiplayer · Play Set Online with Friends", "https://setdaily.app/m"]
+      "/" => [HOME_TITLE, HOME_URL],
+      "/puzzle" => [HOME_TITLE, HOME_URL],
+      "/daily" => [DAILY_TITLE, DAILY_URL],
+      "/practice" => ["Practice | Set Daily", "https://setdaily.app/practice"],
+      "/m" => ["Multiplayer | Set Daily", "https://setdaily.app/m"]
     }.each do |path, (title, url)|
       get path
       assert_response :success
       assert_select "html[lang=en]"
-      assert_select "title", text: title
+      assert_equal title, css_select("title").first.text
+      assert_select "title", count: 1
+      assert_select "meta[property='og:site_name'][content='Set Daily']"
+      assert_select "meta[name='apple-mobile-web-app-title'][content='Set Daily']"
       description = css_select("meta[name=description]").first["content"]
       assert_operator description.length, :>, 80, "#{path} says what the page is, not just its title"
       assert_select "link[rel=canonical][href=?]", url
@@ -77,7 +85,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "the Daily Deal is the front door and old links still work" do
+  test "the Puzzle is the front door and old links still work" do
     get "/s"
     assert_redirected_to "/"
     get "/solo"
@@ -126,7 +134,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
       get "/daily", params: { r: token }, headers: { "User-Agent" => user_agent }
       assert_response :success
       assert_select "title", text: DAILY_TITLE
-      assert_select "link[rel=canonical][href=?]", "https://setdaily.app/"
+      assert_select "link[rel=canonical][href=?]", DAILY_URL
       assert_select "meta[property='og:title'][content=?]", "Set Daily Deal #12 · 2:41"
       assert_select "meta[name='twitter:title'][content=?]", "Set Daily Deal #12 · 2:41"
       assert_select "meta[property='og:url'][content=?]", "https://setdaily.app/daily?r=#{token}"
@@ -138,6 +146,47 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     get "/daily", params: { r: "c-3gk0-abcdefghijkl" }
     assert_select "meta[property='og:title'][content=?]", DAILY_TITLE
     assert_select "meta[property='og:image'][content=?]", "https://setdaily.app/og-image.png"
+  end
+
+  # The Daily Deal was the front door before the Puzzle: its results shared from / must still open the Deal.
+  test "a Daily Deal result shared from the old front door still lands on the Deal" do
+    token = DailyShare.token(number: 12, elapsed_ms: 161_400, rank: 2, total: 9, streak: 3, marks: "ggy")
+    legacy = DailyShare.token(number: 12, elapsed_ms: 161_400)
+
+    [token, legacy].each do |shared|
+      get "/", params: { r: shared }
+      assert_response :moved_permanently
+      assert_redirected_to "/daily?r=#{shared}"
+      follow_redirect!
+      assert_response :success
+      assert_select "title", text: DAILY_TITLE
+      assert_select "meta[property='og:title'][content=?]", "Set Daily Deal #12 · 2:41"
+      assert_select "meta[property='og:url'][content=?]", "https://setdaily.app/daily?r=#{shared}"
+      assert_select "meta[property='og:image'][content=?]", "https://setdaily.app/og/daily/#{shared}.png"
+    end
+
+    # A link preview follows it too, and whatever else the link carried comes along.
+    get "/", params: { r: token, ref: "dib2" }, headers: { "User-Agent" => PREVIEW_BOTS.fetch("Slack") }
+    assert_redirected_to "/daily?r=#{token}&ref=dib2"
+    get "/puzzle", params: { r: token }
+    assert_redirected_to "/daily?r=#{token}"
+
+    # The Puzzle's own results, and links that carry nothing real, stay on the Puzzle.
+    puzzle = DailyShare.token(kind: "puzzle", number: 5, elapsed_ms: 70_000)
+    ["/", "/puzzle"].each do |path|
+      get path, params: { r: puzzle }
+      assert_response :success
+      assert_select "meta[property='og:title'][content=?]", "Set Puzzle #5 · 1:10"
+      assert_select "meta[property='og:url'][content=?]", "https://setdaily.app/?r=#{puzzle}"
+      assert_select "meta[property='og:image'][content=?]", "https://setdaily.app/og/puzzle/#{puzzle}.png"
+    end
+    ["c-3gk0-abcdefghijkl", "", "nonsense"].each do |made_up|
+      get "/", params: { r: made_up }
+      assert_response :success
+      assert_select "meta[property='og:title'][content=?]", HOME_TITLE
+    end
+    get "/", params: { ref: "dib2" }
+    assert_response :success
   end
 
   test "Safari 17.0 on iOS gets the app; browsers too old to render it do not" do
@@ -173,9 +222,11 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     refute Rails.root.join("public/sitemap.xml").exist?, "a file there would be served instead of the generated sitemap (SitemapController)"
 
     manifest = JSON.parse(Rails.root.join("public/manifest.json").read)
-    assert_equal "Set", manifest.fetch("name")
-    assert_equal "Set", manifest.fetch("short_name")
+    assert_equal "Set Daily", manifest.fetch("name")
+    assert_equal "Set Daily", manifest.fetch("short_name")
+    # The installed app opens the home page, which is the Puzzle; its id stays "/" so it is still the same app.
     assert_equal "/", manifest.fetch("start_url")
+    assert_equal "/", manifest.fetch("id")
     assert_equal "standalone", manifest.fetch("display")
     sizes = manifest.fetch("icons").map { |icon| icon.fetch("sizes") }
     assert_includes sizes, "192x192"
@@ -193,70 +244,83 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     get "/daily", params: { r: DailyShare.token(number: 12, elapsed_ms: 161_400, rank: 2, total: 9, streak: 3, marks: "ggy") }
     assert_equal({ "kind" => "daily", "number" => 12, "elapsed_ms" => 161_400, "rank" => 2, "total" => 9 }, boot.(response.body)["shared"])
 
-    get "/puzzle", params: { r: DailyShare.token(kind: "puzzle", number: 5, elapsed_ms: 70_000) }
-    assert_equal({ "kind" => "puzzle", "number" => 5, "elapsed_ms" => 70_000, "rank" => nil, "total" => nil }, boot.(response.body)["shared"])
+    %w[/ /puzzle].each do |path|
+      get path, params: { r: DailyShare.token(kind: "puzzle", number: 5, elapsed_ms: 70_000) }
+      assert_equal({ "kind" => "puzzle", "number" => 5, "elapsed_ms" => 70_000, "rank" => nil, "total" => nil }, boot.(response.body)["shared"])
+    end
 
-    # A daily token doesn't verify as a puzzle one, and a made-up one is nothing.
-    get "/puzzle", params: { r: DailyShare.token(number: 12, elapsed_ms: 161_400) }
+    # A puzzle token doesn't verify as a daily one, and a made-up one is nothing.
+    get "/daily", params: { r: DailyShare.token(kind: "puzzle", number: 5, elapsed_ms: 70_000) }
     assert_nil boot.(response.body)["shared"]
-    get "/daily", params: { r: "c-3gk0-abcdefghijkl" }
-    assert_nil boot.(response.body)["shared"]
-  end
-
-  test "the front door leads with the daily Set puzzle for search and says both dailies are there" do
     %w[/ /daily].each do |path|
-      get path
-      assert_select "title", text: DAILY_TITLE
-      assert_select "meta[name=description][content=?]", DAILY_DESCRIPTION
-      assert_select "meta[property='og:title'][content=?]", DAILY_TITLE
-      assert_select "meta[name='twitter:title'][content=?]", DAILY_TITLE
-      assert_select "meta[property='og:description'][content=?]", DAILY_DESCRIPTION
-      assert_select "meta[name='twitter:description'][content=?]", DAILY_DESCRIPTION
-      assert_select "link[rel=canonical][href=?]", "https://setdaily.app/", count: 1
-      # One main heading, out of sight like the About text; the game on screen is still the Daily Deal.
-      assert_select "h1", count: 1
-      assert_select "h1.sr-only", text: DAILY_HEADING
+      get path, params: { r: "c-3gk0-abcdefghijkl" }
+      assert_nil boot.(response.body)["shared"]
     end
-
-    title = css_select("title").first.text
-    description = css_select("meta[name=description]").first["content"]
-    assert title.start_with?("Daily Set Puzzle"), "the phrase people search for comes first"
-    assert_equal 1, title.scan(/puzzle/i).size, "said once, not stuffed"
-    # Honest about what opens: the title, the heading and the description name the Daily Deal's game too.
-    [title, css_select("h1").first.text].each { |text| assert_match(/find 6 sets in 12 cards, or clear the deck/, text) }
-    assert_match(/6 sets in 12 cards/, description)
-    assert_match(/clear the whole deck in the Daily Deal/, description)
-    assert_operator description.length, :<=, 170, "long descriptions are cut off in search results"
-    # The hidden About text says the same, the daily puzzle first.
-    assert_select "section.sr-only p", text: /a daily Set puzzle \(find all 6 sets in 12 cards\) and a Daily Deal \(clear the whole deck\)/
   end
 
-  test "the Puzzle page says what that one game is and doesn't compete with the front door" do
-    get "/puzzle"
-    assert_select "title", text: PUZZLE_TITLE
-    assert_select "meta[name=description][content=?]", PUZZLE_DESCRIPTION
-    assert_select "meta[property='og:title'][content=?]", PUZZLE_TITLE
-    assert_select "meta[name='twitter:title'][content=?]", PUZZLE_TITLE
-    assert_select "meta[property='og:description'][content=?]", PUZZLE_DESCRIPTION
-    assert_select "link[rel=canonical][href=?]", "https://setdaily.app/puzzle", count: 1
-    assert_select "h1", count: 1
-    assert_select "h1.sr-only", text: PUZZLE_HEADING
-    title = css_select("title").first.text
-    description = css_select("meta[name=description]").first["content"]
-    assert_operator description.length, :<=, 170, "long descriptions are cut off in search results"
-    [title, description, css_select("h1").first.text].each do |text|
-      assert_no_match(/daily set puzzle/i, text, "the front door is the page for that search")
+  test "the front door is the Puzzle: the site's name for a title, the search wording in the description and heading" do
+    %w[/ /puzzle].each do |path|
+      get path
+      assert_equal HOME_TITLE, css_select("title").first.text, "#{path}: the tab says the site's name and nothing else"
+      assert_select "meta[name=description][content=?]", HOME_DESCRIPTION
+      assert_select "meta[property='og:title'][content=?]", HOME_TITLE
+      assert_select "meta[name='twitter:title'][content=?]", HOME_TITLE
+      assert_select "meta[property='og:description'][content=?]", HOME_DESCRIPTION
+      assert_select "meta[name='twitter:description'][content=?]", HOME_DESCRIPTION
+      # /puzzle is the same page, so it names / as the one address for it.
+      assert_select "link[rel=canonical][href=?]", HOME_URL, count: 1
+      assert_select "meta[property='og:url'][content=?]", HOME_URL
+      # One main heading, out of sight like the About text.
+      assert_select "h1", count: 1
+      assert_select "h1.sr-only", text: HOME_HEADING
     end
 
-    # A shared result keeps its own canonical page, whatever the link carries.
-    get "/puzzle", params: { r: DailyShare.token(kind: "puzzle", number: 5, elapsed_ms: 70_000) }
-    assert_select "title", text: PUZZLE_TITLE
-    assert_select "link[rel=canonical][href=?]", "https://setdaily.app/puzzle"
-    assert_select "meta[property='og:title'][content=?]", "Set Puzzle #5 · 1:10"
+    description = css_select("meta[name=description]").first["content"]
+    heading = css_select("h1").first.text
+    assert description.start_with?("Play the daily Set puzzle"), "the phrase people search for comes first"
+    assert heading.start_with?("Daily Set Puzzle")
+    assert_match(/12 cards hold exactly 6 sets/, description)
+    assert_operator description.length, :<=, 170, "long descriptions are cut off in search results"
+    # Honest about what opens: the page is the Puzzle, so neither says the Daily Deal is here.
+    [description, heading].each { |text| assert_no_match(/Daily Deal|clear the/i, text) }
+    # The hidden About text names the site and both dailies, the puzzle first.
+    assert_select "section.sr-only p", text: /at Set Daily, with a daily Set puzzle \(find all 6 sets in 12 cards\) and a Daily Deal \(clear the whole deck\)/
+  end
+
+  test "the Daily Deal has its own page, title and description at /daily" do
+    get "/daily"
+    assert_equal DAILY_TITLE, css_select("title").first.text
+    assert_select "meta[name=description][content=?]", DAILY_DESCRIPTION
+    assert_select "meta[property='og:title'][content=?]", DAILY_TITLE
+    assert_select "meta[name='twitter:title'][content=?]", DAILY_TITLE
+    assert_select "meta[property='og:description'][content=?]", DAILY_DESCRIPTION
+    assert_select "link[rel=canonical][href=?]", DAILY_URL, count: 1
+    assert_select "meta[property='og:url'][content=?]", DAILY_URL
+    assert_select "h1", count: 1
+    assert_select "h1.sr-only", text: DAILY_HEADING
+    assert_operator DAILY_DESCRIPTION.length, :<=, 170, "long descriptions are cut off in search results"
+    assert_no_match(/daily set puzzle/i, DAILY_DESCRIPTION, "the front door is the page for that search")
+
+    # A shared result keeps the page's own address, whatever the link carries.
+    get "/daily", params: { r: DailyShare.token(number: 12, elapsed_ms: 161_400) }
+    assert_equal DAILY_TITLE, css_select("title").first.text
+    assert_select "link[rel=canonical][href=?]", DAILY_URL
+  end
+
+  test "every page's title ends with the site's name, and only the home page's is the name alone" do
+    titles = %w[/ /daily /practice /m].to_h do |path|
+      get path
+      [path, css_select("title").first.text]
+    end
+    assert_equal "Set Daily", titles.delete("/")
+    titles.each do |path, title|
+      assert_match(/\A[^|]+ \| Set Daily\z/, title, path)
+      assert_no_match(/\ASet Daily Deal/, title, "#{path}: the tab doesn't read as the Daily Deal's name")
+    end
   end
 
   test "no two game pages share a title, a description or a canonical URL" do
-    pages = %w[/ /puzzle /practice /m].map do |path|
+    pages = %w[/ /daily /practice /m].map do |path|
       get path
       [css_select("title").first.text, css_select("meta[name=description]").first["content"], css_select("link[rel=canonical]").first["href"]]
     end
@@ -274,7 +338,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2, data.fetch("@graph").size
 
     assert_equal(
-      { "@type" => "WebSite", "@id" => "https://setdaily.app/#website", "name" => "Set Daily", "alternateName" => "Set",
+      { "@type" => "WebSite", "@id" => "https://setdaily.app/#website", "name" => "Set Daily", "alternateName" => "setdaily.app",
         "url" => "https://setdaily.app/", "inLanguage" => "en" },
       site
     )
@@ -283,7 +347,8 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_equal "https://setdaily.app/#game", game.fetch("@id")
     assert_equal "Set Daily", game.fetch("name")
     assert_equal "https://setdaily.app/", game.fetch("url")
-    assert_equal DAILY_DESCRIPTION, game.fetch("description")
+    assert_nil game["alternateName"]
+    assert_equal HOME_DESCRIPTION, game.fetch("description")
     assert_equal css_select("meta[name=description]").first["content"], game.fetch("description")
     assert_equal css_select("meta[property='og:image']").first["content"], game.fetch("image")
     assert_equal ["Puzzle", "Card game"], game.fetch("genre")
@@ -300,15 +365,15 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
       assert_empty node.keys & %w[aggregateRating review author publisher creator potentialAction], node.fetch("@type").inspect
     end
 
-    # /daily is the same page under its canonical URL, so it says the same.
-    get "/daily"
+    # /puzzle is the same page, so it says the same.
+    get "/puzzle"
     assert_equal data, JSON.parse(css_select("script[type='application/ld+json']").first.text)
 
     # A shared result changes the link preview, not what the site is.
-    get "/daily", params: { r: DailyShare.token(number: 12, elapsed_ms: 161_400) }
+    get "/", params: { r: DailyShare.token(kind: "puzzle", number: 5, elapsed_ms: 70_000) }
     assert_equal data, JSON.parse(css_select("script[type='application/ld+json']").first.text)
 
-    %w[/puzzle /practice /m].each do |path|
+    %w[/daily /practice /m].each do |path|
       get path
       assert_select "script[type='application/ld+json']", count: 0
     end

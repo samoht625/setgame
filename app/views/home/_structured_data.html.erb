@@ -1,14 +1,13 @@
-<%# What search engines show as the site's name and what it is. Only what is true of the site: no ratings, authors or search box, which it doesn't have. The game has both types because it is a game and an app that runs in the browser. %>
+<%# What search engines show as the site's name and what it is. Only what is true of the site: no ratings, authors or search box, which it doesn't have. The game has both types because it is a game and an app that runs in the browser. The alternate name is what a search engine may show if it won't use the name. %>
 <% site = "#{ApplicationHelper::SITE_URL}/" %>
 <script type="application/ld+json"><%= raw json_escape({
   "@context": "https://schema.org",
   "@graph": [
-    { "@type": "WebSite", "@id": "#{site}#website", name: "Set Daily", alternateName: "Set", url: site, inLanguage: "en" },
+    { "@type": "WebSite", "@id": "#{site}#website", name: ApplicationHelper::SITE_NAME, alternateName: "setdaily.app", url: site, inLanguage: "en" },
     {
       "@type": ["VideoGame", "WebApplication"],
       "@id": "#{site}#game",
-      name: "Set Daily",
-      alternateName: "Set",
+      name: ApplicationHelper::SITE_NAME,
       url: site,
       description: page_description,
       image: "#{ApplicationHelper::SITE_URL}/og-image.png",

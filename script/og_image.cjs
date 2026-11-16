@@ -28,14 +28,14 @@ function cards() {
 
 const escapeXml = value => String(value).replace(/[<>&"']/g, char => `&#${char.charCodeAt(0)};`)
 
-// The header's wordmark: "Set" and three colored dots.
+// The header's wordmark: "Set Daily" and three colored dots, which start where the name ends.
 function wordmark(x, y, size) {
   const dot = size * 0.13
-  const start = x + size * 1.98
+  const start = x + size * 4.49
   const dots = [INK.red, INK.purple, INK.green]
     .map((ink, index) => `<circle cx="${start + index * dot * 3}" cy="${y - size * 0.34}" r="${dot}" fill="${ink}"/>`)
     .join('')
-  return `<text x="${x}" y="${y}" font-size="${size}" font-weight="700" letter-spacing="${-size * 0.03}" fill="${TEXT.strong}">Set</text>${dots}`
+  return `<text x="${x}" y="${y}" font-size="${size}" font-weight="700" letter-spacing="${-size * 0.03}" fill="${TEXT.strong}">Set Daily</text>${dots}`
 }
 
 // Three cards forming a set, fanned like a hand of cards around (cx, cy).
@@ -76,7 +76,7 @@ function frame(content) {
 
 function staticSvg() {
   return frame(`
-    ${wordmark(88, 360, 120)}
+    ${wordmark(88, 352, 100)}
     ${cardFan(940, 322, 1.05)}
   `)
 }

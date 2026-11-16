@@ -25,7 +25,7 @@ class SitemapTest < ActiveSupport::TestCase
     listed = urls(xml)
 
     assert xml.start_with?(%(<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n))
-    assert_equal %w[/ /puzzle /practice /m /stats /archive /daily/3 /puzzle/21 /daily/2 /puzzle/20 /daily/1 /puzzle/19 /puzzle/18].map { |path| "https://setdaily.app#{path}" },
+    assert_equal %w[/ /daily /practice /m /stats /archive /daily/3 /puzzle/21 /daily/2 /puzzle/20 /daily/1 /puzzle/19 /puzzle/18].map { |path| "https://setdaily.app#{path}" },
                  listed.keys.first(13)
     assert_equal 6 + 3 + 21, listed.length
     assert_equal "https://setdaily.app/puzzle/1", listed.keys.last
@@ -37,7 +37,8 @@ class SitemapTest < ActiveSupport::TestCase
     listed = urls(sitemap.to_xml)
 
     assert_equal "2026-11-15", listed.fetch("https://setdaily.app/"), "the dailies change every day"
-    assert_equal "2026-11-15", listed.fetch("https://setdaily.app/puzzle")
+    assert_equal "2026-11-15", listed.fetch("https://setdaily.app/daily")
+    refute listed.key?("https://setdaily.app/puzzle"), "/puzzle is the home page again, which names / as its address"
     assert_equal "2026-11-15", listed.fetch("https://setdaily.app/stats")
     assert_nil listed.fetch("https://setdaily.app/practice"), "no made-up date for a page that doesn't change"
     assert_nil listed.fetch("https://setdaily.app/m")
@@ -64,7 +65,7 @@ class SitemapTest < ActiveSupport::TestCase
   test "with nothing archived it is the site's pages alone" do
     empty = Sitemap.new(site: "https://setdaily.app", today: TODAY, archives: [DailyArchive.new("daily", launch: nil, last_closed: TODAY - 1)])
 
-    assert_equal %w[https://setdaily.app/ https://setdaily.app/puzzle https://setdaily.app/practice https://setdaily.app/m https://setdaily.app/stats], urls(empty.to_xml).keys
+    assert_equal %w[https://setdaily.app/ https://setdaily.app/daily https://setdaily.app/practice https://setdaily.app/m https://setdaily.app/stats], urls(empty.to_xml).keys
   end
 
   test "the current sitemap follows the clock: a day joins when it closes" do

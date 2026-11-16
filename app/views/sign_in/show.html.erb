@@ -1,5 +1,5 @@
 <% if @confirm %>
-  <h1><%= @reminder ? "Turn on your reminder?" : "Sign in to Set?" %></h1>
+  <h1><%= @reminder ? "Turn on your reminder?" : "Sign in to Set Daily?" %></h1>
   <p>As <strong><%= @email %></strong>.<% if @merges %> Games played in this browser will move to that account.<% end %></p>
   <%= form_with url: "/signin", method: :post, id: "sign-in", data: { turbo: false } do %>
     <%= hidden_field_tag :token, @token %>

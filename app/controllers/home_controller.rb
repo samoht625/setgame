@@ -12,13 +12,18 @@ class HomeController < ApplicationController
   def multiplayer
   end
 
+  # The front door (/) and /puzzle. ?r= carries a shared result for link
+  # previews; the page is always today's puzzle.
   def puzzle
     @shared_result = DailyShare.verify(params[:r], kind: "puzzle")
+    # The Daily Deal was the front door once: a Deal result shared from there
+    # still opens the Deal, with everything else the link carried.
+    return redirect_to("#{daily_path}?#{request.query_string}", status: :moved_permanently) if @shared_result.nil? && DailyShare.verify(params[:r])
+
     load_boot_statuses
   end
 
-  # The front door (/) and /daily. ?r= carries a shared result for link
-  # previews; the page is always today's deal.
+  # /daily. ?r= carries a shared result for link previews; the page is always today's deal.
   def daily
     @shared_result = DailyShare.verify(params[:r])
     load_boot_statuses

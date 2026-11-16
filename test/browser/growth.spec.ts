@@ -118,22 +118,22 @@ test('the streak shows on the result card and in the menu, and the menu row goes
   const streak = page.locator('[data-streak]')
   await expect(streak).toHaveText('🔥3-day streak')
 
-  await page.getByRole('navigation', { name: 'Game mode' }).getByRole('button', { name: 'Puzzle' }).click()
+  await page.getByRole('navigation', { name: 'Game mode' }).getByRole('link', { name: 'Puzzle' }).click()
   await page.getByRole('button', { name: 'Menu', exact: true }).click()
   const row = page.getByRole('menuitem', { name: /Streak/ })
   await expect(row).toContainText('🔥 3 days')
   await row.click()
-  await expect(page).toHaveURL(/\/$/)
+  await expect(page).toHaveURL(/\/daily$/)
   await expect(streak).toBeVisible()
 })
 
 test('a new player’s first visit sends where it came from with their first game; a returning player sends nothing', async ({ page, context }) => {
   const started = page.waitForRequest(request => request.url().endsWith('/api/daily/games'))
-  await page.goto('/?ref=dib2')
+  await page.goto('/daily?ref=dib2')
   await page.getByRole('button', { name: 'Start', exact: true }).click()
   const headers = (await started).headers()
   expect(headers['x-player-source']).toBe('ref:dib2')
-  expect(headers['x-player-landing']).toBe('/')
+  expect(headers['x-player-landing']).toBe('/daily')
 
   const returning = await context.newPage()
   await returning.addInitScript(() => {
@@ -156,7 +156,7 @@ test.describe('Safari on an iPhone', () => {
 
   test('from the second day with a finish, the result offers Add to Home Screen instead of the email reminder', async ({ page }) => {
     const events = await recordEvents(page)
-    const install = page.getByRole('dialog', { name: 'Add Set to your Home Screen' })
+    const install = page.getByRole('dialog', { name: 'Add Set Daily to your Home Screen' })
     const reminder = page.getByRole('dialog', { name: 'Keep your streak going' })
     await page.goto('/daily')
 
@@ -213,7 +213,7 @@ test.describe('Safari on an iPhone', () => {
     await seedFinishedRun(page)
     await page.reload()
     await page.waitForTimeout(1600)
-    await expect(page.getByRole('dialog', { name: 'Add Set to your Home Screen' })).toHaveCount(0)
+    await expect(page.getByRole('dialog', { name: 'Add Set Daily to your Home Screen' })).toHaveCount(0)
     expect(named(events, 'app_open')).toContainEqual({ display: 'standalone' })
   })
 })

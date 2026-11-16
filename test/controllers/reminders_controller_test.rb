@@ -48,24 +48,46 @@ class RemindersControllerTest < ActionDispatch::IntegrationTest
 
   test "Play asks before signing this browser in, then opens the game left to play" do
     token = Reminder.play_token(@account, Date.current)
-    get "/play", params: { t: token, to: "/puzzle" }
+    get "/play", params: { t: token, to: "daily" }
     assert_response :success
     assert_select "h1", "Play as rose@example.com?"
     assert_select "form[action='/play'][method=post] input[name='t'][value=?]", token
-    assert_select "a[href='/puzzle']", "Play without signing in"
+    assert_select "form[action='/play'][method=post] input[name='to'][value='daily']"
+    assert_select "a[href='/daily']", "Play without signing in"
     get "/"
     assert_select "meta[name='setgame-account']", false, "opening the link alone signs nobody in"
 
-    post "/play", params: { t: token, to: "/puzzle" }
-    assert_redirected_to "/puzzle"
+    post "/play", params: { t: token, to: "daily" }
+    assert_redirected_to "/daily"
     get "/"
     assert_select "meta[name='setgame-account'][content='rose@example.com']"
     assert_select "meta[name='setgame-player-id'][content=?]", @account.player_id
     assert_select "meta[name='setgame-reminder'][content='480']"
 
     # Already signed in: straight to the game.
+    get "/play", params: { t: token, to: "daily" }
+    assert_redirected_to "/daily"
+    get "/play", params: { t: token, to: "puzzle" }
+    assert_redirected_to "/", "the Puzzle is the home page"
+  end
+
+  # Before the Puzzle became the home page, `to` was a path: "/" for the Daily Deal, "/puzzle" for the Puzzle.
+  test "Play links in emails sent before the Puzzle became the home page open the same game" do
+    token = Reminder.play_token(@account, Date.current)
+    { "/" => "/daily", "/puzzle" => "/" }.each do |to, path|
+      get "/play", params: { t: token, to: to }
+      assert_response :success
+      assert_select "a[href=?]", path, "Play without signing in"
+      # The form posts what the link said, not the path it opens, so the POST opens the same game.
+      assert_select "form[action='/play'][method=post] input[name='to'][value=?]", to
+    end
+
+    post "/play", params: { t: token, to: "/" }
+    assert_redirected_to "/daily"
     get "/play", params: { t: token, to: "/puzzle" }
-    assert_redirected_to "/puzzle"
+    assert_redirected_to "/", "signed in now: straight to the Puzzle"
+    get "/play", params: { t: token, to: "/" }
+    assert_redirected_to "/daily"
   end
 
   test "an expired or forged Play link just opens the game, signed out" do
@@ -84,7 +106,7 @@ class RemindersControllerTest < ActionDispatch::IntegrationTest
     post "/api/sign_in", params: { email: "new@example.com", reminder_minutes: 450, time_zone: "Europe/Paris", return_to: "/puzzle" }, headers: { "X-Player-Id" => phone }, as: :json
     assert_response :success
     mail = ResendMail.deliveries.last
-    assert_equal "Confirm your Set reminder", mail[:subject]
+    assert_equal "Confirm your Set Daily reminder", mail[:subject]
     assert_match "Tap to get a reminder at 7:30 AM on days you haven’t played.", mail[:html]
     assert_match(/>Confirm</, mail[:html])
     assert_match "Tap to get a reminder at 7:30 AM on days you haven't played.", mail[:text]
@@ -110,7 +132,7 @@ class RemindersControllerTest < ActionDispatch::IntegrationTest
   test "a menu sign-in email stays a sign-in email" do
     post "/api/sign_in", params: { email: "menu@example.com" }, as: :json
     mail = ResendMail.deliveries.last
-    assert_equal "Sign in to Set", mail[:subject]
+    assert_equal "Sign in to Set Daily", mail[:subject]
     assert_match(/>Sign in</, mail[:html])
     refute_match(/reminder/i, mail[:text])
   end

@@ -1,7 +1,8 @@
 import { formatTime } from '../solitaire/time'
 
 export const DAILY_URL = 'https://setdaily.app/daily'
-export const PUZZLE_URL = 'https://setdaily.app/puzzle'
+// The Puzzle is the home page.
+export const PUZZLE_URL = 'https://setdaily.app/'
 // Must match DailyPuzzle::TIME_ZONE.
 export const DAILY_TIME_ZONE = 'America/Los_Angeles'
 

@@ -58,13 +58,13 @@ class ArchiveControllerTest < ActionDispatch::IntegrationTest
       get "/puzzle/21"
       assert_response :success
 
-      assert_select "title", "Set Puzzle #21 · Nov 14, 2026 · Board, Solution and Leaderboard"
+      assert_select "title", "Puzzle #21 | Set Daily"
       description = css_select("meta[name=description]").first["content"]
       assert_includes description, "Set Puzzle #21, the daily Set puzzle for Saturday, November 14, 2026"
       assert_includes description, "3 players finished it; the fastest took 0:42."
       assert_select "link[rel=canonical][href='https://setdaily.app/puzzle/21']"
       assert_select "meta[property='og:url'][content='https://setdaily.app/puzzle/21']"
-      assert_select "meta[property='og:title'][content='Set Puzzle #21 · Nov 14, 2026 · Board, Solution and Leaderboard']"
+      assert_select "meta[property='og:title'][content='Puzzle #21 | Set Daily']"
       assert_select "h1", "Set Puzzle #21"
       assert_select "time[datetime='2026-11-14']", "Saturday, November 14, 2026"
 
@@ -83,7 +83,7 @@ class ArchiveControllerTest < ActionDispatch::IntegrationTest
       assert_select "a[rel=prev][href='/puzzle/20']", "←Puzzle #20"
       assert_select "a[rel=next]", 0, "the next one is today's"
       assert_select "a[href='/daily/4']", "That day’s Daily Deal #4"
-      assert_select "a[href='/puzzle']", "Today’s Puzzle"
+      assert_select "a[href='/']", "Today’s Puzzle"
       assert_select "a[href='/archive']", minimum: 2
       assert_select "#site-header", 1
       assert_select "#root", 0, "the game itself is not mounted here"
@@ -101,7 +101,7 @@ class ArchiveControllerTest < ActionDispatch::IntegrationTest
       get "/daily/4"
       assert_response :success
 
-      assert_select "title", "Set Daily Deal #4 · Nov 14, 2026 · Opening Board and Leaderboard"
+      assert_select "title", "Daily Deal #4 | Set Daily"
       assert_includes css_select("meta[name=description]").first["content"], "Set Daily Deal #4, the Set Daily Deal for Saturday, November 14, 2026"
       assert_includes css_select("meta[name=description]").first["content"], "1 player finished it; the fastest took 3:05."
       assert_select "link[rel=canonical][href='https://setdaily.app/daily/4']"
@@ -115,7 +115,7 @@ class ArchiveControllerTest < ActionDispatch::IntegrationTest
       refute_includes response.body, ada.player_id
       assert_select "a[rel=prev][href='/daily/3']"
       assert_select "a[href='/puzzle/21']", "That day’s Puzzle #21"
-      assert_select "a[href='/']", "Today’s Daily Deal"
+      assert_select "a[href='/daily']", "Today’s Daily Deal"
       assert_nothing_of_today response.body, "a past day's page"
     end
   end
@@ -139,10 +139,10 @@ class ArchiveControllerTest < ActionDispatch::IntegrationTest
       assert_equal [22, 5], [ClassicPuzzle.today.number, DailyPuzzle.today.number]
 
       get "/puzzle/22"
-      assert_redirected_to "/puzzle"
+      assert_redirected_to "/"
       assert_nothing_of_today response.body, "the redirect"
       get "/daily/5"
-      assert_redirected_to "/"
+      assert_redirected_to "/daily"
       assert_nothing_of_today response.body, "the redirect"
 
       ["/archive", "/puzzle/21", "/daily/4", "/sitemap.xml", "/api/archive/puzzle/21", "/api/archive/daily/4"].each do |path|
@@ -189,9 +189,9 @@ class ArchiveControllerTest < ActionDispatch::IntegrationTest
     [ENDED - 1.second, NOON - 1.day].each do |live|
       travel_to live do
         get "/puzzle/21"
-        assert_redirected_to "/puzzle", "still today's"
+        assert_redirected_to "/", "still today's"
         get "/daily/4"
-        assert_redirected_to "/"
+        assert_redirected_to "/daily"
       end
     end
 
@@ -252,9 +252,9 @@ class ArchiveControllerTest < ActionDispatch::IntegrationTest
       assert_select "a[rel=prev]", 0
       assert_select "a[rel=next]", 0
       get "/puzzle/2"
-      assert_redirected_to "/puzzle"
+      assert_redirected_to "/"
       get "/daily/1"
-      assert_redirected_to "/", "no Daily Deal played yet: #1 is today's"
+      assert_redirected_to "/daily", "no Daily Deal played yet: #1 is today's"
       get "/daily/2"
       assert_response :not_found
     end
@@ -270,7 +270,7 @@ class ArchiveControllerTest < ActionDispatch::IntegrationTest
 
       get "/archive"
       assert_response :success
-      assert_select "title", "Set Archive · Every Past Daily Deal and Puzzle"
+      assert_select "title", "Archive | Set Daily"
       assert_select "link[rel=canonical][href='https://setdaily.app/archive']"
       assert_select "h1", "Archive"
       assert_select "main ol > li", 30
@@ -289,7 +289,7 @@ class ArchiveControllerTest < ActionDispatch::IntegrationTest
 
       get "/archive", params: { page: "2" }
       assert_response :success
-      assert_select "title", "Set Archive · Past Daily Deals and Puzzles, Page 2"
+      assert_select "title", "Archive, page 2 | Set Daily"
       assert_equal "https://setdaily.app/archive?page=2", css_select("link[rel=canonical]").first["href"]
       assert_select "main ol > li", 13
       assert_select "a[href='/daily/13']", 1
@@ -313,7 +313,7 @@ class ArchiveControllerTest < ActionDispatch::IntegrationTest
 
   test "every game page has a link to the archive that a crawler can follow" do
     travel_to NOON do
-      ["/", "/puzzle", "/practice", "/m"].each do |path|
+      ["/", "/puzzle", "/daily", "/practice", "/m"].each do |path|
         get path
         assert_select "a[href='/archive']", { minimum: 1 }, path
       end

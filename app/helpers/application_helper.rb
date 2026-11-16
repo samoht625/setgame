@@ -1,6 +1,6 @@
 module ApplicationHelper
   SITE_URL = "https://setdaily.app"
-  DEFAULT_TITLE = "Set"
+  SITE_NAME = "Set Daily"
 
   PRERENDERED = Rails.root.join("app/assets/builds/prerendered.json")
 
@@ -14,8 +14,11 @@ module ApplicationHelper
     (@@prerendered[name.to_s] || "").html_safe
   end
 
+  # "Daily Deal | Set Daily". The home page names no page of its own, so its
+  # title is the site's name. Must match TITLES in components/App.tsx.
   def page_title
-    content_for(:title).presence || DEFAULT_TITLE
+    page = content_for(:title).presence
+    page ? "#{page} | #{SITE_NAME}" : SITE_NAME
   end
 
   def page_description
@@ -44,6 +47,6 @@ module ApplicationHelper
   end
 
   def social_image_alt
-    content_for(:social_image_alt).presence || DEFAULT_TITLE
+    content_for(:social_image_alt).presence || SITE_NAME
   end
 end

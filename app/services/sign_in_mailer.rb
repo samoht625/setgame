@@ -3,9 +3,9 @@
 # The sign-in email. Production keeps sign-in switched off until
 # RESEND_API_KEY is set (see .enabled?).
 module SignInMailer
-  SUBJECT = "Sign in to Set"
+  SUBJECT = "Sign in to Set Daily"
   # Asked for from the reminder prompt: the link confirms the reminder (and signs in).
-  CONFIRM_SUBJECT = "Confirm your Set reminder"
+  CONFIRM_SUBJECT = "Confirm your Set Daily reminder"
 
   def self.enabled?
     return false if ENV["SETGAME_SIGN_IN"] == "off"
