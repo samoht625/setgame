@@ -2,7 +2,9 @@ import React from 'react'
 import { formatTime } from '../solitaire/time'
 import { ordinal } from '../lib/daily'
 import type { SharedResult } from '../lib/boot'
-import { openTour, RULE_LINE } from '../rules/Tour'
+import { primaryButton } from '../lib/buttons'
+import { openTour } from '../rules/Tour'
+import StreakPill from './StreakPill'
 
 /** On the start card of a friend's shared link: their time, to beat. */
 export const Challenge: React.FC<{ shared: SharedResult; number: number; name: string }> = ({ shared, number, name }) => {
@@ -21,12 +23,50 @@ export const Challenge: React.FC<{ shared: SharedResult; number: number; name: s
   )
 }
 
-/** On a new player's start card: the rule in a line, and the tour. */
-export const RulesOffer: React.FC = () => (
-  <p data-rules-offer className="mt-3 text-balance text-xs text-neutral-600 dark:text-neutral-300">
-    {RULE_LINE}{' '}
-    <button type="button" onClick={openTour} className="cursor-pointer font-medium text-neutral-900 underline underline-offset-2 dark:text-neutral-100">
-      How to play
+interface StartCardProps {
+  /** A friend's time to beat, on a shared link. */
+  challenge?: React.ReactNode
+  /** What the game is and what a try costs: a line each. */
+  lines: [string, string]
+  action?: string
+  onStart: () => void
+  starting: boolean
+  streak: number
+  /** The player is new to the rules: offer the tour. */
+  offerRules: boolean
+}
+
+/**
+ * What the Daily Deal and the Puzzle show before a run. Everything leads to
+ * the one button: two lines above it, and under it only what this player has
+ * (a streak) or may need (the tour).
+ */
+export const StartCard: React.FC<StartCardProps> = ({ challenge, lines, action = 'Start', onStart, starting, streak, offerRules }) => (
+  <>
+    {challenge}
+    <p className="mt-2 text-sm text-neutral-800 dark:text-neutral-100">
+      {lines[0]}
+      <br />
+      {lines[1]}
+    </p>
+    <button type="button" onClick={onStart} disabled={starting} className={`${primaryButton} mt-4 w-full`}>
+      {action}
     </button>
-  </p>
+    {/* The tour's button is taller than its text, for a finger; the row gives that back below. */}
+    {(streak > 0 || offerRules) && (
+      <div className={`mt-3 flex flex-wrap items-center justify-center gap-x-1 gap-y-1 ${offerRules ? '-mb-2' : ''}`}>
+        {streak > 0 && <StreakPill streak={streak} />}
+        {offerRules && (
+          <button
+            type="button"
+            data-rules-offer
+            onClick={openTour}
+            className="inline-flex min-h-9 cursor-pointer items-center rounded-full px-3 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+          >
+            How to play
+          </button>
+        )}
+      </div>
+    )}
+  </>
 )

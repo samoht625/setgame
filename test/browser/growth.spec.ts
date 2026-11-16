@@ -88,6 +88,25 @@ test('the Puzzle’s shared link challenges too', async ({ page, request }) => {
   await expect(page.locator('[data-challenge]')).toContainText('Can you beat it?')
 })
 
+test('the start card shows a streak under Start, as the pill alone', async ({ page }) => {
+  const status = {
+    date: today(), number: 7, next_at: new Date(Date.now() + 3600_000).toISOString(), total: 0, leaderboard: [],
+    me: { attempted: false, streak: 5, result: null }
+  }
+  await page.route('**/api/daily', route => route.fulfill({ json: status }))
+  await page.goto('/daily')
+
+  const streak = page.locator('[data-streak]')
+  await expect(streak).toHaveText('🔥5-day streak')
+  await expect(page.getByText('Same deal for everyone today.')).toBeVisible()
+  await expect(page.getByText('One try, against the clock.')).toBeVisible()
+  // The pill sits below Start, and a returning player isn't offered the tour next to it.
+  const start = await page.getByRole('button', { name: 'Start', exact: true }).boundingBox()
+  const pill = await streak.boundingBox()
+  expect(pill!.y).toBeGreaterThan(start!.y + start!.height)
+  await expect(page.getByRole('button', { name: 'How to play', exact: true })).toHaveCount(0)
+})
+
 test('the streak shows on the result card and in the menu, and the menu row goes to the Daily Deal', async ({ page }) => {
   const status = {
     date: today(), number: 7, next_at: new Date(Date.now() + 3600_000).toISOString(), total: 1, leaderboard: [],

@@ -14,8 +14,6 @@ const STEPS = [
   { demo: 'set', title: 'A set: each feature all same or all different' }
 ] as const
 
-export const RULE_LINE = 'Find 3 cards where each feature is all the same or all different.'
-
 export function openTour(): void {
   window.dispatchEvent(new Event(OPEN_EVENT))
 }
