@@ -86,19 +86,23 @@ const Header: React.FC<HeaderProps> = ({ mode, page, onSwitchMode, othersOnline 
       >
         {narrowLabel ? (
           <>
-            <span aria-hidden="true" className="min-[420px]:hidden">{narrowLabel}</span>
-            <span className="max-[420px]:sr-only">{label}</span>
+            <span aria-hidden="true" className="text-trim-caps min-[420px]:hidden">{narrowLabel}</span>
+            <span className="text-trim-caps max-[420px]:sr-only">{label}</span>
           </>
-        ) : label}
+        ) : <span className="text-trim-caps">{label}</span>}
       </a>
     )
   }
 
+  // Everything in the row shares one centre line. Its text (the wordmark, the
+  // switch's labels) is boxed by its capitals (text-trim-caps), so centring
+  // the box centres the letters; in the font's own line box they sit a pixel
+  // or so off the line, differently at each size.
   return (
     <header>
       <div className="mx-auto flex h-12 w-full max-w-screen-2xl items-center justify-between gap-1 px-3 md:px-6 lg:px-10">
         <LogoTag {...(mode === null ? { href: '/', 'aria-label': `${SITE_NAME} home` } : { type: 'button' as const, 'aria-label': `${SITE_NAME} logo`, onClick: tapLogo })} className="flex min-h-11 shrink-0 items-center gap-1 rounded-lg sm:gap-2">
-          <span className={`whitespace-nowrap text-base font-semibold tracking-tight ${wordRoom}`}>{SITE_NAME}</span>
+          <span className={`text-trim-caps whitespace-nowrap text-base font-semibold tracking-tight ${wordRoom}`}>{SITE_NAME}</span>
           <span className={`h-6 w-11 items-center justify-center gap-1 ${dotsRoom}`} aria-hidden="true">
             {showLogoSet ? (
               <span data-logo-set className="flex w-full gap-0.5 animate-logo-reveal">
