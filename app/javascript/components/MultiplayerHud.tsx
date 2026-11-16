@@ -120,7 +120,7 @@ const MultiplayerHud: React.FC<MultiplayerHudProps> = ({
             spellCheck={false}
             maxLength={20}
             // 16px text so phones don't zoom in on focus.
-            className="text-field h-8 w-32 min-w-0 rounded-full border border-neutral-300 bg-white px-3 text-base text-neutral-900 focus:border-neutral-500 focus:outline-none dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100 dark:focus:border-neutral-400"
+            className="text-field h-8 w-32 min-w-0 rounded-full border border-neutral-300 bg-white px-3 text-base text-neutral-900 focus:border-neutral-500 focus:outline-none dark:border-neutral-500 dark:bg-neutral-900 dark:text-neutral-100 dark:focus:border-neutral-300"
           />
         ) : (
           <button

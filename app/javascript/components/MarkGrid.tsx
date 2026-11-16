@@ -71,7 +71,7 @@ const MarkGrid: React.FC<{ marks: string; label: string }> = ({ marks, label }) 
       <div
         id={legendId}
         role="tooltip"
-        className={`pointer-events-none absolute left-1/2 top-full z-10 mt-1 w-72 max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-xl border border-neutral-200 bg-white p-3 text-left shadow-lg transition-opacity dark:border-neutral-700 dark:bg-neutral-900 ${
+        className={`pointer-events-none absolute left-1/2 top-full z-10 mt-1 w-72 max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-xl border border-neutral-200 bg-white p-3 text-left shadow-lg transition-opacity dark:border-neutral-600 dark:bg-neutral-900 ${
           open ? 'visible opacity-100' : 'invisible opacity-0 group-hover:visible group-hover:opacity-100'
         }`}
       >

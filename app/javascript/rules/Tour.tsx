@@ -104,13 +104,13 @@ const Tour: React.FC<{ onDone: () => void }> = ({ onDone }) => {
       }}
       className="fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none items-end justify-center overflow-hidden border-0 bg-transparent p-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] open:flex sm:items-start sm:pt-24"
     >
-      <div className="animate-dialog-in w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-4 shadow-2xl dark:border-neutral-700 dark:bg-neutral-900">
+      <div className="animate-dialog-in w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-4 shadow-2xl dark:border-neutral-600 dark:bg-neutral-900">
         <h2 id={titleId} className="mb-3 text-center text-sm font-semibold text-neutral-900 dark:text-neutral-100">
           {STEPS[step]!.title}
         </h2>
         <RulesDemo step={STEPS[step]!.demo} />
         <div className="mt-4 flex items-center gap-2">
-          <button type="button" onClick={() => finish(false)} className="min-h-10 rounded-full border border-neutral-300 px-4 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-200 dark:hover:bg-neutral-800">
+          <button type="button" onClick={() => finish(false)} className="min-h-10 rounded-full border border-neutral-300 px-4 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:border-neutral-500 dark:text-neutral-200 dark:hover:bg-neutral-800">
             Skip
           </button>
           <span className="flex flex-1 justify-center gap-1.5" aria-label={`Step ${step + 1} of ${STEPS.length}`}>

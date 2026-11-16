@@ -90,6 +90,9 @@ class SignInFlowTest < ActionDispatch::IntegrationTest
     assert_select "h1", "Sign in to Set?"
     assert_select "strong", "mallory@example.com"
     assert_select "button[type=submit]", "Sign in"
+    assert_select "meta[name='color-scheme'][content='light dark']"
+    assert_select "meta[name='theme-color'][media=?][content=?]", "(prefers-color-scheme: light)", "#f5f5f5"
+    assert_select "meta[name='theme-color'][media=?][content=?]", "(prefers-color-scheme: dark)", "#111214"
     refute_match "requestSubmit", response.body, "no automatic sign-in"
     assert_nil Account.find_by(email: "mallory@example.com")
     assert_nil SignInToken.last.used_at

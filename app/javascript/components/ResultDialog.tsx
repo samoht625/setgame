@@ -59,7 +59,7 @@ const ResultDialog: React.FC<ResultDialogProps> = ({ open, onClose, label, actio
     >
       {open && (
         <>
-          <div className="animate-dialog-in relative flex max-h-full w-full max-w-sm flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white text-center shadow-2xl dark:border-neutral-700 dark:bg-neutral-900">
+          <div className="animate-dialog-in relative flex max-h-full w-full max-w-sm flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white text-center shadow-2xl dark:border-neutral-600 dark:bg-neutral-900">
             <div className="px-12 pt-4">
               <h2 id={labelId} className="text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">{label}</h2>
             </div>
@@ -72,7 +72,7 @@ const ResultDialog: React.FC<ResultDialogProps> = ({ open, onClose, label, actio
               <CloseIcon />
             </button>
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4">{children}</div>
-            <div className="border-t border-neutral-100 px-5 py-3 dark:border-neutral-800">{actions}</div>
+            <div className="border-t border-neutral-100 px-5 py-3 dark:border-neutral-700">{actions}</div>
           </div>
           {toast}
         </>

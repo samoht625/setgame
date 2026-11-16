@@ -134,12 +134,12 @@ export const SoloLeaderboard: React.FC<SoloLeaderboardProps> = ({
       {scoresLoading ? (
         <p role="status" className="mt-2.5 rounded-xl bg-neutral-50 px-3 py-6 text-center text-xs text-neutral-500 dark:bg-neutral-800/50 dark:text-neutral-400">Loading times…</p>
       ) : scoresError ? (
-        <div className="mt-2.5 rounded-xl border border-dashed border-neutral-200 px-3 py-4 text-center dark:border-neutral-700">
+        <div className="mt-2.5 rounded-xl border border-dashed border-neutral-200 px-3 py-4 text-center dark:border-neutral-600">
           <p role="status" className="text-xs text-neutral-600 dark:text-neutral-300">{scoresError}</p>
           <button type="button" onClick={onRetryScores} className={`${secondaryButtonSmall} mt-2`}>Try again</button>
         </div>
       ) : leaderboard.length === 0 ? (
-        <div className="mt-2.5 rounded-xl border border-dashed border-neutral-200 px-3 py-6 text-center dark:border-neutral-700">
+        <div className="mt-2.5 rounded-xl border border-dashed border-neutral-200 px-3 py-6 text-center dark:border-neutral-600">
           <p className="text-xs text-neutral-600 dark:text-neutral-300">
             No times yet — finish a game to claim the top spot.
           </p>
@@ -186,7 +186,7 @@ const SolitairePanel: React.FC<SolitairePanelProps> = ({ isFinished, recentClaim
       <SoloLeaderboard {...leaderboardProps} />
 
       {bestTimes.length > 0 && (
-        <div className="mt-5 border-t border-neutral-100 pt-4 dark:border-neutral-800">
+        <div className="mt-5 border-t border-neutral-100 pt-4 dark:border-neutral-700">
           <SectionLabel>My times</SectionLabel>
           <ol className="mt-1.5 space-y-0.5">
             {bestTimes.map((entry, index) => {

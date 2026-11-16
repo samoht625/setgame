@@ -49,13 +49,13 @@ const ReminderDialog: React.FC = () => {
       aria-labelledby="reminder-dialog-title"
       onClose={() => setOpen(false)}
       onClick={event => { if (event.target === ref.current) close() }}
-      className="animate-dialog-in m-auto w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-neutral-200 bg-white p-0 text-neutral-900 shadow-xl dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+      className="animate-dialog-in m-auto w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-neutral-200 bg-white p-0 text-neutral-900 shadow-xl dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-100"
     >
       {open && (
         <div className="relative p-5">
           <h2 id="reminder-dialog-title" className="pr-8 text-base font-semibold">
             Daily reminder
-            <span className="ml-1.5 text-sm font-normal text-neutral-400 dark:text-neutral-500">{setting.enabled ? 'On' : 'Off'}</span>
+            <span className="ml-1.5 text-sm font-normal text-neutral-400 dark:text-neutral-400">{setting.enabled ? 'On' : 'Off'}</span>
           </h2>
           <button
             type="button"

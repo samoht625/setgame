@@ -20,6 +20,14 @@ const OUTLINE_WIDTH = [6, 4.5, 6] as const
 // Eight stripes, 12 apart and mirrored about the shape's center.
 const STRIPES = [-42, -30, -18, -6, 6, 18, 30, 42].map(y => `M-32 ${y}H32`).join('')
 
+// Dark mode keeps the card faces light, so a bright ring drawn straight onto a
+// card has almost no contrast with it. A 2px band of the page colour sets the
+// ring apart: the card's border, widened (DARK_RING_GAP, on the bordered box).
+// The face then overhangs the content box by the extra pixel, so the artwork
+// doesn't move when the band appears (DARK_RING_GAP_FACE, on the CardFace).
+export const DARK_RING_GAP = 'dark:border-2 dark:border-[#111214]'
+export const DARK_RING_GAP_FACE = 'dark:-m-px dark:w-[calc(100%+2px)]'
+
 export function describeCard(cardId: number): string {
   const { number, color, shape, shading } = cardAttributes(cardId)
   return `${number + 1} ${SHADINGS[shading]} ${COLORS[color].name} ${SHAPES[shape]}${number === 0 ? '' : 's'}`

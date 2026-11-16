@@ -52,6 +52,10 @@ dialog::backdrop {
   dialog::backdrop {
     background: rgb(0 0 0 / 0.6);
   }
+
+  input.text-field:focus-visible {
+    box-shadow: 0 0 0 3px rgb(163 163 163 / 0.45);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

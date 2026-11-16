@@ -284,7 +284,7 @@ export const MenuButton: React.FC<MenuButtonProps> = ({ sections }) => {
           aria-label="Menu"
           tabIndex={-1}
           onKeyDown={onMenuKeyDown}
-          className="animate-menu-in absolute right-0 top-11 z-40 max-h-[calc(100dvh-4rem)] w-60 overflow-y-auto rounded-xl border border-neutral-200 bg-white p-1 shadow-xl outline-none dark:border-neutral-700 dark:bg-neutral-900"
+          className="animate-menu-in absolute right-0 top-11 z-40 max-h-[calc(100dvh-4rem)] w-60 overflow-y-auto rounded-xl border border-neutral-200 bg-white p-1 shadow-xl outline-none dark:border-neutral-600 dark:bg-neutral-900"
         >
           {groups.map((section, index) => (
             <div key={index} role="group">

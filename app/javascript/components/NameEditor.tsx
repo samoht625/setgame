@@ -65,7 +65,7 @@ const NameEditor: React.FC<NameEditorProps> = ({ initial, onSave, onCancel, comp
           // 16px text so phones don't zoom in on focus.
           className={`text-field min-w-0 flex-1 rounded-full border bg-white text-base text-neutral-900 placeholder:text-neutral-400 focus:outline-none dark:bg-neutral-900 dark:text-neutral-100 ${
             compact ? 'h-9 px-3.5' : stacked ? 'h-11 px-4' : 'h-10 px-4'
-          } ${invalid ? 'border-rose-400 focus:border-rose-500' : 'border-neutral-300 focus:border-neutral-500 dark:border-neutral-600 dark:focus:border-neutral-400'}`}
+          } ${invalid ? 'border-rose-400 focus:border-rose-500' : 'border-neutral-300 focus:border-neutral-500 dark:border-neutral-500 dark:focus:border-neutral-300'}`}
         />
         {!stacked && (
           <button

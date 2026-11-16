@@ -53,6 +53,10 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
       assert_select "meta[name='twitter:card'][content='summary_large_image']"
       assert_select "link[rel=manifest][href='/manifest.json']"
       assert_select "link[rel=apple-touch-icon][href='/apple-touch-icon.png']"
+      # Light or dark with the system, browser chrome included.
+      assert_select "meta[name='color-scheme'][content='light dark']"
+      assert_select "meta[name='theme-color'][media=?][content=?]", "(prefers-color-scheme: light)", "#f5f5f5"
+      assert_select "meta[name='theme-color'][media=?][content=?]", "(prefers-color-scheme: dark)", "#111214"
       # The rules live in the How to play dialog, still in the page for search engines.
       assert_select "dialog#how-to-play", text: /Three cards are a set when each feature/
       assert_select "dialog#how-to-play", text: /About Set|free/, count: 0

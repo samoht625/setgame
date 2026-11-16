@@ -512,6 +512,91 @@ for (const colorScheme of ['light', 'dark'] as const) {
   })
 }
 
+/** What one card's outline is made of: its border, its ring, its face, and where the artwork sits. */
+async function cardOutline(page: Page, cardId: number) {
+  return page.locator(`[data-card-id="${cardId}"]`).evaluate(node => {
+    const context = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!
+    const luminance = (color: string) => {
+      context.fillStyle = color
+      context.fillRect(0, 0, 1, 1)
+      const [r, g, b] = [...context.getImageData(0, 0, 1, 1).data].map(value => {
+        const channel = value / 255
+        return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
+      })
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b
+    }
+    const contrast = (a: string, b: string) => {
+      const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x)
+      return (light + 0.05) / (dark + 0.05)
+    }
+    const style = getComputedStyle(node)
+    const face = node.querySelector('svg')!
+    // A ring is the box shadow with a spread and no blur or offset.
+    const ring = [...style.boxShadow.matchAll(/((?:rgba?|oklch|oklab|color)\([^)]+\)) 0px 0px 0px (\d+(?:\.\d+)?)px(?! inset)/g)]
+      .map(match => ({ color: match[1], width: Number(match[2]) }))
+      .find(shadow => shadow.width > 0)
+    const faceColor = getComputedStyle(face).backgroundColor
+    const page = getComputedStyle(document.body).backgroundColor
+    const box = face.getBoundingClientRect()
+    return {
+      borderWidth: parseFloat(style.borderTopWidth),
+      ringWidth: ring?.width ?? 0,
+      ringVsBorder: ring ? contrast(ring.color, style.borderTopColor) : 0,
+      ringVsPage: ring ? contrast(ring.color, page) : 0,
+      borderVsFace: contrast(style.borderTopColor, faceColor),
+      ringVsFace: ring ? contrast(ring.color, faceColor) : 0,
+      face: [box.x, box.y, box.width, box.height].map(value => Math.round(value * 100) / 100)
+    }
+  })
+}
+
+test('dark mode sets the selection and wrong-pick rings apart from the light card faces', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' })
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 844 })
+    await page.goto('/practice')
+    await ready(page)
+    const board = await cards(page)
+    const wrong = findTriple(board, false)
+    const idle = await cardOutline(page, wrong[0])
+    expect(idle.ringWidth).toBe(0)
+
+    // Selected: a bright ring, a dark band, then the light face. Each edge reads at 3:1 or better.
+    await page.locator(`[data-card-id="${wrong[0]}"]`).click()
+    await expect(page.locator(`[data-card-id="${wrong[0]}"]`)).toHaveAttribute('aria-pressed', 'true')
+    const selected = await cardOutline(page, wrong[0])
+    expect(selected.ringWidth, 'the ring is as heavy as the light theme’s').toBeGreaterThanOrEqual(3)
+    expect(selected.borderWidth, 'a band of the page colour sits between the ring and the face').toBe(2)
+    expect(selected.ringVsBorder).toBeGreaterThanOrEqual(3)
+    expect(selected.ringVsPage).toBeGreaterThanOrEqual(3)
+    expect(selected.borderVsFace).toBeGreaterThanOrEqual(3)
+    expect(selected.face, 'the artwork stays put when the band appears').toEqual(idle.face)
+
+    // A wrong pick gets the same treatment in its own colour.
+    await page.locator(`[data-card-id="${wrong[1]}"]`).click()
+    await page.locator(`[data-card-id="${wrong[2]}"]`).click()
+    await expect(page.locator('.animate-shake')).toHaveCount(3)
+    const rejected = await cardOutline(page, wrong[1])
+    expect(rejected.ringWidth).toBeGreaterThanOrEqual(3)
+    expect(rejected.ringVsBorder).toBeGreaterThanOrEqual(3)
+    expect(rejected.borderVsFace).toBeGreaterThanOrEqual(3)
+    await expect(page.locator('.animate-shake')).toHaveCount(0)
+    const after = await cardOutline(page, wrong[1])
+    expect([after.ringWidth, after.borderWidth], 'and the card is as it was once the ring goes').toEqual([0, 1])
+  }
+
+  // The light theme draws its ring straight onto the white face, where a dark ring already reads.
+  await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' })
+  await page.goto('/practice')
+  await ready(page)
+  const [first] = await cards(page)
+  await page.locator(`[data-card-id="${first}"]`).click()
+  const light = await cardOutline(page, first)
+  expect(light.borderWidth).toBe(1)
+  expect(light.ringWidth).toBe(2)
+  expect(light.ringVsFace).toBeGreaterThanOrEqual(3)
+})
+
 test('multiplayer synchronizes claims, names, reset cancellation, and reconnection', async ({ browser }) => {
   const firstContext = await browser.newContext({ baseURL: test.info().project.use.baseURL })
   const secondContext = await browser.newContext({ baseURL: test.info().project.use.baseURL })

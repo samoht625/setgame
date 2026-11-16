@@ -10,7 +10,7 @@ const RecentSets = React.memo(function RecentSets({ claims, names }: RecentSetsP
   if (claims.length === 0) return null
 
   return (
-    <div className="mt-4 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+    <div className="mt-4 border-t border-neutral-100 pt-3 dark:border-neutral-700">
       <div className="text-xs font-medium uppercase tracking-wide text-neutral-600 dark:text-neutral-300">Last sets found</div>
       <ul className="mt-2 max-h-72 space-y-2 overflow-y-auto">
         {claims.map((claim, index) => (
