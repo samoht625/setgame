@@ -290,7 +290,7 @@
     </style>
   </head>
   <body>
-    <div id="site-header"><%= prerendered(:stats) %></div>
+    <div id="site-header" data-page="stats"><%= prerendered(:stats) %></div>
     <%= yield %>
     <%# The header menu's How to play opens this. %>
     <%= render "layouts/how_to_play" %>

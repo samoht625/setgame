@@ -17,6 +17,28 @@ export function dailyDate(now: Date = new Date()): string {
   return `${part('year')}-${part('month')}-${part('day')}`
 }
 
+// Must match DailyPuzzle::FINISH_GRACE.
+const FINISH_GRACE_MS = 2 * 60 * 60 * 1000
+
+/**
+ * Whether the day `date` (YYYY-MM-DD) has closed: it ended, and the grace for
+ * finishing a run started on it has passed too. The server ranks nothing on
+ * a closed day, and its archive page shows the solution.
+ */
+export function dayClosed(date: string, now: Date = new Date()): boolean {
+  return date < dailyDate(new Date(now.getTime() - FINISH_GRACE_MS))
+}
+
+/**
+ * Whether a daily's day `number` has its page in the archive (/daily/:number,
+ * /puzzle/:number), given today's number: every day before today, bar
+ * yesterday until it closes.
+ */
+export function archivedNumber(number: number, todayNumber: number, now: Date = new Date()): boolean {
+  const yesterdayClosed = dailyDate(new Date(now.getTime() - FINISH_GRACE_MS)) === dailyDate(now)
+  return Number.isInteger(number) && number >= 1 && number < todayNumber - (yesterdayClosed ? 0 : 1)
+}
+
 export type DailyShare = {
   number: number
   elapsedMs: number

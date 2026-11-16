@@ -1,0 +1,96 @@
+<%# One closed day of the Daily Deal or the Puzzle. Everything here is the same for every visitor and readable without JavaScript; ArchivePlay (app/javascript/archive) adds the practice game over the board. %>
+<% day = @day %>
+<% content_for :title, archive_day_title(day) %>
+<% content_for :description, archive_day_description(day) %>
+<% content_for :canonical, "#{ApplicationHelper::SITE_URL}#{day.path}" %>
+<% content_for :head, render("home/identity") %>
+<% section_label = "text-xs font-medium uppercase tracking-wide text-neutral-600 dark:text-neutral-300" %>
+<% pill = "inline-flex min-h-9 items-center justify-center rounded-full border border-neutral-300 bg-white px-3.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:border-neutral-500 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800" %>
+<div id="site-header"><%= prerendered(:stats) %></div>
+<%= render "shared/card_symbols" %>
+<main class="mx-auto w-full max-w-5xl px-3 pb-16 pt-2 antialiased md:px-6 lg:pt-4">
+  <nav aria-label="Breadcrumb" class="text-xs text-neutral-600 dark:text-neutral-300">
+    <a href="<%= archive_path %>" class="font-medium hover:text-neutral-900 dark:hover:text-white">Archive</a>
+    <span aria-hidden="true" class="px-1 text-neutral-400 dark:text-neutral-500">/</span>
+    <span aria-current="page"><%= day.name %></span>
+  </nav>
+
+  <header class="mt-2">
+    <h1 class="text-2xl font-semibold tracking-tight"><%= day.title %></h1>
+    <p class="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
+      <time datetime="<%= day.date.iso8601 %>"><%= archive_long_date(day.date) %></time>
+      <span aria-hidden="true">·</span>
+      <%= day.puzzle? ? "12 cards, 6 sets" : "the same deal for everyone that day" %>
+    </p>
+  </header>
+
+  <div class="mt-5 lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-8">
+    <div class="min-w-0">
+      <%# The practice game mounts here. Until a practice run is over it hides the board and solution below, which are otherwise always on the page. %>
+      <div id="archive-play" data-archive="<%= day.play_data.to_json %>"></div>
+
+      <section id="archive-board" aria-labelledby="archive-board-title">
+        <h2 id="archive-board-title" class="<%= section_label %>"><%= day.puzzle? ? "The board" : "The opening board" %></h2>
+        <ul class="mt-2 grid grid-cols-3 gap-2 sm:gap-3 lg:grid-cols-4">
+          <% day.board.each do |id| %><%= archive_card(id) %><% end %>
+        </ul>
+      </section>
+
+      <section id="archive-solution" class="mt-6" aria-labelledby="archive-solution-title">
+        <details class="group rounded-2xl border border-neutral-200 bg-white dark:border-neutral-600 dark:bg-neutral-900">
+          <summary class="flex min-h-11 list-none items-center justify-between gap-3 rounded-2xl px-4 py-2.5 [&::-webkit-details-marker]:hidden">
+            <h2 id="archive-solution-title" class="text-sm font-semibold">
+              <%= day.puzzle? ? "Solution: all #{day.sets.length} sets" : "#{pluralize(day.sets.length, 'set')} on the opening board" %>
+            </h2>
+            <span class="text-xs font-medium text-neutral-600 group-open:hidden dark:text-neutral-300">Show</span>
+            <span class="hidden text-xs font-medium text-neutral-600 group-open:inline dark:text-neutral-300">Hide</span>
+          </summary>
+          <div class="border-t border-neutral-100 px-4 pb-4 pt-3 dark:border-neutral-700">
+            <% unless day.puzzle? %>
+              <p class="mb-3 text-sm text-neutral-600 dark:text-neutral-300">The Daily Deal goes on through all 81 cards, three new ones for every set found. These are the sets to choose from at the start.</p>
+            <% end %>
+            <ol class="grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-3">
+              <% day.sets.each do |set| %>
+                <li class="flex gap-1.5"><%= archive_set(set) %></li>
+              <% end %>
+            </ol>
+          </div>
+        </details>
+      </section>
+    </div>
+
+    <section class="mt-6 rounded-2xl border border-neutral-200 bg-white p-4 lg:mt-0 dark:border-neutral-600 dark:bg-neutral-900" aria-labelledby="archive-leaderboard-title">
+      <div class="flex min-h-6 items-center justify-between gap-2">
+        <h2 id="archive-leaderboard-title" class="<%= section_label %>">Leaderboard</h2>
+        <span class="text-[11px] text-neutral-600 dark:text-neutral-300"><%= pluralize(day.total, "finisher") %></span>
+      </div>
+      <% if day.leaderboard.empty? %>
+        <p class="mt-2 rounded-xl border border-dashed border-neutral-200 px-3 py-6 text-center text-xs text-neutral-600 dark:border-neutral-600 dark:text-neutral-300">Nobody finished this one on the day.</p>
+      <% else %>
+        <ol class="mt-2 space-y-0.5">
+          <% day.leaderboard.each do |entry| %>
+            <li class="flex items-center gap-2.5 rounded-lg px-2 py-1.5">
+              <span class="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold tabular-nums <%= archive_rank_badge(entry.rank) %>"><%= entry.rank %></span>
+              <span class="min-w-0 flex-1 truncate text-sm font-medium text-neutral-900 dark:text-neutral-100"><%= entry.display_name || "Anonymous" %></span>
+              <span class="shrink-0 text-sm font-semibold tabular-nums text-neutral-900 dark:text-neutral-100"><%= archive_time(entry.elapsed_ms) %></span>
+            </li>
+          <% end %>
+        </ol>
+        <% if day.total > day.leaderboard.length %>
+          <p class="mt-2 px-2 text-[11px] text-neutral-600 dark:text-neutral-300">The top <%= day.leaderboard.length %> of <%= day.total %>.</p>
+        <% end %>
+      <% end %>
+      <p class="mt-3 border-t border-neutral-100 px-2 pt-3 text-xs leading-relaxed text-neutral-600 dark:border-neutral-700 dark:text-neutral-300">
+        <%= archive_summary(day) %> This leaderboard is final: a game played from the archive is practice and isn’t ranked.
+      </p>
+    </section>
+  </div>
+
+  <nav aria-label="More days" class="mt-8 flex flex-wrap items-center gap-2">
+    <% if (previous = day.previous_day) %><a rel="prev" href="<%= previous.path %>" class="<%= pill %>"><span aria-hidden="true" class="mr-1">←</span><%= previous.name %></a><% end %>
+    <% if (following = day.next_day) %><a rel="next" href="<%= following.path %>" class="<%= pill %>"><%= following.name %><span aria-hidden="true" class="ml-1">→</span></a><% end %>
+    <% if (sibling = day.sibling) %><a href="<%= sibling.path %>" class="<%= pill %>">That day’s <%= sibling.name %></a><% end %>
+    <a href="<%= day.puzzle? ? puzzle_path : root_path %>" class="<%= pill %>">Today’s <%= day.puzzle? ? "Puzzle" : "Daily Deal" %></a>
+    <a href="<%= archive_path %>" class="<%= pill %>">All past days</a>
+  </nav>
+</main>

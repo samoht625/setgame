@@ -20,7 +20,7 @@ import { missMessage, newToRules } from '../rules/Tour'
 import FoundSets from './FoundSets'
 import { afterNextPaint } from '../lib/after_paint'
 import { seconds, track } from '../lib/analytics'
-import { dailyDate, puzzleShareLink, shareLink, type DailyShare } from '../lib/daily'
+import { dailyDate, dayClosed, puzzleShareLink, shareLink, type DailyShare } from '../lib/daily'
 import { getPlayerId } from '../lib/player_id'
 import { getSavedName, onNameChange, saveName } from '../lib/player_name'
 import { isSet } from '../lib/rules'
@@ -75,11 +75,11 @@ function isRun(value: unknown): value is PuzzleRun {
   )
 }
 
-/** Today's run, or an unfinished one from yesterday so it can still be finished. */
+/** Today's run, or an unfinished one from yesterday so it can still be finished, until that day closes. */
 function loadRun(today: string): PuzzleRun | null {
   try {
     const run = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null')
-    return isRun(run) && (run.date === today || run.status === 'playing') ? run : null
+    return isRun(run) && (run.date === today || (run.status === 'playing' && !dayClosed(run.date))) ? run : null
   } catch {
     return null
   }

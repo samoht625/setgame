@@ -1,0 +1,53 @@
+<%# Every closed day of the Daily Deal and the Puzzle, newest first, a page at a time. %>
+<% page_path = ->(page) { page == 1 ? archive_path : archive_path(page: page) } %>
+<% content_for :title, @page == 1 ? "Set Archive · Every Past Daily Deal and Puzzle" : "Set Archive · Past Daily Deals and Puzzles, Page #{@page}" %>
+<% content_for :description, "Every past Set Daily Deal and daily Set Puzzle, with each day’s board, solution and final leaderboard. Play any day again as practice, free in your browser." %>
+<% content_for :canonical, "#{ApplicationHelper::SITE_URL}#{page_path.(@page)}" %>
+<% content_for :head, render("home/identity") %>
+<% pill = "inline-flex min-h-9 items-center justify-center rounded-full border border-neutral-300 bg-white px-3.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:border-neutral-500 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800" %>
+<div id="site-header" data-page="archive"><%= prerendered(:stats) %></div>
+<main class="mx-auto w-full max-w-3xl px-3 pb-16 pt-2 antialiased md:px-6 lg:pt-4">
+  <header>
+    <h1 class="text-2xl font-semibold tracking-tight">Archive</h1>
+    <p class="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
+      Every past Daily Deal and Puzzle, with its board, solution and final leaderboard. Any day can be played again as practice; only the day itself is ranked.
+    </p>
+  </header>
+
+  <% if @rows.empty? %>
+    <div class="mt-6 rounded-2xl border border-dashed border-neutral-300 px-4 py-10 text-center dark:border-neutral-600">
+      <p class="text-sm font-medium">No past days yet</p>
+      <p class="mt-1 text-sm text-neutral-600 dark:text-neutral-300">Days end at midnight Pacific and land here two hours later.</p>
+      <a href="<%= root_path %>" class="<%= pill %> mt-4">Play today’s Daily Deal</a>
+    </div>
+  <% else %>
+    <ol class="mt-5 overflow-hidden rounded-2xl border border-neutral-200 bg-white dark:border-neutral-600 dark:bg-neutral-900">
+      <% @rows.each do |row| %>
+        <li class="flex flex-col gap-2 border-t border-neutral-100 px-4 py-3 first:border-t-0 sm:flex-row sm:items-center sm:gap-4 dark:border-neutral-700">
+          <time datetime="<%= row.date.iso8601 %>" class="text-sm font-medium tabular-nums sm:w-36 sm:shrink-0"><%= row.date.strftime("%a, %b %-d, %Y") %></time>
+          <div class="grid min-w-0 flex-1 grid-cols-2 gap-2">
+            <% DailyArchive::KINDS.each do |kind| %>
+              <% if (day = row.days[kind]) %>
+                <% stats = @stats.dig(kind, row.date) %>
+                <a href="<%= day.path %>" class="flex min-h-11 min-w-0 flex-col justify-center rounded-xl border border-neutral-200 px-3 py-1.5 transition-colors hover:bg-neutral-50 dark:border-neutral-600 dark:hover:bg-neutral-800">
+                  <span class="truncate text-sm font-medium"><%= day.name %></span>
+                  <span class="truncate text-[11px] tabular-nums text-neutral-600 dark:text-neutral-300"><%= stats ? "#{pluralize(stats[:count], 'finisher')} · best #{archive_time(stats[:best_ms])}" : "No finishers" %></span>
+                </a>
+              <% else %>
+                <span aria-hidden="true"></span>
+              <% end %>
+            <% end %>
+          </div>
+        </li>
+      <% end %>
+    </ol>
+
+    <% if @index.pages > 1 %>
+      <nav aria-label="Archive pages" class="mt-5 flex items-center justify-between gap-2">
+        <% if @page > 1 %><a rel="prev" href="<%= page_path.(@page - 1) %>" class="<%= pill %>"><span aria-hidden="true" class="mr-1">←</span>Newer</a><% else %><span></span><% end %>
+        <span class="text-xs tabular-nums text-neutral-600 dark:text-neutral-300">Page <%= @page %> of <%= @index.pages %></span>
+        <% if @page < @index.pages %><a rel="next" href="<%= page_path.(@page + 1) %>" class="<%= pill %>">Older<span aria-hidden="true" class="ml-1">→</span></a><% else %><span></span><% end %>
+      </nav>
+    <% end %>
+  <% end %>
+</main>

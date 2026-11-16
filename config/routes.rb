@@ -23,6 +23,7 @@ Rails.application.routes.draw do
     post "puzzle/games/:id/progress", to: "puzzle#progress"
     post "puzzle/games/:id/finish", to: "puzzle#finish"
     patch "puzzle/name", to: "puzzle#name"
+    get "archive/:kind/:number", to: "archive#show", format: false
     post "sign_in", to: "sign_in#create"
     delete "sign_in", to: "sign_in#destroy"
     patch "reminder", to: "reminders#update"
@@ -54,6 +55,15 @@ Rails.application.routes.draw do
 
   # Timed solo games against the clock
   get '/practice' => 'home#solo', as: :practice
+
+  # The archive: a page per closed day, numbered like the share links
+  # ("Set Puzzle #21" is /puzzle/21), and the index of them all.
+  get '/archive' => 'archive#index', as: :archive, format: false
+  get '/daily/:number' => 'archive#daily', as: :archived_daily, format: false
+  get '/puzzle/:number' => 'archive#puzzle', as: :archived_puzzle, format: false
+
+  # Every page, and every archived day as it closes
+  get '/sitemap.xml' => 'sitemap#show', as: :sitemap, format: false
 
   # Link-preview image for a shared daily result (token from DailyShare)
   get '/og/daily/:token.png' => 'og_images#daily', as: :daily_og_image, format: false

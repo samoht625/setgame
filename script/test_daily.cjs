@@ -25,7 +25,18 @@ try {
     outfile: bundle,
     logLevel: 'silent'
   })
-  const { dailyDate, dailyShareLink, ordinal, formatCountdown } = require(bundle)
+  const { dailyDate, dailyShareLink, ordinal, formatCountdown, dayClosed, archivedNumber } = require(bundle)
+
+  const archiveBundle = path.join(temporary, 'archive.cjs')
+  buildSync({
+    entryPoints: [path.join(root, 'app/javascript/lib/archive.ts')],
+    bundle: true,
+    platform: 'node',
+    format: 'cjs',
+    outfile: archiveBundle,
+    logLevel: 'silent'
+  })
+  const archive = require(archiveBundle)
 
   const replayBundle = path.join(temporary, 'daily_replay.cjs')
   buildSync({
@@ -64,6 +75,58 @@ try {
     assert.equal(dailyDate(new Date('2026-10-04T07:00:00Z')), '2026-10-04')
     assert.equal(dailyDate(new Date('2026-12-01T07:59:59Z')), '2026-11-30')
     assert.equal(dailyDate(new Date('2026-12-01T08:00:00Z')), '2026-12-01')
+  })
+
+  check('a day closes two hours after it ends, like the server (DailyPuzzle.closed?)', () => {
+    // Nov 14 ends at 08:00 UTC on the 15th and closes at 10:00.
+    assert.equal(dayClosed('2026-11-14', new Date('2026-11-15T07:59:59Z')), false, 'still today')
+    assert.equal(dayClosed('2026-11-14', new Date('2026-11-15T08:00:01Z')), false, 'ended a second ago')
+    assert.equal(dayClosed('2026-11-14', new Date('2026-11-15T09:59:59Z')), false)
+    assert.equal(dayClosed('2026-11-14', new Date('2026-11-15T10:00:00Z')), true)
+    assert.equal(dayClosed('2026-11-13', new Date('2026-11-15T09:59:59Z')), true)
+    assert.equal(dayClosed('2026-11-15', new Date('2026-11-15T23:00:00Z')), false, 'today never is')
+    assert.equal(dayClosed('2026-11-16', new Date('2026-11-15T23:00:00Z')), false)
+    // Real hours across the clocks going back on Nov 1: Oct 31 ends at 07:00 UTC and closes at 09:00.
+    assert.equal(dayClosed('2026-10-31', new Date('2026-11-01T08:59:59Z')), false)
+    assert.equal(dayClosed('2026-10-31', new Date('2026-11-01T09:00:00Z')), true)
+  })
+
+  check('a day number has an archive page once that day has closed', () => {
+    const noon = new Date('2026-11-15T20:00:00Z')
+    assert.equal(archivedNumber(21, 22, noon), true, 'yesterday, closed since 2am')
+    assert.equal(archivedNumber(1, 22, noon), true)
+    assert.equal(archivedNumber(22, 22, noon), false, 'today')
+    assert.equal(archivedNumber(23, 22, noon), false)
+    assert.equal(archivedNumber(0, 22, noon), false)
+    assert.equal(archivedNumber(1.5, 22, noon), false)
+    const inGrace = new Date('2026-11-15T09:59:59Z')
+    assert.equal(archivedNumber(21, 22, inGrace), false, 'yesterday, ended but not closed')
+    assert.equal(archivedNumber(20, 22, inGrace), true)
+    assert.equal(archivedNumber(21, 22, new Date('2026-11-15T10:00:00Z')), true)
+  })
+
+  check('an archive page’s day is read strictly, or not at all', () => {
+    const puzzle = { kind: 'puzzle', number: 21, date: '2026-11-14', total: 3, times: [42000, 65000, 80000], cards: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] }
+    const deal = { kind: 'daily', number: 4, date: '2026-11-14', total: 0, times: [], seed: 123456789 }
+    assert.deepEqual(archive.readArchiveDay(JSON.stringify(puzzle)), puzzle)
+    assert.deepEqual(archive.readArchiveDay(JSON.stringify(deal)), deal)
+    assert.equal(archive.dayKey(puzzle), 'puzzle:21')
+    for (const broken of [undefined, '', 'null', '{', '[]', JSON.stringify({ ...puzzle, cards: [1, 2, 3] }), JSON.stringify({ ...puzzle, cards: undefined }),
+      JSON.stringify({ ...puzzle, cards: [...puzzle.cards.slice(1), 82] }), JSON.stringify({ ...deal, seed: undefined }), JSON.stringify({ ...deal, kind: 'solo' }),
+      JSON.stringify({ ...deal, times: ['fast'] }), JSON.stringify({ ...deal, number: '4' })]) {
+      assert.equal(archive.readArchiveDay(broken), null, String(broken))
+    }
+  })
+
+  check('a practice time is placed on the day’s leaderboard, behind anyone it ties', () => {
+    const day = { kind: 'puzzle', number: 21, date: '2026-11-14', total: 3, times: [42000, 65000, 80000], cards: [] }
+    assert.equal(archive.practicePlace(30000, day), 1)
+    assert.equal(archive.practicePlace(42000, day), 2, 'a tie goes to whoever finished first')
+    assert.equal(archive.practicePlace(70000, day), 3)
+    assert.equal(archive.practicePlace(90000, day), 4, 'last, when the page lists every finisher')
+    assert.equal(archive.practicePlace(90000, { ...day, total: 40 }), null, 'slower than every listed time, with more finishers unlisted')
+    assert.equal(archive.practicePlace(70000, { ...day, total: 40 }), 3)
+    assert.equal(archive.practicePlace(5000, { ...day, total: 0, times: [] }), 1)
   })
 
   check('a share has the number and time as text, and the link on its own', () => {

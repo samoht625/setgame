@@ -23,6 +23,7 @@ import { seconds, track } from '../lib/analytics'
 import {
   dailyDate,
   dailyShareLink,
+  dayClosed,
   shareLink,
   type DailyShare
 } from '../lib/daily'
@@ -91,12 +92,12 @@ function isRun(value: unknown): value is DailyRun {
   )
 }
 
-/** Today's run. An unfinished run from yesterday is kept so it can still be finished. */
+/** Today's run. An unfinished run from yesterday is kept so it can still be finished, until that day closes. */
 function loadSave(today: string): DailySave {
   try {
     const parsed = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null') as Partial<DailySave> | null
     const ranked = parsed?.ranked
-    return { ranked: isRun(ranked) && (ranked.date === today || ranked.status === 'playing') ? ranked : null }
+    return { ranked: isRun(ranked) && (ranked.date === today || (ranked.status === 'playing' && !dayClosed(ranked.date))) ? ranked : null }
   } catch {
     return { ranked: null }
   }

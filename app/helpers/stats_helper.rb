@@ -5,7 +5,8 @@ module StatsHelper
   SHAPES = %w[squiggle diamond oval].freeze
   SPACING = [66, 72, 72].freeze
 
-  def set_card_svg(id)
+  # One card as an SVG, drawn with the shapes in shared/_card_symbols.
+  def set_card_svg(id, css: "c")
     a = Rules.card_attributes(id)
     name, ink = INKS[a[:color]]
     symbol = "#st-#{SHAPES[a[:shape]]}#{'-striped' if a[:shading] == 1}"
@@ -13,7 +14,7 @@ module StatsHelper
     uses = (0..n).map do |i|
       tag.use(href: symbol, transform: "translate(#{129 + (i - n / 2.0) * SPACING[a[:shape]]} 83.5)")
     end
-    tag.svg(safe_join(uses), class: "c", viewBox: "0 0 258 167", fill: a[:shading].zero? ? ink : "none", stroke: ink,
+    tag.svg(safe_join(uses), class: css, viewBox: "0 0 258 167", fill: a[:shading].zero? ? ink : "none", stroke: ink,
       "stroke-width": [6, 4.5, 6][a[:shading]], "stroke-linejoin": "round", role: "img",
       "aria-label": "#{n + 1} #{%w[solid striped open][a[:shading]]} #{name} #{SHAPES[a[:shape]]}#{n.zero? ? '' : 's'}")
   end

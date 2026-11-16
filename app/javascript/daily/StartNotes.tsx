@@ -1,6 +1,6 @@
 import React from 'react'
 import { formatTime } from '../solitaire/time'
-import { ordinal } from '../lib/daily'
+import { archivedNumber, ordinal } from '../lib/daily'
 import type { SharedResult } from '../lib/boot'
 import { primaryButton } from '../lib/buttons'
 import { openTour } from '../rules/Tour'
@@ -9,6 +9,8 @@ import StreakPill from './StreakPill'
 /** On the start card of a friend's shared link: their time, to beat. */
 export const Challenge: React.FC<{ shared: SharedResult; number: number; name: string }> = ({ shared, number, name }) => {
   const standing = shared.rank && shared.total && shared.rank <= shared.total ? ` · ${ordinal(shared.rank)} of ${shared.total}` : ''
+  // A link to an earlier day's result: that day can be played from the archive, as practice.
+  const archived = archivedNumber(shared.number, number)
   return (
     <div data-challenge className="mb-3 rounded-xl bg-amber-50 px-3 py-2.5 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
       <p className="text-xs">
@@ -19,6 +21,11 @@ export const Challenge: React.FC<{ shared: SharedResult; number: number; name: s
         <span className="text-sm font-normal text-amber-900/80 dark:text-amber-100/80">{standing}</span>
       </p>
       <p className="text-sm font-medium">Can you beat it?</p>
+      {archived && (
+        <a href={`/${shared.kind}/${shared.number}`} data-archive-link className="mt-1 inline-flex min-h-9 items-center text-xs font-medium underline underline-offset-2">
+          Play {name} #{shared.number} from the archive
+        </a>
+      )}
     </div>
   )
 }

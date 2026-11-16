@@ -170,9 +170,7 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     robots = Rails.root.join("public/robots.txt").read
     assert_includes robots, "Sitemap: https://setdaily.app/sitemap.xml"
 
-    sitemap = Nokogiri::XML(Rails.root.join("public/sitemap.xml").read)
-    locations = sitemap.remove_namespaces!.xpath("//url/loc").map(&:text)
-    assert_equal %w[https://setdaily.app/ https://setdaily.app/puzzle https://setdaily.app/practice https://setdaily.app/m https://setdaily.app/stats], locations
+    refute Rails.root.join("public/sitemap.xml").exist?, "a file there would be served instead of the generated sitemap (SitemapController)"
 
     manifest = JSON.parse(Rails.root.join("public/manifest.json").read)
     assert_equal "Set", manifest.fetch("name")

@@ -19,7 +19,7 @@ interface HeaderProps {
   /** The game on screen; null on pages outside the game (/stats), where neither segment is selected. */
   mode: GameMode | null
   /** A page outside the game, left out of the menu. */
-  page?: 'stats'
+  page?: 'stats' | 'archive'
   onSwitchMode: (mode: GameMode) => void
   /** How many other people are in the multiplayer game right now (shown in the menu). */
   othersOnline?: number
@@ -120,6 +120,7 @@ const Header: React.FC<HeaderProps> = ({ mode, page, onSwitchMode, othersOnline 
               },
               {
                 items: [
+                  ...(page === 'archive' ? [] : [{ label: 'Archive', onSelect: () => window.location.assign('/archive') }]),
                   ...(page === 'stats' ? [] : [{ label: 'Stats', onSelect: () => window.location.assign('/stats') }]),
                   { label: 'How to play', onSelect: openHowToPlay }
                 ]
