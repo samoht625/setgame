@@ -40,8 +40,8 @@ function modeFromPath(pathname: string): GameMode {
 
 // Must match the <title> each route renders in app/views/home.
 const TITLES: Record<GameMode, string> = {
-  daily: 'Set Daily Deal · Play the Set Card Game Online',
-  puzzle: 'Set Puzzle · The Daily Set Puzzle: Find All 6 Sets',
+  daily: 'Daily Set Puzzle: find 6 sets in 12 cards, or clear the deck | Set Daily',
+  puzzle: 'Today’s Set Puzzle: 12 cards, 6 sets, one try | Set Daily',
   solo: 'Set Practice · Timed Set Card Game',
   multiplayer: 'Set Multiplayer · Play Set Online with Friends'
 }

@@ -1,5 +1,7 @@
-<% content_for :title, "Set Daily Deal · Play the Set Card Game Online" %>
-<% content_for :description, "Play Set, the card game of spotting sets, free in your browser. A new Daily Deal every day: the same deal for everyone, one try, on today’s leaderboard. No signup, no download." %>
+<%# The front door answers a search for the daily Set puzzle, so it names both dailies: the Puzzle is one tap away in the header, the Daily Deal is what opens. %>
+<% lead = "Daily Set Puzzle: find 6 sets in 12 cards, or clear the deck" %>
+<% content_for :title, "#{lead} | Set Daily" %>
+<% content_for :description, "Play the daily Set puzzle free: find all 6 sets in 12 cards, or clear the whole deck in the Daily Deal. Same cards for everyone, new at midnight Pacific. No signup." %>
 <% content_for :canonical, "#{ApplicationHelper::SITE_URL}/" %>
 <% content_for :head, render("home/identity") + render("home/boot") + render("home/structured_data") %>
 <% if @shared_result %>
@@ -9,4 +11,6 @@
   <% content_for :social_image, "#{ApplicationHelper::SITE_URL}#{daily_og_image_path(@shared_result.token)}" %>
   <% content_for :social_image_alt, ["#{@shared_result.title} · #{@shared_result.time}", @shared_result.standing.presence].compact.join(" · ") %>
 <% end %>
+<%# The page's main heading, for search engines and screen readers; the game below names its own cards. %>
+<h1 class="sr-only"><%= lead %></h1>
 <div id="root" data-online-ids="<%= GAME_ENGINE.online_player_ids_snapshot.to_json %>"><%= prerendered(:daily) %></div>

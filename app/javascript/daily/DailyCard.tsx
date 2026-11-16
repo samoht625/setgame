@@ -89,9 +89,10 @@ const DailyCard: React.FC<DailyCardProps> = ({
         className="overflow-hidden rounded-2xl border border-neutral-200 bg-white text-center shadow-sm dark:border-neutral-600 dark:bg-neutral-900"
       >
         <div className="px-5 pb-4 pt-4">
-          <h1 id={titleId} className="text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+          {/* The page's own heading is in the view (home/daily, home/puzzle); this is the card's. */}
+          <h2 id={titleId} className="text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
             {title ?? `Daily Deal #${number}`}
-          </h1>
+          </h2>
           {result ? (
             <>
               <div className="mt-1 text-4xl font-semibold tabular-nums tracking-tight text-neutral-900 dark:text-neutral-100">
