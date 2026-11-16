@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import CardFace from '../components/CardFace'
+import CardFace, { DARK_RING_GAP, DARK_RING_GAP_FACE } from '../components/CardFace'
 import { makeExample, nextSameCount, verdicts, type DemoExample } from './demoExample'
 
 /** The example set: 1 red solid squiggle, 2 red striped diamonds, 3 red open ovals. */
@@ -128,11 +128,11 @@ const RulesDemo: React.FC<RulesDemoProps> = ({ step, shuffle = false, well = tru
               data-in-set={lit && inSet ? 'true' : undefined}
               className={`overflow-hidden rounded-lg border transition-[border-color,box-shadow,opacity] duration-500 ease-out ${
                 lit && inSet
-                  ? 'border-amber-400 ring-2 ring-amber-400 dark:border-amber-300 dark:ring-amber-300'
+                  ? `border-amber-400 ring-2 ring-amber-400 dark:ring-amber-300 ${DARK_RING_GAP}`
                   : 'border-neutral-200 ring-0 ring-transparent dark:border-neutral-500/50'
               } ${lit && !inSet ? 'opacity-45' : 'opacity-100'}`}
             >
-              <CardFace cardId={id} className="h-auto w-full" />
+              <CardFace cardId={id} className={`h-auto w-full ${lit && inSet ? DARK_RING_GAP_FACE : ''}`} />
               {step === 'set' && inSet && <span className="sr-only">In the set</span>}
             </div>
           )

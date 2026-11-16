@@ -56,9 +56,9 @@ const SidePanel: React.FC<SidePanelProps> = ({ open, onClose, title, isDesktop, 
         aria-modal={isDesktop ? undefined : true}
         aria-label={title}
         tabIndex={-1}
-        className="animate-sheet-in fixed inset-x-0 bottom-0 z-40 flex max-h-[85dvh] flex-col rounded-t-2xl border border-neutral-200 bg-white shadow-2xl outline-none lg:static lg:z-auto lg:w-72 lg:max-h-none lg:shrink-0 lg:animate-none lg:rounded-2xl lg:shadow-none xl:w-80 dark:border-neutral-800 dark:bg-neutral-900"
+        className="animate-sheet-in fixed inset-x-0 bottom-0 z-40 flex max-h-[85dvh] flex-col rounded-t-2xl border border-neutral-200 bg-white shadow-2xl outline-none lg:static lg:z-auto lg:w-72 lg:max-h-none lg:shrink-0 lg:animate-none lg:rounded-2xl lg:shadow-none xl:w-80 dark:border-neutral-600 dark:bg-neutral-900"
       >
-        <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-2.5 dark:border-neutral-800">
+        <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-2.5 dark:border-neutral-700">
           <h2 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{title}</h2>
           <button
             type="button"

@@ -151,6 +151,10 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     get "/stats"
     assert_response :success
     assert_select "#site-header", 1
+    # Light or dark with the system, like the game.
+    assert_select "meta[name='color-scheme'][content='light dark']"
+    assert_select "meta[name='theme-color'][media=?][content=?]", "(prefers-color-scheme: light)", "#f5f5f5"
+    assert_select "meta[name='theme-color'][media=?][content=?]", "(prefers-color-scheme: dark)", "#111214"
     assert_select "dialog#how-to-play", 1 do
       assert_select "#rules-demo-root", 1
       assert_select "h2#how-to-play-title", "How to play"

@@ -86,7 +86,7 @@ const DailyCard: React.FC<DailyCardProps> = ({
     <main className="mx-auto w-full max-w-sm px-3 pb-safe pt-4 sm:pt-10">
       <section
         aria-labelledby={titleId}
-        className="overflow-hidden rounded-2xl border border-neutral-200 bg-white text-center shadow-sm dark:border-neutral-700 dark:bg-neutral-900"
+        className="overflow-hidden rounded-2xl border border-neutral-200 bg-white text-center shadow-sm dark:border-neutral-600 dark:bg-neutral-900"
       >
         <div className="px-5 pb-4 pt-4">
           <h1 id={titleId} className="text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
@@ -139,7 +139,7 @@ const DailyCard: React.FC<DailyCardProps> = ({
           )}
         </div>
 
-        <div className="border-t border-neutral-100 px-5 py-4 text-left dark:border-neutral-800">
+        <div className="border-t border-neutral-100 px-5 py-4 text-left dark:border-neutral-700">
           <DailyStandings
             status={status}
             error={statusError}

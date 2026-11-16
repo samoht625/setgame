@@ -23,7 +23,7 @@ const Toast: React.FC<ToastProps> = ({ message, onClose }) => {
       <button
         type="button"
         onClick={onClose}
-        className="flex min-h-11 items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-left text-sm font-medium leading-relaxed text-neutral-800 shadow-lg dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200"
+        className="flex min-h-11 items-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-left text-sm font-medium leading-relaxed text-neutral-800 shadow-lg dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-200"
       >
         <span className={`h-2 w-2 shrink-0 rounded-full ${dotColor}`} aria-hidden="true" />
         {message.text}

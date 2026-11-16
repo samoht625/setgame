@@ -31,7 +31,7 @@ const FoundSets: React.FC<{ found: PuzzleClaim[]; total: number; latestKey?: num
           ))}
         </li>
       ) : (
-        <li key={index} aria-hidden="true" className={`${slotRow} border-dashed border-neutral-300 dark:border-neutral-700`}>
+        <li key={index} aria-hidden="true" className={`${slotRow} border-dashed border-neutral-300 dark:border-neutral-600`}>
           {[0, 1, 2].map(slot => <span key={slot} className="aspect-[258/167] min-w-0 flex-1 border border-transparent" />)}
         </li>
       )

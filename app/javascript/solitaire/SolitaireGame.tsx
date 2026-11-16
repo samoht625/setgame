@@ -798,7 +798,7 @@ const SolitaireGame: React.FC = () => {
         {resultTime}
         {showBest && bestImprovement !== null && <PersonalBestCelebration improvementMs={bestImprovement.ms} scope={bestImprovement.scope} />}
         {submissionNote}
-        <div className="mt-5 border-t border-neutral-100 pt-4 text-left dark:border-neutral-800">
+        <div className="mt-5 border-t border-neutral-100 pt-4 text-left dark:border-neutral-700">
           <SoloLeaderboard
             leaderboard={scores.leaderboard}
             personalBest={scores.personalBest}

@@ -68,7 +68,7 @@ const NamePrompt: React.FC<{ onSave: (name: string) => Promise<boolean>; as?: 'l
 export const DailyStandings: React.FC<DailyStandingsProps> = ({ status, error, onRetry, playerId, limit, label, onNameScore, onCompare, aside, emptyText = 'No times yet — clear today’s deal to take the top spot.' }) => {
   if (!status) {
     return error ? (
-      <div className="mt-2 rounded-xl border border-dashed border-neutral-200 px-3 py-4 text-center dark:border-neutral-700">
+      <div className="mt-2 rounded-xl border border-dashed border-neutral-200 px-3 py-4 text-center dark:border-neutral-600">
         <p role="status" className="text-xs text-neutral-600 dark:text-neutral-300">Could not load today’s times.</p>
         <button type="button" onClick={onRetry} className={`${secondaryButtonSmall} mt-2`}>Try again</button>
       </div>
@@ -92,7 +92,7 @@ export const DailyStandings: React.FC<DailyStandingsProps> = ({ status, error, o
       </div>
 
       {status.leaderboard.length === 0 ? (
-        <div className="mt-2 rounded-xl border border-dashed border-neutral-200 px-3 py-6 text-center dark:border-neutral-700">
+        <div className="mt-2 rounded-xl border border-dashed border-neutral-200 px-3 py-6 text-center dark:border-neutral-600">
           <p className="text-xs text-neutral-600 dark:text-neutral-300">{emptyText}</p>
         </div>
       ) : (
