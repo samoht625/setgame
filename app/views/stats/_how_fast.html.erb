@@ -1,0 +1,19 @@
+<%# How fast each kind of set is found: one row per kind on a shared 0–20s scale, with an example set, the middle half of its find times and their median. `kinds` is SetStats' list, or a saved copy of it (see SpottingSets). Styled by the stats layout. %>
+<% kmax = 20_000; kpos = ->(ms) { (ms.clamp(0, kmax) * 100.0 / kmax).round(2) } %>
+<div class="card kinds">
+  <div class="kind-axis" aria-hidden="true"><span class="kind-scale"><% (0..4).each do |t| %><i style="left:<%= t * 25 %>%"><%= t * 5 %>s</i><% end %></span></div>
+  <ol role="list">
+    <% kinds.each do |k| %>
+      <li class="kind">
+        <span class="kind-label"><%= k[:label] %></span>
+        <%= set_cards(k[:cards]) if k[:cards] %>
+        <span class="kind-track" role="img" aria-label="middle half <%= secs(k[:p25_ms]) %> to <%= secs(k[:p75_ms]) %>" title="<%= secs(k[:p25_ms]) %> – <%= secs(k[:p75_ms]) %> · <%= num(k[:n]) %> finds">
+          <% [5_000, 10_000, 15_000].each do |t| %><span class="kind-tick" style="left:<%= kpos.(t) %>%"></span><% end %>
+          <span class="kind-iqr" style="left:<%= kpos.(k[:p25_ms]) %>%;width:<%= (kpos.(k[:p75_ms]) - kpos.(k[:p25_ms])).round(2) %>%"></span>
+          <span class="kind-mid" style="left:<%= kpos.(k[:median_ms]) %>%"></span>
+        </span>
+        <b class="kind-med"><%= format("%.1fs", k[:median_ms] / 1000.0) %></b>
+      </li>
+    <% end %>
+  </ol>
+</div>
