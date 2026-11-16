@@ -43,6 +43,11 @@ class ArchiveControllerTest < ActionDispatch::IntegrationTest
     [puzzle.cards.to_json, puzzle.cards.join(","), puzzle.sets.first.to_json, DailyPuzzle.new(TODAY).seed.to_s]
   end
 
+  # The page's content exactly as served, byte for byte.
+  def served_main(body = response.body)
+    body[%r{<main\b.*</main>}m] || flunk("no <main> in the page")
+  end
+
   def assert_nothing_of_today(body, where)
     todays_secrets.each { |secret| refute_includes body, secret, "#{where} gives away today's game" }
   end
@@ -308,6 +313,63 @@ class ArchiveControllerTest < ActionDispatch::IntegrationTest
       end
       get "/archive?page[]=1"
       assert_response :not_found
+    end
+  end
+
+  test "the index is the same list for every visitor: what a player has played is added by the script, not served" do
+    travel_to NOON do
+      player = SecureRandom.uuid
+      create_daily_score(Date.new(2026, 10, 3), elapsed_ms: 200_000)
+      create_puzzle_run(DAY, elapsed_ms: 42_000)
+      create_puzzle_run(DAY, elapsed_ms: 65_432, player_id: player)
+      create_daily_score(DAY, elapsed_ms: 150_000)
+      create_daily_score(DAY, elapsed_ms: 185_432, player_id: player)
+      create_daily_score(Date.new(2026, 10, 5), elapsed_ms: 200_000)
+      create_daily_score(Date.new(2026, 10, 5), elapsed_ms: 251_432, player_id: player)
+
+      # A browser the server knows as that player.
+      get "/api/archive", headers: { "X-Player-Id" => player }
+      assert_equal %w[43], JSON.parse(response.body).fetch("daily").keys, "the script can ask for this player's days"
+      pages = ["/archive", "/archive?page=2"].to_h do |path|
+        get path
+        assert_response :success
+        assert_select "meta[name='setgame-player-id'][content=?]", player
+        [path, served_main]
+      end
+
+      # Each tile says which day it is and leaves room for the script to mark it.
+      assert_select "ol[data-archive-page='2']", 1
+      get "/archive"
+      assert_select "ol[data-archive-page='1']", 1
+      assert_select "a[data-archive-tile]", 30 + 21
+      assert_select "a[href='/daily/43'][data-archive-tile='daily:43'][data-archive-date='2026-11-14']", 1
+      assert_select "a[href='/puzzle/21'][data-archive-tile='puzzle:21'][data-archive-date='2026-11-14']", 1
+      assert_select "a[href='/puzzle/1'][data-archive-tile='puzzle:1'][data-archive-date='2026-10-25']", 1
+      assert_select "a[data-archive-tile] [data-archive-status]", 30 + 21
+      css_select("a[data-archive-tile] [data-archive-status]").each { |slot| assert_empty slot.inner_html, "nothing about any player is served in a tile" }
+      assert_select "[data-played]", 0
+
+      ["1:05", "3:05", "4:11", "65432", "185432", "251432", "On the day", "Practice", "Not played"].each do |own|
+        pages.each { |path, html| refute_includes html, own, "the player's own result (#{own}) is not in the list #{path} serves" }
+      end
+      assert_includes pages.fetch("/archive"), "2 finishers · best 0:42", "only the day's own figures"
+      assert_includes pages.fetch("/archive"), "2 finishers · best 2:30"
+
+      # Someone else, and a browser the server has never seen, get the same list.
+      [{ "X-Player-Id" => SecureRandom.uuid }, nil].each do |headers|
+        open_session do |visitor|
+          visitor.get "/api/archive", headers: headers if headers
+          pages.each do |path, html|
+            visitor.get path
+            visitor.assert_response :success
+            assert_equal html, served_main(visitor.response.body), "#{path} for #{headers ? 'another player' : 'a new browser'}"
+          end
+        end
+      end
+
+      # A crawler too.
+      get "/archive", headers: { "User-Agent" => "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" }
+      assert_equal pages.fetch("/archive"), served_main
     end
   end
 

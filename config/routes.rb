@@ -23,6 +23,7 @@ Rails.application.routes.draw do
     post "puzzle/games/:id/progress", to: "puzzle#progress"
     post "puzzle/games/:id/finish", to: "puzzle#finish"
     patch "puzzle/name", to: "puzzle#name"
+    get "archive", to: "archive#index", format: false
     get "archive/:kind/:number", to: "archive#show", format: false
     post "sign_in", to: "sign_in#create"
     delete "sign_in", to: "sign_in#destroy"
