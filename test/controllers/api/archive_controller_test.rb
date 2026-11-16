@@ -96,6 +96,80 @@ module Api
       end
     end
 
+    test "the archive's played days: this player's ranked finishes on one page of it, by day number" do
+      travel_to NOON do
+        # The Daily Deal's first day, so DAY is Daily Deal #43 and Puzzle #21, and the archive has two pages.
+        create_daily_score(Date.new(2026, 10, 3), elapsed_ms: 150_000)
+        create_daily_score(DAY, elapsed_ms: 190_000, player_id: @player_id)
+        create_puzzle_run(DAY, elapsed_ms: 31_000, player_id: @player_id)
+        create_puzzle_run(DAY - 3, elapsed_ms: 45_000, player_id: @player_id)
+        create_daily_score(Date.new(2026, 10, 5), elapsed_ms: 260_000, player_id: @player_id)
+        # Started that day and never finished: not played, as far as the archive goes.
+        PuzzleRun.create!(id: SecureRandom.uuid, player_id: @player_id, puzzle_on: DAY - 1, cards: ClassicPuzzle.new(DAY - 1).cards, started_at: Time.current)
+        # Today's isn't in the archive yet.
+        create_puzzle_run(DAY + 1, elapsed_ms: 20_000, player_id: @player_id)
+        create_daily_score(DAY + 1, elapsed_ms: 170_000, player_id: @player_id)
+        # Other players' days.
+        create_puzzle_run(DAY - 1, elapsed_ms: 25_000)
+        create_daily_score(DAY - 2, elapsed_ms: 180_000)
+        create_puzzle_run(DAY, elapsed_ms: 12_000)
+        before = snapshot
+
+        get "/api/archive", headers: @headers
+        assert_response :success
+        assert_equal(
+          { "page" => 1, "daily" => { "43" => { "elapsed_ms" => 190_000 } }, "puzzle" => { "21" => { "elapsed_ms" => 31_000 }, "18" => { "elapsed_ms" => 45_000 } } },
+          JSON.parse(response.body)
+        )
+        assert_includes response.headers["Cache-Control"], "private", "one player's history is never a shared cache's to keep"
+
+        get "/api/archive", params: { page: "1" }, headers: @headers
+        assert_equal %w[43], JSON.parse(response.body).fetch("daily").keys
+
+        get "/api/archive", params: { page: "2" }, headers: @headers
+        assert_response :success
+        assert_equal({ "page" => 2, "daily" => { "3" => { "elapsed_ms" => 260_000 } }, "puzzle" => {} }, JSON.parse(response.body))
+
+        get "/api/archive", headers: { "X-Player-Id" => SecureRandom.uuid }
+        assert_response :success
+        assert_equal({ "page" => 1, "daily" => {}, "puzzle" => {} }, JSON.parse(response.body), "someone who has played none of them")
+
+        get "/api/archive", headers: { "X-Player-Id" => @player_id, "X-Player-Key" => nil }
+        assert_equal({ "page" => 1, "daily" => {}, "puzzle" => {} }, JSON.parse(response.body), "a player id alone, as shown on leaderboards, is not enough")
+
+        ["3", "0", "-1", "01", "2.0", "two", "99999"].each do |page|
+          get "/api/archive", params: { page: page }, headers: @headers
+          assert_response :not_found, "page=#{page}"
+          assert_equal({ "error" => "not_found" }, JSON.parse(response.body))
+        end
+        get "/api/archive?page[]=1", headers: @headers
+        assert_response :not_found
+
+        assert_equal before, snapshot, "asking writes nothing"
+      end
+    end
+
+    test "a day's ranked finish shows in the archive's played days only once the day has closed" do
+      travel_to LATE do
+        create_daily_score(DAY - 1, elapsed_ms: 150_000)
+        create_puzzle_run(DAY, elapsed_ms: 31_000, player_id: @player_id)
+        create_daily_score(DAY, elapsed_ms: 190_000, player_id: @player_id)
+      end
+
+      [LATE, CLOSED - 1.second].each do |open|
+        travel_to open do
+          get "/api/archive", headers: @headers
+          assert_response :success
+          assert_equal({ "page" => 1, "daily" => {}, "puzzle" => {} }, JSON.parse(response.body), "at #{open}")
+        end
+      end
+
+      travel_to CLOSED do
+        get "/api/archive", headers: @headers
+        assert_equal({ "page" => 1, "daily" => { "2" => { "elapsed_ms" => 190_000 } }, "puzzle" => { "21" => { "elapsed_ms" => 31_000 } } }, JSON.parse(response.body))
+      end
+    end
+
     test "days that are not in the archive are not found" do
       travel_to NOON do
         create_daily_score(DAY, elapsed_ms: 190_000)

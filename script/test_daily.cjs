@@ -129,6 +129,100 @@ try {
     assert.equal(archive.practicePlace(5000, { ...day, total: 0, times: [] }), 1)
   })
 
+  const tiles = [['daily:43', '2026-11-14'], ['puzzle:21', '2026-11-14'], ['daily:42', '2026-11-13'], ['puzzle:20', '2026-11-13'], ['puzzle:19', '2026-11-12']]
+    .map(([key, date]) => archive.readArchiveTile(key, date))
+
+  check('an archive tile is read from its attributes, or not at all', () => {
+    assert.deepEqual(archive.readArchiveTile('puzzle:21', '2026-11-14'), { key: 'puzzle:21', kind: 'puzzle', date: '2026-11-14' })
+    assert.deepEqual(archive.readArchiveTile('daily:43', '2026-11-14'), { key: 'daily:43', kind: 'daily', date: '2026-11-14' })
+    for (const [key, date] of [[undefined, '2026-11-14'], ['puzzle:21', undefined], ['puzzle:021', '2026-11-14'], ['puzzle:0', '2026-11-14'], ['solo:1', '2026-11-14'],
+      ['puzzle:21 ', '2026-11-14'], ['puzzle', '2026-11-14'], ['puzzle:21', 'Nov 14'], ['puzzle:21', '2026-11-14T00:00']]) {
+      assert.equal(archive.readArchiveTile(key, date), null, `${key} ${date}`)
+    }
+  })
+
+  check('the server’s played days are read by day key, and anything else in the answer is left out', () => {
+    assert.deepEqual(archive.readRankedTimes({ page: 1, daily: { 43: { elapsed_ms: 174000 } }, puzzle: { 21: { elapsed_ms: 51000 }, 20: { elapsed_ms: 54000 } } }),
+      { 'daily:43': 174000, 'puzzle:21': 51000, 'puzzle:20': 54000 })
+    assert.deepEqual(archive.readRankedTimes({ page: 1, daily: {}, puzzle: {} }), {})
+    assert.deepEqual(archive.readRankedTimes({ daily: { 43: { elapsed_ms: '174000' }, 0: { elapsed_ms: 1 }, abc: { elapsed_ms: 1 }, 42: null, 41: { elapsed_ms: -5 } }, puzzle: [1, 2], solo: { 1: { elapsed_ms: 1 } } }), {})
+    for (const broken of [null, undefined, 'played', 7, []]) assert.deepEqual(archive.readRankedTimes(broken), {})
+  })
+
+  check('a tile shows a ranked finish over practice, and calls a day unplayed only once the server has answered', () => {
+    const nothing = { ranked: {}, practice: {}, running: null }
+    const remembered = { ranked: { 'puzzle:20': 61000 }, practice: { 'daily:42': 241000, 'puzzle:21': 9000 }, running: 'puzzle:19' }
+    const server = { 'daily:43': 174000, 'puzzle:21': 51000 }
+
+    assert.deepEqual(archive.dayPlays(tiles, remembered, server), {
+      'daily:43': { state: 'ranked', elapsedMs: 174000 },
+      'puzzle:21': { state: 'ranked', elapsedMs: 51000 },
+      'daily:42': { state: 'practice', elapsedMs: 241000 },
+      'puzzle:20': { state: 'ranked', elapsedMs: 61000 },
+      'puzzle:19': { state: 'running' }
+    }, 'the day itself outranks practice; this browser’s ranked save counts too')
+
+    assert.deepEqual(archive.dayPlays(tiles, nothing, server), {
+      'daily:43': { state: 'ranked', elapsedMs: 174000 },
+      'puzzle:21': { state: 'ranked', elapsedMs: 51000 },
+      'daily:42': { state: 'unplayed' },
+      'puzzle:20': { state: 'unplayed' },
+      'puzzle:19': { state: 'unplayed' }
+    })
+    assert.deepEqual(archive.dayPlays(tiles, nothing, {}), Object.fromEntries(tiles.map(tile => [tile.key, { state: 'unplayed' }])), 'a player with no history')
+
+    // Still asking, or the server couldn't be reached: only what this browser knows is shown.
+    for (const unanswered of [undefined, null]) {
+      assert.deepEqual(archive.dayPlays(tiles, nothing, unanswered), {})
+      assert.deepEqual(archive.dayPlays(tiles, remembered, unanswered), {
+        'puzzle:21': { state: 'practice', elapsedMs: 9000 },
+        'daily:42': { state: 'practice', elapsedMs: 241000 },
+        'puzzle:20': { state: 'ranked', elapsedMs: 61000 },
+        'puzzle:19': { state: 'running' }
+      })
+    }
+    assert.deepEqual(archive.dayPlays(tiles, { ...nothing, practice: { 'puzzle:21': 0 } }, {})['puzzle:21'], { state: 'practice', elapsedMs: 0 })
+    assert.deepEqual(archive.dayPlays(tiles, { ...nothing, running: 'puzzle:7' }, {})['puzzle:19'], { state: 'unplayed' }, 'another day’s run')
+  })
+
+  check('what this browser remembers of the days comes from its saves, which are only read', () => {
+    const store = new Map()
+    const writes = []
+    global.localStorage = {
+      getItem: key => (store.has(key) ? store.get(key) : null),
+      setItem: (key, value) => { writes.push(key); store.set(key, value) },
+      removeItem: key => { writes.push(key); store.delete(key) }
+    }
+    try {
+      assert.deepEqual(archive.rememberedPlays(tiles), { ranked: {}, practice: {}, running: null }, 'nothing saved')
+
+      store.set('setgame_archive_v1', JSON.stringify({
+        results: { 'daily:42': { elapsedMs: 241000, misses: 2, finishedAtMs: 1 }, 'puzzle:21': { elapsedMs: 9000, misses: 0, finishedAtMs: 1 }, 'puzzle:5': { elapsedMs: 1, misses: 0, finishedAtMs: 1 }, 'puzzle:20': { elapsedMs: 'fast' } },
+        run: { kind: 'puzzle', day: 'puzzle:19', startedAtMs: 1, found: [], misses: 0, attempts: '' }
+      }))
+      store.set('setgame_puzzle_v1', JSON.stringify({ date: '2026-11-14', status: 'finished', elapsedMs: 51000, misses: 1, attempts: 'hhmhhhh' }))
+      store.set('setgame_daily_v1', JSON.stringify({ ranked: { date: '2026-11-13', status: 'playing', elapsedMs: 0 } }))
+      assert.deepEqual(archive.rememberedPlays(tiles), {
+        ranked: { 'puzzle:21': 51000 },
+        practice: { 'daily:42': 241000, 'puzzle:21': 9000 },
+        running: 'puzzle:19'
+      }, 'a finished ranked save for the tile’s date, practice results for the tiles’ days, and the unfinished practice run')
+
+      store.set('setgame_daily_v1', JSON.stringify({ ranked: { date: '2026-11-13', status: 'finished', elapsedMs: 200000, misses: 0 } }))
+      assert.deepEqual(archive.rememberedPlays(tiles).ranked, { 'puzzle:21': 51000, 'daily:42': 200000 })
+
+      for (const broken of ['{', 'null', '[]', JSON.stringify({ results: 'none', run: 7 })]) {
+        store.set('setgame_archive_v1', broken)
+        store.set('setgame_puzzle_v1', broken)
+        store.set('setgame_daily_v1', broken)
+        assert.deepEqual(archive.rememberedPlays(tiles), { ranked: {}, practice: {}, running: null }, broken)
+      }
+      assert.deepEqual(writes, [], 'reading the saves changes none of them')
+    } finally {
+      delete global.localStorage
+    }
+  })
+
   check('a share has the number and time as text, and the link on its own', () => {
     assert.deepEqual(dailyShareLink({ number: 12, elapsedMs: 161_400 }),
       { title: 'Set Daily Deal #12', text: 'Set Daily Deal #12 · 2:41', url: 'https://setdaily.app/daily' })

@@ -4,6 +4,13 @@
 <% content_for :description, "Every past daily Set Puzzle and Set Daily Deal, with each day’s board, solution and final leaderboard. Play any day again as practice, free in your browser." %>
 <% content_for :canonical, "#{ApplicationHelper::SITE_URL}#{page_path.(@page)}" %>
 <% content_for :head, render("home/identity") %>
+<%# A day's tile. The script (ArchivePlayed) sets data-played on it once it knows what this player did that day. %>
+<% tile = "flex min-h-11 min-w-0 flex-col justify-center rounded-xl border border-neutral-200 px-3 py-1.5 transition-colors hover:bg-neutral-50 " \
+          "md:flex-row md:items-center md:justify-between md:gap-3 dark:border-neutral-600 dark:hover:bg-neutral-800 " \
+          "data-[played=ranked]:border-emerald-200 data-[played=ranked]:bg-emerald-50 data-[played=ranked]:hover:bg-emerald-100 " \
+          "dark:data-[played=ranked]:border-emerald-800 dark:data-[played=ranked]:bg-emerald-950/40 dark:data-[played=ranked]:hover:bg-emerald-950/70 " \
+          "data-[played=practice]:border-amber-200 data-[played=practice]:bg-amber-50 data-[played=practice]:hover:bg-amber-100 " \
+          "dark:data-[played=practice]:border-amber-800 dark:data-[played=practice]:bg-amber-950/40 dark:data-[played=practice]:hover:bg-amber-950/70" %>
 <% pill = "inline-flex min-h-9 items-center justify-center rounded-full border border-neutral-300 bg-white px-3.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:border-neutral-500 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800" %>
 <div id="site-header" data-page="archive"><%= prerendered(:stats) %></div>
 <main class="mx-auto w-full max-w-3xl px-3 pb-16 pt-2 antialiased md:px-6 lg:pt-4">
@@ -21,7 +28,7 @@
       <a href="<%= root_path %>" class="<%= pill %> mt-4">Play today’s Puzzle</a>
     </div>
   <% else %>
-    <ol class="mt-5 overflow-hidden rounded-2xl border border-neutral-200 bg-white dark:border-neutral-600 dark:bg-neutral-900">
+    <ol data-archive-page="<%= @page %>" class="mt-5 overflow-hidden rounded-2xl border border-neutral-200 bg-white dark:border-neutral-600 dark:bg-neutral-900">
       <% @rows.each do |row| %>
         <li class="flex flex-col gap-2 border-t border-neutral-100 px-4 py-3 first:border-t-0 sm:flex-row sm:items-center sm:gap-4 dark:border-neutral-700">
           <time datetime="<%= row.date.iso8601 %>" class="text-sm font-medium tabular-nums sm:w-36 sm:shrink-0"><%= row.date.strftime("%a, %b %-d, %Y") %></time>
@@ -29,9 +36,13 @@
             <% DailyArchive::KINDS.each do |kind| %>
               <% if (day = row.days[kind]) %>
                 <% stats = @stats.dig(kind, row.date) %>
-                <a href="<%= day.path %>" class="flex min-h-11 min-w-0 flex-col justify-center rounded-xl border border-neutral-200 px-3 py-1.5 transition-colors hover:bg-neutral-50 dark:border-neutral-600 dark:hover:bg-neutral-800">
-                  <span class="truncate text-sm font-medium"><%= day.name %></span>
-                  <span class="truncate text-[11px] tabular-nums text-neutral-600 dark:text-neutral-300"><%= stats ? "#{pluralize(stats[:count], 'finisher')} · best #{archive_time(stats[:best_ms])}" : "No finishers" %></span>
+                <a href="<%= day.path %>" data-archive-tile="<%= kind %>:<%= day.number %>" data-archive-date="<%= day.date.iso8601 %>" class="<%= tile %>">
+                  <span class="flex min-w-0 flex-col">
+                    <span class="truncate text-sm font-medium"><%= day.name %></span>
+                    <span class="truncate text-[11px] tabular-nums text-neutral-600 dark:text-neutral-300"><%= stats ? "#{pluralize(stats[:count], 'finisher')} · best #{archive_time(stats[:best_ms])}" : "No finishers" %></span>
+                  </span>
+                  <%# Empty for everyone as served: the player's own time, or an invitation to play, is put here by the script. Its line is kept free on a phone so the list doesn't jump. %>
+                  <span data-archive-status class="mt-0.5 flex min-h-4 items-center gap-1.5 text-[11px] leading-4 md:mt-0 md:min-h-0 md:shrink-0 md:flex-col md:items-end md:justify-center md:gap-0"></span>
                 </a>
               <% else %>
                 <span aria-hidden="true"></span>
