@@ -9,6 +9,18 @@
   --safe-area-left: env(safe-area-inset-left);
 }
 
+/*
+ * A line of text boxed by its capitals: from the cap height down to the
+ * baseline, without the room the font and the line height leave above and
+ * below. A flex row that centres the box then centres the letters
+ * themselves, so text of any size or font lines up with the shapes beside
+ * it (the header's wordmark with its switch). Browsers without text-box
+ * keep the full line box, centred as before.
+ */
+@utility text-trim-caps {
+  text-box: trim-both cap alphabetic;
+}
+
 html {
   -webkit-tap-highlight-color: transparent;
   color-scheme: light dark;
