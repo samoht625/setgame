@@ -2,9 +2,9 @@
 
 require "date"
 
-# sitemap.xml: the site's pages plus every closed day of the Daily Deal and
-# the Puzzle. A day joins when it closes, which is also the last time its
-# page changes, so that date is its lastmod.
+# sitemap.xml: the site's pages, the blog, and every closed day of the Daily
+# Deal and the Puzzle. A day joins when it closes, which is also the last
+# time its page changes, so that date is its lastmod.
 #
 # Plain Ruby: the archives and today's date come in, XML goes out
 # (Sitemap.current supplies them and caches the result).
@@ -15,7 +15,7 @@ class Sitemap
 
   Entry = Struct.new(:path, :lastmod)
 
-  CACHE_KEY = "sitemap/v2"
+  CACHE_KEY = "sitemap/v3"
 
   # The whole document, built again only when a day starts or closes. One
   # cache entry, replaced in place, so the cache doesn't grow by a file a day.
@@ -30,11 +30,12 @@ class Sitemap
     xml
   end
 
-  # `today` is the dailies' current day; `archives` one DailyArchive per game.
-  def initialize(site:, today:, archives:)
+  # `today` is the dailies' current day; `archives` one DailyArchive per game; `posts` the blog's (see Blog).
+  def initialize(site:, today:, archives:, posts: Blog::POSTS)
     @site = site.to_s.chomp("/")
     @today = today
     @archives = archives.reject(&:empty?)
+    @posts = posts
   end
 
   def entries
@@ -62,7 +63,14 @@ class Sitemap
     list = [Entry.new("/", @today), Entry.new("/daily", @today), Entry.new("/practice", nil), Entry.new("/m", nil), Entry.new("/stats", @today)]
     newest = @archives.map(&:last_date).max
     list << Entry.new("/archive", newest + 1) if newest
-    list
+    list + blog
+  end
+
+  # The blog's index and its posts, newest first. A post last changed the day
+  # it was published, and the index when its newest post was.
+  def blog
+    posts = @posts.map { |post| Entry.new(Blog.path(post), [post::PUBLISHED_ON, @today].min) }
+    posts.empty? ? [] : [Entry.new("/blog", posts.map(&:lastmod).max), *posts]
   end
 
   # Newest first, the two games side by side: the Puzzle, then the Daily Deal.

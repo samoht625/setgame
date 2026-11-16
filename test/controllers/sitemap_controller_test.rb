@@ -24,8 +24,8 @@ class SitemapControllerTest < ActionDispatch::IntegrationTest
       assert_nil response.headers["Set-Cookie"], "the same document for everyone"
 
       listed = urls
-      site = %w[/ /daily /practice /m /stats /archive].map { |path| "https://setdaily.app#{path}" }
-      assert_equal site, listed.keys.first(6)
+      site = %w[/ /daily /practice /m /stats /archive /blog /blog/spotting-sets].map { |path| "https://setdaily.app#{path}" }
+      assert_equal site, listed.keys.first(8)
       past_puzzles = (1..21).map { |number| "https://setdaily.app/puzzle/#{number}" }
       past_deals = (1..3).map { |number| "https://setdaily.app/daily/#{number}" }
       assert_equal (site + past_puzzles + past_deals).sort, listed.keys.sort

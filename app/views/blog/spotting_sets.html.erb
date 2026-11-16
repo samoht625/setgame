@@ -1,0 +1,76 @@
+<%# Which kinds of set people spot fast, and which they miss. Every figure in the text and both charts come from one saved copy of the /stats numbers (SpottingSets), so they agree with each other; /stats has the live ones. %>
+<% post = SpottingSets.current %>
+<% url = "#{ApplicationHelper::SITE_URL}#{Blog.path(SpottingSets)}" %>
+<% site = "#{ApplicationHelper::SITE_URL}/" %>
+<% content_for :title, SpottingSets::TITLE %>
+<% content_for :social_title, SpottingSets::TITLE %>
+<% content_for :description, SpottingSets::DESCRIPTION %>
+<% content_for :og_type, "article" %>
+<% content_for :site_page, "blog" %>
+<% content_for :head, render("blog/styles") %>
+<% content_for :head do %>
+  <script type="application/ld+json"><%= raw json_escape({
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: SpottingSets::TITLE,
+    description: SpottingSets::DESCRIPTION,
+    url: url,
+    mainEntityOfPage: url,
+    datePublished: SpottingSets::PUBLISHED_ON.iso8601,
+    inLanguage: "en",
+    publisher: { "@type": "Organization", name: ApplicationHelper::SITE_NAME, url: site },
+    isPartOf: { "@type": "WebSite", name: ApplicationHelper::SITE_NAME, url: site }
+  }.to_json) %></script>
+<% end %>
+<% as_of = post_date(post.taken_at) %>
+<%= render "shared/card_symbols" %>
+<main class="blog">
+  <article>
+    <header class="top">
+      <p class="crumb"><a href="/blog">Blog</a></p>
+      <h1><%= SpottingSets::TITLE %></h1>
+      <p class="dateline"><time datetime="<%= SpottingSets::PUBLISHED_ON.iso8601 %>"><%= post_date(SpottingSets::PUBLISHED_ON) %></time> · Numbers as of <time datetime="<%= post.taken_at.iso8601 %>"><%= as_of %></time></p>
+    </header>
+
+    <div class="prose">
+      <p>
+        In Set, three cards make a set when each of their four features (number, color, shape, shading) is either all the same or all different across the three.
+        Set Daily times every find, anonymously. That’s now <%= num(post.finds) %> finds from <%= num(post.players) %> players, enough to see which kinds of sets people spot fast and which they miss.
+      </p>
+
+      <figure>
+        <%= render "stats/how_fast", kinds: post.kinds %>
+        <figcaption>Median time to find a set in the Daily Deal and Practice, by which features are all different. Bar: the middle half of finds. Line: the median. Numbers as of <%= as_of %>; <a href="/stats">the stats page</a> has them live.</figcaption>
+      </figure>
+
+      <h2>Each extra difference costs time</h2>
+      <p>
+        When one feature differs, the median find takes <%= seconds_range(post.median_range_ms(1)) %> seconds.
+        Two differences take <%= seconds_range(post.median_range_ms(2)) %>, three take <%= seconds_range(post.median_range_ms(3)) %>.
+        All four different takes <%= seconds_range(post.median_range_ms(4)) %> seconds, <%= number_word(post.slowdown) %> times the easiest.
+      </p>
+
+      <h2>Not all features are equal</h2>
+      <p>
+        Shape and number are fastest (<%= secs(post.median_ms("shape")) %> each), color and shading about <%= whole_seconds(post.median_ms("color")) %>s.
+        Among three-difference sets the slowest are the ones that keep shape or number the same (<%= secs(post.median_ms("all but shape")) %> each), as if people anchor on shape and number first.
+      </p>
+
+      <h2 id="h-skipped">People skip the hard ones</h2>
+      <p>
+        <%= SetStats::CHANCE[4] %>% of the <%= num(SetStats::TOTAL_SETS) %> possible sets have all four features different, but they’re only <%= post.shares.fetch(4).round %>% of finds; one-difference sets are <%= post.shares.fetch(1).round %>% of finds vs <%= SetStats::CHANCE[1] %>% by chance.
+      </p>
+
+      <figure>
+        <%= render "stats/what_gets_found", shares: post.shares, labelledby: "h-skipped" %>
+        <figcaption>Share of finds by how many features are all different. Tick: the share among all <%= num(SetStats::TOTAL_SETS) %> possible sets. Numbers as of <%= as_of %>.</figcaption>
+      </figure>
+
+      <p class="closing">
+        Set Daily has a new <a href="/">Puzzle</a> every day (12 cards hiding exactly 6 sets) and a <a href="/daily">Daily Deal</a> everyone plays from the same cards.
+        These numbers keep moving on <a href="/stats">the stats page</a>.
+      </p>
+      <p class="more"><a class="btn" href="/">Play today’s Puzzle</a><a href="/blog">All posts</a></p>
+    </div>
+  </article>
+</main>
