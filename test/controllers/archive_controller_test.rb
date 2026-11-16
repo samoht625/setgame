@@ -280,8 +280,11 @@ class ArchiveControllerTest < ActionDispatch::IntegrationTest
       assert_select "h1", "Archive"
       assert_select "main ol > li", 30
       assert_select "main ol > li:first-child time[datetime='2026-11-14']"
-      assert_select "main ol > li:first-child a[href='/daily/43']", /Daily Deal #43\s+1 finisher · best 3:05/
       assert_select "main ol > li:first-child a[href='/puzzle/21']", /Puzzle #21\s+2 finishers · best 0:42/
+      assert_select "main ol > li:first-child a[href='/daily/43']", /Daily Deal #43\s+1 finisher · best 3:05/
+      assert_equal %w[/puzzle/21 /daily/43], css_select("main ol > li:first-child a").map { |link| link["href"] }, "the Puzzle's tile comes first"
+      assert_includes css_select("main header p").first.text, "Every past Puzzle and Daily Deal"
+      assert_match(/\AEvery past daily Set Puzzle and Set Daily Deal/, css_select("meta[name=description]").first["content"])
       assert_select "a[href='/puzzle/20']", /Puzzle #20\s+No finishers/
       assert_select "a[href='/puzzle/22']", 0, "today's is not listed"
       assert_select "a[href='/daily/44']", 0
@@ -370,6 +373,48 @@ class ArchiveControllerTest < ActionDispatch::IntegrationTest
       # A crawler too.
       get "/archive", headers: { "User-Agent" => "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" }
       assert_equal pages.fetch("/archive"), served_main
+    end
+  end
+
+  test "a day's row has the Puzzle on the left and the Daily Deal on the right, each tile with its own key, date and slot for the played mark" do
+    travel_to NOON do
+      player = SecureRandom.uuid
+      create_daily_score(Date.new(2026, 10, 3), elapsed_ms: 200_000)
+      create_puzzle_run(DAY, elapsed_ms: 65_432, player_id: player)
+      create_daily_score(DAY, elapsed_ms: 185_432, player_id: player)
+
+      # The two cells of each row's grid, in the order served: a tile's key, or nil for the gap a missing game leaves.
+      cells = -> { css_select("main ol > li").map { |row| row.at_css("div").element_children.map { |cell| cell["data-archive-tile"] } } }
+      assert_tiles_are_their_days = lambda do
+        css_select("main ol > li").each do |row|
+          row.css("a[data-archive-tile]").each do |tile|
+            kind, number = tile["data-archive-tile"].split(":")
+            assert_equal "/#{kind}/#{number}", tile["href"], "the tile's key is the day it links to"
+            assert_equal row.at_css("time")["datetime"], tile["data-archive-date"], "and its date is the row's"
+            assert_equal 1, tile.css("[data-archive-status]").size, "with one slot of its own for the mark"
+          end
+        end
+      end
+
+      get "/archive"
+      assert_response :success
+      both = (0...21).map { |i| ["puzzle:#{21 - i}", "daily:#{43 - i}"] }
+      before_the_puzzle = (0...9).map { |i| [nil, "daily:#{22 - i}"] }
+      assert_equal both + before_the_puzzle, cells.call, "the Daily Deal stays on the right on days before the Puzzle launched"
+      assert_tiles_are_their_days.call
+
+      get "/archive", params: { page: "2" }
+      assert_response :success
+      older = (0...13).map { |i| [nil, "daily:#{13 - i}"] }
+      assert_equal older, cells.call
+      assert_tiles_are_their_days.call
+
+      # What the script is told this player played is named by those same keys, whichever side the tile is on.
+      get "/api/archive", headers: { "X-Player-Id" => player }
+      assert_response :success
+      played = JSON.parse(response.body)
+      assert_equal({ "page" => 1, "puzzle" => { "21" => { "elapsed_ms" => 65_432 } }, "daily" => { "43" => { "elapsed_ms" => 185_432 } } }, played)
+      assert_equal both.first, ["puzzle:#{played.fetch('puzzle').keys.first}", "daily:#{played.fetch('daily').keys.first}"]
     end
   end
 

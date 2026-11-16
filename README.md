@@ -11,7 +11,7 @@ Set Daily is the card game Set, for phones and desktops. No signup and no downlo
 | Practice | `/practice` | Timed games against the clock, as many as you like, with daily, weekly and monthly leaderboards. |
 | Multiplayer | `/m` | One shared live table. Whoever finds the most sets wins the round. |
 | Stats | `/stats` | Site-wide numbers: sets found, games per day, how fast each kind of set is found, and the most active named players. |
-| Archive | `/archive`, `/daily/21`, `/puzzle/21` | A page for every past Daily Deal and Puzzle, numbered like its share links: the board, the final leaderboard and the solution, and the day to play again as unranked practice. A day joins two hours after it ends, when nothing can be ranked on it any more. |
+| Archive | `/archive`, `/puzzle/21`, `/daily/21` | A page for every past Puzzle and Daily Deal, numbered like its share links: the board, the final leaderboard and the solution, and the day to play again as unranked practice. A day joins two hours after it ends, when nothing can be ranked on it any more. |
 
 Players are anonymous by default. Signing in is optional: enter an email, tap the link it sends, and your history follows you to other browsers. An account can also get a daily reminder email at a time you choose. Each player can switch on two-card sets, where you pick two cards and the game picks the third.
 
@@ -71,7 +71,7 @@ Production is one Linux host. Puma runs as a user systemd service on a loopback 
 
 | Path | What is there |
 | --- | --- |
-| `app/services` | Rules, the multiplayer engine, the Daily Deal and Puzzle, replay verification, sign-in, reminders, stats |
+| `app/services` | Rules, the multiplayer engine, the Puzzle and Daily Deal, replay verification, sign-in, reminders, stats |
 | `app/javascript` | The React app |
 | `script/` | Development and test tooling, plus the share image renderer |
 | `scripts/`, `deploy/` | Production host scripts and systemd units |

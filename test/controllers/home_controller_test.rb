@@ -80,6 +80,9 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
       assert_select "dialog#how-to-play", text: /Three cards are a set when each feature/
       assert_select "dialog#how-to-play", text: /About Set|free/, count: 0
       assert_select "section.sr-only", text: /About Set/
+      # The Puzzle first, wherever the two dailies are listed.
+      assert_equal ["Puzzle", "Daily Deal", "Practice", "Multiplayer"], css_select("dialog#how-to-play dl dt").map(&:text)
+      assert_select "section.sr-only a[href='/archive']", "every past Puzzle and Daily Deal"
       assert_select "footer", false
       assert_no_match(/not affiliated with Set Enterprises/, response.body)
     end

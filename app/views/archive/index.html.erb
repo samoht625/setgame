@@ -1,7 +1,7 @@
 <%# Every closed day of the Daily Deal and the Puzzle, newest first, a page at a time. %>
 <% page_path = ->(page) { page == 1 ? archive_path : archive_path(page: page) } %>
 <% content_for :title, @page == 1 ? "Archive" : "Archive, page #{@page}" %>
-<% content_for :description, "Every past Set Daily Deal and daily Set Puzzle, with each day’s board, solution and final leaderboard. Play any day again as practice, free in your browser." %>
+<% content_for :description, "Every past daily Set Puzzle and Set Daily Deal, with each day’s board, solution and final leaderboard. Play any day again as practice, free in your browser." %>
 <% content_for :canonical, "#{ApplicationHelper::SITE_URL}#{page_path.(@page)}" %>
 <% content_for :head, render("home/identity") %>
 <%# A day's tile. The script (ArchivePlayed) sets data-played on it once it knows what this player did that day. %>
@@ -17,7 +17,7 @@
   <header>
     <h1 class="text-2xl font-semibold tracking-tight">Archive</h1>
     <p class="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
-      Every past Daily Deal and Puzzle, with its board, solution and final leaderboard. Any day can be played again as practice; only the day itself is ranked.
+      Every past Puzzle and Daily Deal, with its board, solution and final leaderboard. Any day can be played again as practice; only the day itself is ranked.
     </p>
   </header>
 

@@ -113,7 +113,7 @@
 
       /* Most games finished: one grid per row, so the columns line up and phones can drop the split to a second line */
       .players,.players thead,.players tbody{display:block}
-      .players tr{display:grid;grid-template-columns:24px minmax(0,1fr) 56px 64px 78px 110px 84px;column-gap:10px;align-items:center;padding:0 16px}
+      .players tr{display:grid;grid-template-columns:24px minmax(0,1fr) 56px 64px 78px 84px 110px;column-gap:10px;align-items:center;padding:0 16px}
       .players th,.players td{padding:0;font-weight:400;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
       .players thead th{padding:11px 0 9px;color:var(--muted);font-size:11px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;line-height:1.25}
       .players thead i{font-style:normal}
@@ -197,7 +197,7 @@
       .facts .c{width:52px;height:auto;aspect-ratio:258/167}
 
       @media (max-width:759px){
-        .players tr{grid-template-columns:22px max-content 0 minmax(0,1fr) 46px 42px 46px;column-gap:8px;padding:0 12px}
+        .players tr{grid-template-columns:22px max-content 0 minmax(0,1fr) 46px 46px 42px;column-gap:8px;padding:0 12px}
         .players thead th{font-size:10px;letter-spacing:.03em;padding:9px 0 8px;align-self:end}
         .players thead .prac,.players thead .dly{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
         .players thead span{display:block}
@@ -206,8 +206,8 @@
         .players .rk{grid-area:1 / 1}
         .players .who{grid-area:1 / 2 / auto / span 3}
         .players .total{grid-area:1 / 5}
-        .players .bdd{grid-area:1 / 6}
-        .players .bpz{grid-area:1 / 7}
+        .players .bpz{grid-area:1 / 6}
+        .players .bdd{grid-area:1 / 7}
         .players tbody .prac{grid-area:2 / 2}
         .players tbody .dly{grid-area:2 / 3 / auto / -1;margin-left:-4px}
         .players tbody .prac,.players tbody .dly{font-size:12px;text-align:left}
@@ -241,7 +241,7 @@
       }
 
       @media (max-width:359px){
-        .players tr{grid-template-columns:20px max-content 0 minmax(0,1fr) 42px 38px 42px;column-gap:6px}
+        .players tr{grid-template-columns:20px max-content 0 minmax(0,1fr) 42px 42px 38px;column-gap:6px}
         .kind,.kind-axis{grid-template-columns:100px minmax(0,1fr) 40px;column-gap:10px}
         .kind .c{width:31px}
         .facts .c{width:44px}
@@ -276,7 +276,7 @@
         .cols .sec{display:grid;grid-row:span 2;grid-template-rows:subgrid}
         .hist{flex:1 1 104px;height:auto}
         .cols .none{align-self:start}
-        .players tr{grid-template-columns:24px minmax(0,1fr) 88px 96px 104px 148px 112px;column-gap:12px}
+        .players tr{grid-template-columns:24px minmax(0,1fr) 88px 96px 104px 112px 148px;column-gap:12px}
         .kind,.kind-axis{grid-template-columns:150px 150px minmax(0,1fr) 56px;column-gap:20px}
         .kind .c{width:46px}
         .days{height:168px}

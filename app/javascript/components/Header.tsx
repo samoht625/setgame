@@ -117,8 +117,9 @@ const Header: React.FC<HeaderProps> = ({ mode, page, onSwitchMode, othersOnline 
 
         <div className="flex min-w-0 items-center gap-1 sm:gap-2">
           <nav aria-label="Game mode" className="flex items-center rounded-full bg-neutral-200/70 p-1 dark:bg-neutral-800">
-            {segment('daily', 'Daily Deal', secondary ? 'Daily' : undefined)}
+            {/* The Puzzle is the home page, so it comes first, here and wherever the two are listed. */}
             {segment('puzzle', 'Puzzle')}
+            {segment('daily', 'Daily Deal', secondary ? 'Daily' : undefined)}
             {mode === 'solo' && segment('solo', 'Practice')}
             {mode === 'multiplayer' && segment('multiplayer', 'Multiplayer', 'Multi')}
           </nav>

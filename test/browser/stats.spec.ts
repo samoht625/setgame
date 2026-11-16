@@ -47,7 +47,7 @@ test('the stats page is a compact table on desktop and two-line rows on a phone,
 
   await expect(page.getByRole('heading', { level: 1, name: 'Stats' })).toBeVisible()
   const table = page.getByRole('table', { name: 'Most games finished' })
-  await expect(table.getByRole('columnheader')).toHaveText(['Rank', 'Player', 'Games', 'Practice', 'Daily Deal', 'Best Daily Deal', 'Best Puzzle'])
+  await expect(table.getByRole('columnheader')).toHaveText(['Rank', 'Player', 'Games', 'Practice', 'Daily Deal', 'Best Puzzle', 'Best Daily Deal'])
   const rows = table.locator('tbody tr')
   const count = await rows.count()
   expect(count).toBeGreaterThan(0)
@@ -57,7 +57,7 @@ test('the stats page is a compact table on desktop and two-line rows on a phone,
 
   // Desktop: one line per player, every number in its own right-aligned column under its heading.
   expect(await overflow(page)).toBeLessThanOrEqual(0)
-  const columns = ['total', 'prac', 'dly', 'bdd', 'bpz']
+  const columns = ['total', 'prac', 'dly', 'bpz', 'bdd']
   for (const column of columns) {
     const heading = await box(table.locator(`thead .${column}`))
     for (let i = 0; i < count; i++) {
@@ -102,13 +102,17 @@ test('the stats page is a compact table on desktop and two-line rows on a phone,
     const practice = await box(row.locator('.prac'))
     const daily = await box(row.locator('.dly'))
     const bestPuzzle = await box(row.locator('.bpz'))
+    const bestDaily = await box(row.locator('.bdd'))
     expect(name.height, `name ${i + 1} stays on one line`).toBeLessThan(26)
     expect(Math.abs(name.y + name.height / 2 - (total.y + total.height / 2))).toBeLessThanOrEqual(3)
     expect(name.x + name.width).toBeLessThanOrEqual(total.x + 1)
     expect(practice.y).toBeGreaterThanOrEqual(name.y + name.height - 2)
     expect(Math.abs(practice.y - daily.y)).toBeLessThanOrEqual(1)
     expect(daily.x).toBeGreaterThanOrEqual(practice.x + practice.width)
-    expect(bestPuzzle.x + bestPuzzle.width).toBeLessThanOrEqual(card.x + card.width)
+    // The Puzzle's best comes first, then the Daily Deal's, which ends inside the card.
+    expect(total.x + total.width).toBeLessThanOrEqual(bestPuzzle.x + 1)
+    expect(bestPuzzle.x + bestPuzzle.width).toBeLessThanOrEqual(bestDaily.x + 1)
+    expect(bestDaily.x + bestDaily.width).toBeLessThanOrEqual(card.x + card.width)
     expect((await box(row)).height, `row ${i + 1} is two short lines, not a card`).toBeLessThanOrEqual(64)
   }
   expect(await rows.first().locator('.prac').evaluate(el => getComputedStyle(el, '::after').content)).toBe('" practice"')

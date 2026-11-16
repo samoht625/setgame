@@ -25,7 +25,7 @@ class SitemapTest < ActiveSupport::TestCase
     listed = urls(xml)
 
     assert xml.start_with?(%(<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n))
-    assert_equal %w[/ /daily /practice /m /stats /archive /daily/3 /puzzle/21 /daily/2 /puzzle/20 /daily/1 /puzzle/19 /puzzle/18].map { |path| "https://setdaily.app#{path}" },
+    assert_equal %w[/ /daily /practice /m /stats /archive /puzzle/21 /daily/3 /puzzle/20 /daily/2 /puzzle/19 /daily/1 /puzzle/18].map { |path| "https://setdaily.app#{path}" },
                  listed.keys.first(13)
     assert_equal 6 + 3 + 21, listed.length
     assert_equal "https://setdaily.app/puzzle/1", listed.keys.last

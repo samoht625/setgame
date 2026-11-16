@@ -22,7 +22,7 @@
         <h3 class="text-xs font-medium uppercase tracking-wide text-neutral-600 dark:text-neutral-400">Game modes</h3>
         <dl class="mt-2.5 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-neutral-200 bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-700">
           <%# Each summary is two phrases, so a narrow cell breaks the line between them. %>
-          <% [["Daily Deal", "Same deal for everyone,", "one try a day."], ["Puzzle", "12 cards hold 6 sets.", "Find all 6."], ["Practice", "Timed games,", "as many as you like."], ["Multiplayer", "Most sets", "wins the round."]].each do |name, *phrases| %>
+          <% [["Puzzle", "12 cards hold 6 sets.", "Find all 6."], ["Daily Deal", "Same deal for everyone,", "one try a day."], ["Practice", "Timed games,", "as many as you like."], ["Multiplayer", "Most sets", "wins the round."]].each do |name, *phrases| %>
             <div class="bg-white px-3 py-2.5 dark:bg-neutral-900">
               <dt class="text-sm font-medium"><%= name %></dt>
               <dd class="mt-0.5 text-[0.8125rem] leading-snug text-neutral-600 dark:text-neutral-400"><%= safe_join(phrases.map { |phrase| tag.span(phrase, class: "inline-block") }, " ") %></dd>
