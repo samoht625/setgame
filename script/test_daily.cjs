@@ -25,7 +25,7 @@ try {
     outfile: bundle,
     logLevel: 'silent'
   })
-  const { dailyDate, dailyShareLink, ordinal, formatCountdown, dayClosed, archivedNumber } = require(bundle)
+  const { dailyDate, dailyDayLabel, dailyShareLink, ordinal, formatCountdown, dayClosed, archivedNumber } = require(bundle)
 
   const archiveBundle = path.join(temporary, 'archive.cjs')
   buildSync({
@@ -75,6 +75,22 @@ try {
     assert.equal(dailyDate(new Date('2026-10-04T07:00:00Z')), '2026-10-04')
     assert.equal(dailyDate(new Date('2026-12-01T07:59:59Z')), '2026-11-30')
     assert.equal(dailyDate(new Date('2026-12-01T08:00:00Z')), '2026-12-01')
+  })
+
+  check('a moment is labelled with its Pacific day, whatever zone the reader is in', () => {
+    // 11:30 PM Pacific on Nov 15 is already the 16th in UTC and further east; 12:30 AM is the 16th.
+    assert.equal(dailyDayLabel(new Date('2026-11-16T07:30:00Z')), 'Nov 15')
+    assert.equal(dailyDayLabel(new Date('2026-11-16T08:30:00Z')), 'Nov 16')
+    // Daylight time: the day ends at 07:00 UTC, and the day the clocks go back is 25 hours long.
+    assert.equal(dailyDayLabel(new Date('2026-11-01T06:30:00Z')), 'Oct 31')
+    assert.equal(dailyDayLabel(new Date('2026-11-01T07:30:00Z')), 'Nov 1')
+    assert.equal(dailyDayLabel(new Date('2026-11-02T07:30:00Z')), 'Nov 1')
+    assert.equal(dailyDayLabel(new Date('2026-11-02T08:30:00Z')), 'Nov 2')
+    for (const at of ['2026-11-16T07:30:00Z', '2026-11-01T06:30:00Z', '2027-03-14T09:30:00Z', '2027-07-04T06:59:59Z']) {
+      const [year, month, day] = dailyDate(new Date(at)).split('-').map(Number)
+      const sameDay = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' }).format(new Date(Date.UTC(year, month - 1, day)))
+      assert.equal(dailyDayLabel(new Date(at)), sameDay, `${at} is labelled with the day dailyDate gives`)
+    }
   })
 
   check('a day closes two hours after it ends, like the server (DailyPuzzle.closed?)', () => {

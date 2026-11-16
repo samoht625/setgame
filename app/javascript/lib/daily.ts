@@ -18,6 +18,16 @@ export function dailyDate(now: Date = new Date()): string {
   return `${part('year')}-${part('month')}-${part('day')}`
 }
 
+const DAY_LABEL = new Intl.DateTimeFormat('en-US', { timeZone: DAILY_TIME_ZONE, month: 'short', day: 'numeric' })
+
+/**
+ * The day a moment fell on by the dailies' clock, as "Nov 15": the day the
+ * server counts it under, wherever the reader is.
+ */
+export function dailyDayLabel(at: Date): string {
+  return DAY_LABEL.format(at)
+}
+
 // Must match DailyPuzzle::FINISH_GRACE.
 const FINISH_GRACE_MS = 2 * 60 * 60 * 1000
 

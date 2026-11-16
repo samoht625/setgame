@@ -11,13 +11,15 @@ class SoloScore < ApplicationRecord
   PERIODS = %w[daily weekly monthly].freeze
   SUMMARY_COLUMNS = %i[id player_id display_name elapsed_ms completed_at].freeze
 
-  def self.period_range(period)
-    now = Time.zone.now
+  # Today, this week (from Monday) and this month, by the dailies' clock: a
+  # practice day starts and ends when the Puzzle's and the Daily Deal's does.
+  def self.period_range(period, now = Time.current)
+    now = now.in_time_zone(DailyPuzzle::TIME_ZONE)
     case period.to_s
     when "daily"
       now.beginning_of_day..now.end_of_day
     when "weekly"
-      now.beginning_of_week(:monday)..now.end_of_week(:sunday)
+      now.beginning_of_week(:monday)..now.end_of_week(:monday)
     when "monthly"
       now.beginning_of_month..now.end_of_month
     else

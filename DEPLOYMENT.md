@@ -101,10 +101,11 @@ journalctl --user -u setgame-reminders -n 50
 
 ## Clocks
 
-- The Puzzle and the Daily Deal roll over at midnight Pacific (`DailyPuzzle::TIME_ZONE`).
-- Practice leaderboards use daily, weekly and monthly windows in Eastern time (`config.time_zone`).
-- The stats page groups days and hours in Central time (`SetStats::ZONE`).
-- Reminders go out in each account's own time zone.
+- One zone decides what day it is: Pacific, `DailyPuzzle::TIME_ZONE`. The server's own zone (`TZ`) doesn't matter.
+- The Puzzle and the Daily Deal roll over at midnight Pacific, and so does everything counted by day: the archive, the sitemap's dates, streaks, the stats page's days and hours, and the practice leaderboards' day, week and month.
+- `config.time_zone` is set to the same zone, so `Date.current` and `Time.zone` agree with the games.
+- Reminders go out at each account's chosen time in its own time zone, and are about the Pacific day's games.
+- `script/retention` counts Pacific days too, daylight time included.
 
 ## How scores are checked
 

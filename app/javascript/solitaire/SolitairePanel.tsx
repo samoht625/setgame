@@ -2,6 +2,7 @@ import React from 'react'
 import { secondaryButtonSmall } from '../lib/buttons'
 import LeaderboardList from '../components/LeaderboardList'
 import RecentSets from '../components/RecentSets'
+import { dailyDayLabel } from '../lib/daily'
 import type { LeaderboardEntry } from '../lib/solo_api'
 import { formatTime } from './time'
 
@@ -55,9 +56,14 @@ function formatDate(isoString: string): string {
   return `${DAY_FORMAT.format(date)}, ${TIME_FORMAT.format(date)}`
 }
 
-/** Short enough to sit beside a time: the time of day on today's list, the day on longer ones. */
+/**
+ * Short enough to sit beside a time: the time of day on today's list, by the
+ * reader's own clock, and the day on longer ones. That day is the one the
+ * week and month are counted in (SoloScore.period_range), not the reader's.
+ */
 function formatWhen(isoString: string, period: LeaderboardPeriod): string {
-  return (period === 'daily' ? TIME_FORMAT : DAY_FORMAT).format(new Date(isoString))
+  const at = new Date(isoString)
+  return period === 'daily' ? TIME_FORMAT.format(at) : dailyDayLabel(at)
 }
 
 function loadBestTimes(): BestTime[] {

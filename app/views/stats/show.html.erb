@@ -199,7 +199,7 @@
         <dt>Busiest hour</dt>
         <% if s[:busiest_hour] %>
           <dd class="val"><%= Time.new(2000, 1, 1, s[:busiest_hour]).strftime("%-l %p") %></dd>
-          <dd class="note">Central time</dd>
+          <dd class="note">Pacific time</dd>
         <% else %>
           <dd class="val"><%= time_cell(nil) %></dd>
         <% end %>
