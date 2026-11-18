@@ -7,15 +7,12 @@ const miniCard = 'min-w-0 flex-1 overflow-hidden rounded-md border border-neutra
 
 /**
  * The six slots for the Puzzle's sets, filled in as they're found. Each found
- * set is three real mini cards. Phones get a 2×3 grid under the board, tablets
- * 3×2, and wide screens a slim column beside the board so it all fits on screen
- * (`stacked` keeps it under the board there too, where the board has a neighbour already).
+ * set is three real mini cards. They go under the board, so the board is where
+ * the Daily Deal has its own: a 2×3 grid on phones, 3×2 from tablets up, and
+ * one row on a wide screen too short for two under the board.
  */
-const FoundSets: React.FC<{ found: PuzzleClaim[]; total: number; latestKey?: number; stacked?: boolean }> = ({ found, total, latestKey, stacked = false }) => (
-  <ol
-    aria-label="Sets found"
-    className={`mt-3 grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-3 ${stacked ? '' : 'lg:mt-0 lg:w-60 lg:shrink-0 lg:grid-cols-1 lg:gap-2.5'}`}
-  >
+const FoundSets: React.FC<{ found: PuzzleClaim[]; total: number; latestKey?: number }> = ({ found, total, latestKey }) => (
+  <ol aria-label="Sets found" className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-3 [@media(min-width:1024px)_and_(max-height:751px)]:grid-cols-6">
     {Array.from({ length: total }, (_, index) => {
       const claim = found[index]
       return claim ? (

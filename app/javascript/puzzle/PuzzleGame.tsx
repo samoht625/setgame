@@ -488,7 +488,6 @@ const PuzzleGame: React.FC = () => {
     <>
       {toastNode}
       <GameLayout
-        wide
         cover={overlay && <StartStage label={overlay.label}>{overlay.content}</StartStage>}
         hud={
           // Before a run the strip is only its room: the start card names the puzzle, and there's no clock yet.
@@ -517,23 +516,22 @@ const PuzzleGame: React.FC = () => {
           </Hud>
         }
         board={
-          <div className="lg:flex lg:items-start lg:justify-center lg:gap-8">
-            <div className="min-w-0 lg:max-w-[calc((100dvh-13rem)*2)] lg:flex-1">
-              <Board
-                cards={run && !starting && playing ? run.cards : []}
-                selectedCards={selectedCards}
-                rejectedCards={rejectedCards}
-                completedCards={autoReveal.cards}
-                autoFilledCard={autoReveal.filled}
-                completedTone={autoReveal.tone}
-                onCardClick={handleCardClick}
-                claiming={clockPending}
-                loading={starting}
-                gameOver={overlay !== null}
-              />
-            </div>
+          <>
+            <Board
+              cards={run && !starting && playing ? run.cards : []}
+              selectedCards={selectedCards}
+              rejectedCards={rejectedCards}
+              completedCards={autoReveal.cards}
+              autoFilledCard={autoReveal.filled}
+              completedTone={autoReveal.tone}
+              onCardClick={handleCardClick}
+              claiming={clockPending}
+              loading={starting}
+              gameOver={overlay !== null}
+              resumes
+            />
             <FoundSets found={run && playing && !starting ? run.found : []} total={SET_COUNT} latestKey={claimAnimationKey} />
-          </div>
+          </>
         }
         panel={
           <SidePanel open={panel.open} onClose={() => panel.setOpen(false)} title="Leaderboard" isDesktop={panel.isDesktop}>

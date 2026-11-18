@@ -184,7 +184,9 @@ dialog::backdrop {
   }
 }
 
-/* Newly dealt / replaced cards ease in instead of popping */
+/* Newly dealt / replaced cards ease in instead of popping. A card that was
+   already on the board when the page opened sets --deal-in-delay past the
+   end, so it's simply there, whichever of the lists below it's given later. */
 @keyframes card-in {
   from {
     opacity: 0;
@@ -197,7 +199,7 @@ dialog::backdrop {
 }
 
 .animate-card-in {
-  animation: card-in 0.22s ease-out;
+  animation: card-in 0.22s ease-out var(--deal-in-delay, 0s);
 }
 
 /* Two-card mode: the completed set lights up together. card-in stays
@@ -208,7 +210,7 @@ dialog::backdrop {
 }
 
 .animate-set-lit {
-  animation: card-in 0.22s ease-out, set-lit 0.28s ease-out;
+  animation: card-in 0.22s ease-out var(--deal-in-delay, 0s), set-lit 0.28s ease-out;
 }
 
 @keyframes set-leave {
@@ -216,7 +218,7 @@ dialog::backdrop {
 }
 
 .animate-set-leave {
-  animation: card-in 0.22s ease-out, set-lit 0.28s ease-out, set-leave 0.12s ease-in forwards;
+  animation: card-in 0.22s ease-out var(--deal-in-delay, 0s), set-lit 0.28s ease-out, set-leave 0.12s ease-in forwards;
 }
 
 /* Invalid set feedback */
@@ -235,7 +237,7 @@ dialog::backdrop {
 /* Two-card mode: a completed set that was already found. Like
    .animate-set-lit, card-in stays first so the filled-in card doesn't replay it. */
 .animate-set-repeat {
-  animation: card-in 0.22s ease-out, shake 0.3s ease-in-out;
+  animation: card-in 0.22s ease-out var(--deal-in-delay, 0s), shake 0.3s ease-in-out;
 }
 
 @keyframes score-pop {

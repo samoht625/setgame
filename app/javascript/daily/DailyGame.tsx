@@ -599,6 +599,7 @@ const DailyGame: React.FC = () => {
             claiming={clockPending}
             loading={starting}
             gameOver={overlay !== null}
+            resumes
           />
         }
         panel={

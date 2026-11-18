@@ -335,7 +335,7 @@ const ArchivePlay: React.FC<{ day: ArchiveDay }> = ({ day }) => {
           </>
         }
       />
-      {run?.kind === 'puzzle' && <FoundSets found={run.found} total={SET_COUNT} latestKey={claimAnimationKey} stacked />}
+      {run?.kind === 'puzzle' && <FoundSets found={run.found} total={SET_COUNT} latestKey={claimAnimationKey} />}
       {run && (
         <div className="mt-3 flex justify-center">
           <button type="button" onClick={stop} className={quietButton}>

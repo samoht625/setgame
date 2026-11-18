@@ -48,6 +48,9 @@ const DARK_RING = {
 }
 const DARK_FOCUS = 'dark:focus-visible:border-blue-500 dark:focus-visible:outline-blue-500!'
 
+// For a card that was on the board already: its deal-in is over before it shows (see card-in in application.tailwind.css).
+const DEALT = { '--deal-in-delay': '-1s' } as React.CSSProperties
+
 interface BoardProps {
   cards: number[]
   selectedCards: number[]
@@ -73,6 +76,8 @@ interface BoardProps {
   pausedNote?: string
   loading?: boolean
   onResume?: () => void
+  /** Cards on the board when it first shows are a game picked up again: they're just there, not dealt in. */
+  resumes?: boolean
 }
 
 const Board: React.FC<BoardProps> = ({
@@ -92,12 +97,14 @@ const Board: React.FC<BoardProps> = ({
   paused = false,
   pausedNote,
   loading = false,
-  onResume
+  onResume,
+  resumes = false
 }) => {
   const isRevealingSet = foundCards.length === 3
   const interactionLocked = claiming || gameOver || paused || loading || isRevealingSet || completedCards.length > 0
   // Empty slots keep the board's footprint when there are no cards to show.
   const placeholders = loading || (gameOver && cards.length === 0)
+  const resumedCards = useRef(resumes ? cards : [])
 
   // Fingers now on a card, by pointer id.
   const presses = useRef(new Map<number, Press>())
@@ -248,6 +255,7 @@ const Board: React.FC<BoardProps> = ({
               data-repeat={isRepeat ? completedRole : undefined}
               aria-label={describeCard(cardId)}
               data-card-id={cardId}
+              style={resumedCards.current.includes(cardId) ? DEALT : undefined}
               onClick={event => { if (!fromTouch(event)) onCardClick(cardId) }}
               className={`animate-card-in block w-full [touch-action:pan-x_pan-y] select-none overflow-hidden rounded-xl border bg-white transition-[border-color,box-shadow,transform] ${isCompleted ? 'duration-0' : 'duration-200'} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 dark:bg-[#f1f0ec] dark:focus-visible:outline-offset-0! ${
                 interactionLocked ? 'cursor-default' : 'cursor-pointer active:scale-[0.98]'
