@@ -10,9 +10,18 @@ import type { RevealTone } from '../hooks/useAutoCompleteReveal'
 // keyboard still pick on click.
 //
 // The browser cancels the pointer when it takes the touch for itself, to
-// scroll or pinch the page, and a cancelled finger picks nothing. A finger
-// that lands while the page is still gliding from a flick only stops it, as
-// before: that touch is left to the browser, which sends no click for it.
+// scroll the page, and a cancelled finger picks nothing. A finger that lands
+// while the page is still gliding from a flick only stops it, as before: that
+// touch is left to the browser, which sends no click for it.
+//
+// Two thumbs on cards drift apart a little as they press, and a phone reads
+// that as a pinch: it zooms the page and cancels both fingers. So a finger on
+// a card never pinches, whatever the other finger is on. The cards'
+// touch-action says so, by leaving out pinch-zoom, and Chrome and Firefox go
+// by that alone. Safari heeds touch-action only in part, and differently from
+// version to version, so there the board also cancels the touch events of a
+// second finger while a finger is on a card, and Safari's own gesture events
+// with them. One finger still scrolls the page from a card.
 
 /** How far (CSS px) a finger may drift between landing and lifting and still be a tap. */
 const TAP_SLOP = 16
@@ -101,6 +110,42 @@ const Board: React.FC<BoardProps> = ({
     const onScroll = () => { scrolledAt.current = performance.now() }
     document.addEventListener('scroll', onScroll, { capture: true, passive: true })
     return () => document.removeEventListener('scroll', onScroll, true)
+  }, [])
+
+  useEffect(() => {
+    // Only Safari has gesture events. Elsewhere touch-action is enough, and
+    // listeners that can cancel a touch would hold up every scroll and tap.
+    if (!('GestureEvent' in window)) return
+    // A gesture event doesn't say where the fingers are, so the touch events keep track.
+    let cardHeld = false
+    // A touch keeps the card it landed on, also once the game has taken that card off the board.
+    const onCard = ({ target }: Touch) => target instanceof Element && target.closest('button[data-card-id]') !== null
+    const track = (event: TouchEvent) => { cardHeld = Array.from(event.touches).some(onCard) }
+    const refuseSecondFinger = (event: TouchEvent) => {
+      track(event)
+      if (cardHeld && event.touches.length > 1 && event.cancelable) event.preventDefault()
+    }
+    const refuseGesture = (event: Event) => {
+      if (cardHeld && event.cancelable) event.preventDefault()
+    }
+    // On the document: the second finger may be anywhere on the page. Not
+    // passive, or Safari would ignore preventDefault.
+    const active = { capture: true, passive: false }
+    const passive = { capture: true, passive: true }
+    document.addEventListener('touchstart', refuseSecondFinger, active)
+    document.addEventListener('touchmove', refuseSecondFinger, active)
+    document.addEventListener('touchend', track, passive)
+    document.addEventListener('touchcancel', track, passive)
+    document.addEventListener('gesturestart', refuseGesture, true)
+    document.addEventListener('gesturechange', refuseGesture, true)
+    return () => {
+      document.removeEventListener('touchstart', refuseSecondFinger, true)
+      document.removeEventListener('touchmove', refuseSecondFinger, true)
+      document.removeEventListener('touchend', track, true)
+      document.removeEventListener('touchcancel', track, true)
+      document.removeEventListener('gesturestart', refuseGesture, true)
+      document.removeEventListener('gesturechange', refuseGesture, true)
+    }
   }, [])
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -204,7 +249,7 @@ const Board: React.FC<BoardProps> = ({
               aria-label={describeCard(cardId)}
               data-card-id={cardId}
               onClick={event => { if (!fromTouch(event)) onCardClick(cardId) }}
-              className={`animate-card-in block w-full touch-manipulation select-none overflow-hidden rounded-xl border bg-white transition-[border-color,box-shadow,transform] ${isCompleted ? 'duration-0' : 'duration-200'} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 dark:bg-[#f1f0ec] dark:focus-visible:outline-offset-0! ${
+              className={`animate-card-in block w-full [touch-action:pan-x_pan-y] select-none overflow-hidden rounded-xl border bg-white transition-[border-color,box-shadow,transform] ${isCompleted ? 'duration-0' : 'duration-200'} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 dark:bg-[#f1f0ec] dark:focus-visible:outline-offset-0! ${
                 interactionLocked ? 'cursor-default' : 'cursor-pointer active:scale-[0.98]'
               } ${borderStyle}`}
             >
