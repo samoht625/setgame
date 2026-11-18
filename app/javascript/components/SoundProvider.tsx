@@ -74,6 +74,23 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     else closeAudio()
   }, [closeAudio, playSelection])
 
+  // Safari starts audio only inside a user gesture. A finger picks its card
+  // on pointerup (see Board), which Safari may not count as one, so a context
+  // made there can stay suspended. The finger's touchend or click starts it.
+  useEffect(() => {
+    if (!enabled) return
+    const resume = () => {
+      const audio = audioRef.current
+      if (audio?.state === 'suspended') void audio.resume().catch(() => {})
+    }
+    document.addEventListener('touchend', resume, { capture: true, passive: true })
+    document.addEventListener('click', resume, true)
+    return () => {
+      document.removeEventListener('touchend', resume, true)
+      document.removeEventListener('click', resume, true)
+    }
+  }, [enabled])
+
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
       if (event.key !== STORAGE_KEY && event.key !== null) return
