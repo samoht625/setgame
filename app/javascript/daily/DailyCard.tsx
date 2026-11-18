@@ -14,6 +14,7 @@ import ReminderPrompt from './ReminderPrompt'
 import InstallPrompt from './InstallPrompt'
 import StreakPill from './StreakPill'
 import { installDue, noteFinishDay, type InstallKind } from '../lib/install'
+import { CARD_SLOT, CARD_TITLE } from './cardSlot'
 export { primaryButton, secondaryButton }
 
 const LEADERBOARD_SIZE = 10
@@ -23,8 +24,10 @@ interface DailyCardProps {
   /** Null when today's try was started but never finished. */
   result: (DailyShare & { rank?: number; total?: number }) | null
   streak: number
-  /** Submission state of a just-finished run. */
+  /** What became of a just-finished run that isn't on the leaderboard. */
   note?: React.ReactNode
+  /** The run is on its way to the server: said where the rank will be. */
+  submitting?: boolean
   status: DailyStatus | null
   statusError: boolean
   onRetryStatus: () => void
@@ -52,7 +55,7 @@ interface DailyCardProps {
 
 /** What the Daily Deal (and the Puzzle) show once today's try is used: the result, today's leaderboard and what's next. */
 const DailyCard: React.FC<DailyCardProps> = ({
-  number, result, streak, note, status, statusError, onRetryStatus, playerId, nowMs, onShare, shareNote, onNextDeal, stale = false, onNameScore,
+  number, result, streak, note, submitting = false, status, statusError, onRetryStatus, playerId, nowMs, onShare, shareNote, onNextDeal, stale = false, onNameScore,
   title, next = { href: '/', label: 'Puzzle' }, noun = 'deal', emptyText, marksLabel = 'Your pace on each set', rivalMs
 }) => {
   const titleId = useId()
@@ -83,14 +86,15 @@ const DailyCard: React.FC<DailyCardProps> = ({
   const rank = result?.rank !== undefined && result.total !== undefined ? `${ordinal(result.rank)} of ${result.total}` : ''
 
   return (
-    <main className="mx-auto w-full max-w-sm px-3 pb-safe pt-4 sm:pt-10">
+    <main className={`${CARD_SLOT} pb-safe`}>
       <section
         aria-labelledby={titleId}
+        data-game-card="result"
         className="overflow-hidden rounded-2xl border border-neutral-200 bg-white text-center shadow-sm dark:border-neutral-600 dark:bg-neutral-900"
       >
         <div className="px-5 pb-4 pt-4">
           {/* The page's own heading is in the view (home/daily, home/puzzle); this is the card's. */}
-          <h2 id={titleId} className="text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+          <h2 id={titleId} data-card-title className={CARD_TITLE}>
             {title ?? `Daily Deal #${number}`}
           </h2>
           {result ? (
@@ -99,15 +103,22 @@ const DailyCard: React.FC<DailyCardProps> = ({
                 {formatTime(result.elapsedMs)}
               </div>
               <p className="mt-0.5 min-h-5 text-sm text-neutral-500 dark:text-neutral-400">
-                {rank && <span>{rank}</span>}
+                {rank ? <span>{rank}</span> : submitting && <span role="status" className="text-xs">Submitting…</span>}
               </p>
-              {result.marks && (
-                <div className="mt-1.5 flex justify-center">
-                  <MarkGrid marks={result.marks} label={marksLabel} />
+              {/* Room for the Daily Deal's three rows of squares, whichever game this is and before they're in:
+                  what's under them is at one height on both games' cards. */}
+              {(result.marks || !stale) && (
+                <div className="mt-1.5 flex min-h-14 items-center justify-center">
+                  {result.marks && <MarkGrid marks={result.marks} label={marksLabel} />}
                 </div>
               )}
               {rivalMs !== undefined && <RivalLine mine={result.elapsedMs} theirs={rivalMs} />}
-              {streak > 0 && <StreakPill streak={streak} className="mt-3" />}
+              {/* A finish makes a streak, so its row is there before the server has counted it. */}
+              {(streak > 0 || !stale) && (
+                <div className="mt-3 flex min-h-6 justify-center">
+                  {streak > 0 && <StreakPill streak={streak} />}
+                </div>
+              )}
             </>
           ) : (
             <>

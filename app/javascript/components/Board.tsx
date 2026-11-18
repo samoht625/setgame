@@ -215,7 +215,10 @@ const Board: React.FC<BoardProps> = ({
         onPointerCancel={handlePointerCancel}
       >
         {placeholders ? Array.from({ length: 12 }, (_, index) => (
-          <div key={index} aria-hidden="true" className="aspect-[258/167] rounded-xl border border-neutral-200 bg-white/60 dark:border-neutral-700 dark:bg-neutral-900" />
+          // The border goes around the card's proportions, as on a dealt card, so the board is the same height dealt or not.
+          <div key={index} aria-hidden="true" className="rounded-xl border border-neutral-200 bg-white/60 dark:border-neutral-700 dark:bg-neutral-900">
+            <div className="aspect-[258/167]" />
+          </div>
         )) : cards.map((cardId) => {
           const isSelected = selectedCards.includes(cardId)
           const isRejected = rejectedCards.includes(cardId)

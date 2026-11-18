@@ -15,7 +15,7 @@ import { useAutoCompleteReveal } from '../hooks/useAutoCompleteReveal'
 import { SoloTimer } from '../solitaire/SolitaireHud'
 import DailyPanel from './DailyPanel'
 import DailyCard, { primaryButton } from './DailyCard'
-import { Challenge, StartCard } from './StartNotes'
+import { Challenge, StartCard, StartStage } from './StartNotes'
 import { missMessage, newToRules } from '../rules/Tour'
 import { autoCompletePick, twoCardModeOn, THIRD_CARD_MISSING } from '../lib/two_card_mode'
 import { afterNextPaint } from '../lib/after_paint'
@@ -45,6 +45,7 @@ import {
 const SAVE_KEY = 'setgame_daily_v1'
 // Session-scoped so a reload mid-game doesn't report the same quit twice.
 const QUIT_REPORTED_KEY = 'setgame_daily_quit_reported'
+const START_LINES: [string, string] = ['Same deal for everyone today.', 'One try, against the clock.']
 
 type DailyRun = {
   date: string
@@ -475,10 +476,8 @@ const DailyGame: React.FC = () => {
 
   // Once today's try is used, the Daily Deal is a result card, not a game.
   if (showCard) {
-    const submissionNote = finishedRun && (
-      submitting ? (
-        <p role="status" className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">Submitting…</p>
-      ) : finishedRun.submission === 'pending' ? (
+    const submissionNote = finishedRun && !submitting && (
+      finishedRun.submission === 'pending' ? (
         <div className="mt-3 rounded-xl bg-amber-50 p-2.5 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
           <p role="status">Your time is saved. Retry when you’re connected.</p>
           <button type="button" onClick={() => void submit(finishedRun)} className={`${secondaryButtonSmall} mt-2`}>
@@ -497,6 +496,7 @@ const DailyGame: React.FC = () => {
           result={result}
           streak={streak}
           note={submissionNote}
+          submitting={submitting}
           status={status}
           statusError={statusError}
           onRetryStatus={refreshStatus}
@@ -523,7 +523,7 @@ const DailyGame: React.FC = () => {
       content: (
         <StartCard
           challenge={shared && !status.me.attempted && <Challenge shared={shared} number={status.number} name="Daily Deal" />}
-          lines={['Same deal for everyone today.', 'One try, against the clock.']}
+          lines={START_LINES}
           onStart={() => void begin()}
           starting={starting}
           streak={streak}
@@ -540,7 +540,10 @@ const DailyGame: React.FC = () => {
           <button type="button" onClick={refreshStatus} className={`${primaryButton} mt-4 w-full`}>Try again</button>
         </>
       ) : (
-        <p role="status" className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">Loading today’s deal…</p>
+        <>
+          <p role="status" className="sr-only">Loading today’s deal…</p>
+          <StartCard lines={START_LINES} onStart={() => void begin()} starting={starting} streak={0} offerRules={newPlayer} loading />
+        </>
       )
     }
   }
@@ -556,24 +559,30 @@ const DailyGame: React.FC = () => {
       {toastNode}
 
       <GameLayout
+        cover={overlay && <StartStage label={overlay.label}>{overlay.content}</StartStage>}
         hud={
+          // Before a run the strip is only its room: the start card names the deal, and there's no clock yet.
           <Hud>
-            <SoloTimer
-              startedAtMs={run?.startedAtMs ?? 0}
-              elapsedMs={run?.status === 'finished' ? run.elapsedMs : 0}
-              running={isPlaying}
-              loading={!run || starting}
-            />
-            {chip && <HudChip tone={chip.tone}>{chip.label}</HudChip>}
-            {run && !starting && (
+            {playing && (
               <>
-                <HudDivider />
-                <HudStat value={run.deck.length} label="cards left" shortLabel="left" />
-                <HudStat
-                  value={<ScoreValue value={run.events.length} animationKey={claimAnimationKey} />}
-                  label={run.events.length === 1 ? 'set found' : 'sets found'}
-                  shortLabel={run.events.length === 1 ? 'set' : 'sets'}
+                <SoloTimer
+                  startedAtMs={run?.startedAtMs ?? 0}
+                  elapsedMs={run?.status === 'finished' ? run.elapsedMs : 0}
+                  running={isPlaying}
+                  loading={!run || starting}
                 />
+                {chip && <HudChip tone={chip.tone}>{chip.label}</HudChip>}
+                {run && !starting && (
+                  <>
+                    <HudDivider />
+                    <HudStat value={run.deck.length} label="cards left" shortLabel="left" />
+                    <HudStat
+                      value={<ScoreValue value={run.events.length} animationKey={claimAnimationKey} />}
+                      label={run.events.length === 1 ? 'set found' : 'sets found'}
+                      shortLabel={run.events.length === 1 ? 'set' : 'sets'}
+                    />
+                  </>
+                )}
               </>
             )}
           </Hud>
@@ -590,8 +599,6 @@ const DailyGame: React.FC = () => {
             claiming={clockPending}
             loading={starting}
             gameOver={overlay !== null}
-            gameOverLabel={overlay?.label}
-            gameOverContent={overlay?.content}
           />
         }
         panel={

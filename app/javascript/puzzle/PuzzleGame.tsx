@@ -15,7 +15,7 @@ import { useAutoCompleteReveal } from '../hooks/useAutoCompleteReveal'
 import { SoloTimer } from '../solitaire/SolitaireHud'
 import DailyPanel from '../daily/DailyPanel'
 import DailyCard, { primaryButton } from '../daily/DailyCard'
-import { Challenge, StartCard } from '../daily/StartNotes'
+import { Challenge, StartCard, StartStage } from '../daily/StartNotes'
 import { missMessage, newToRules } from '../rules/Tour'
 import FoundSets from './FoundSets'
 import { afterNextPaint } from '../lib/after_paint'
@@ -39,6 +39,7 @@ const SAVE_KEY = 'setgame_puzzle_v1'
 const QUIT_REPORTED_KEY = 'setgame_puzzle_quit_reported'
 const SET_COUNT = 6
 const MODE = 'puzzle'
+const START_LINES: [string, string] = ['12 cards. 6 sets. Find them all.', 'One try, against the clock.']
 
 type PuzzleRun = {
   date: string
@@ -408,10 +409,8 @@ const PuzzleGame: React.FC = () => {
   const dailyDone = useOtherDailyDone('daily', showCard)
 
   if (showCard && result) {
-    const submissionNote = finishedRun && (
-      submitting ? (
-        <p role="status" className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">Submitting…</p>
-      ) : finishedRun.submission === 'pending' ? (
+    const submissionNote = finishedRun && !submitting && (
+      finishedRun.submission === 'pending' ? (
         <div className="mt-3 rounded-xl bg-amber-50 p-2.5 text-xs text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
           <p role="status">Your time is saved. Retry when you’re connected.</p>
           <button type="button" onClick={() => void submit(finishedRun)} className={`${secondaryButtonSmall} mt-2`}>
@@ -431,6 +430,7 @@ const PuzzleGame: React.FC = () => {
           result={result}
           streak={streak}
           note={submissionNote}
+          submitting={submitting}
           status={status}
           statusError={statusError}
           onRetryStatus={refreshStatus}
@@ -459,9 +459,7 @@ const PuzzleGame: React.FC = () => {
       content: (
         <StartCard
           challenge={shared && !resuming && <Challenge shared={shared} number={status.number} name="Puzzle" />}
-          lines={resuming
-            ? ['Pick up where you left off.', 'Your clock kept running.']
-            : ['12 cards. 6 sets. Find them all.', 'One try, against the clock.']}
+          lines={resuming ? ['Pick up where you left off.', 'Your clock kept running.'] : START_LINES}
           action={resuming ? 'Continue' : 'Start'}
           onStart={() => void begin()}
           starting={starting}
@@ -479,7 +477,7 @@ const PuzzleGame: React.FC = () => {
           <button type="button" onClick={refreshStatus} className={`${primaryButton} mt-4 w-full`}>Try again</button>
         </>
       ) : (
-        <p role="status" className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">12 cards. 6 sets. Find them all.</p>
+        <StartCard lines={START_LINES} onStart={() => void begin()} starting={starting} streak={0} offerRules={newPlayer} loading />
       )
     }
   }
@@ -491,23 +489,29 @@ const PuzzleGame: React.FC = () => {
       {toastNode}
       <GameLayout
         wide
+        cover={overlay && <StartStage label={overlay.label}>{overlay.content}</StartStage>}
         hud={
+          // Before a run the strip is only its room: the start card names the puzzle, and there's no clock yet.
           <Hud>
-            <SoloTimer
-              startedAtMs={run?.startedAtMs ?? 0}
-              elapsedMs={run?.status === 'finished' ? run.elapsedMs : 0}
-              running={isPlaying}
-              loading={!run || starting}
-            />
-            {!starting && number !== undefined && <HudChip>Puzzle #{number}</HudChip>}
-            {run && !starting && (
+            {playing && (
               <>
-                <HudDivider />
-                <HudStat
-                  value={<><ScoreValue value={foundCount} animationKey={claimAnimationKey} />/{SET_COUNT}</>}
-                  label="sets found"
-                  shortLabel="sets"
+                <SoloTimer
+                  startedAtMs={run?.startedAtMs ?? 0}
+                  elapsedMs={run?.status === 'finished' ? run.elapsedMs : 0}
+                  running={isPlaying}
+                  loading={!run || starting}
                 />
+                {!starting && number !== undefined && <HudChip>Puzzle #{number}</HudChip>}
+                {run && !starting && (
+                  <>
+                    <HudDivider />
+                    <HudStat
+                      value={<><ScoreValue value={foundCount} animationKey={claimAnimationKey} />/{SET_COUNT}</>}
+                      label="sets found"
+                      shortLabel="sets"
+                    />
+                  </>
+                )}
               </>
             )}
           </Hud>
@@ -526,8 +530,6 @@ const PuzzleGame: React.FC = () => {
                 claiming={clockPending}
                 loading={starting}
                 gameOver={overlay !== null}
-                gameOverLabel={overlay?.label}
-                gameOverContent={overlay?.content}
               />
             </div>
             <FoundSets found={run && playing && !starting ? run.found : []} total={SET_COUNT} latestKey={claimAnimationKey} />
