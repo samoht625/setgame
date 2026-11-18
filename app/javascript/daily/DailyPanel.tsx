@@ -64,6 +64,33 @@ const NamePrompt: React.FC<{ onSave: (name: string) => Promise<boolean>; as?: 'l
   )
 }
 
+const SKELETON_ROWS = 5
+const skeletonBar = 'h-3 rounded-full bg-neutral-100 dark:bg-neutral-800'
+
+/**
+ * The leaderboard while today's times are on their way: its heading and
+ * rows at the size they'll have, so what's around it doesn't move when they
+ * land. How many rows there will be isn't known, so it draws a few.
+ */
+const StandingsSkeleton: React.FC<{ label?: string; aside?: React.ReactNode }> = ({ label, aside }) => (
+  <div role="status">
+    <span className="sr-only">Loading times…</span>
+    <div className="flex min-h-6 items-center justify-between gap-2">
+      {label ? <SectionLabel>{label}</SectionLabel> : <span aria-hidden="true" className={`${skeletonBar} w-24`} />}
+      {aside}
+    </div>
+    <div aria-hidden="true" className="mt-2 space-y-0.5">
+      {Array.from({ length: SKELETON_ROWS }, (_, index) => (
+        <div key={index} className="flex items-center gap-2.5 px-2 py-1.5">
+          <span className="h-5 w-5 shrink-0 rounded-full bg-neutral-100 dark:bg-neutral-800" />
+          <span className={`${skeletonBar} w-24`} />
+          <span className={`${skeletonBar} ml-auto w-8`} />
+        </div>
+      ))}
+    </div>
+  </div>
+)
+
 /** Today's leaderboard, with the player's row even when they are below the cut. */
 export const DailyStandings: React.FC<DailyStandingsProps> = ({ status, error, onRetry, playerId, limit, label, onNameScore, onCompare, aside, emptyText = 'No times yet — clear today’s deal to take the top spot.' }) => {
   if (!status) {
@@ -73,7 +100,7 @@ export const DailyStandings: React.FC<DailyStandingsProps> = ({ status, error, o
         <button type="button" onClick={onRetry} className={`${secondaryButtonSmall} mt-2`}>Try again</button>
       </div>
     ) : (
-      <p role="status" className="mt-2 rounded-xl bg-neutral-50 px-3 py-6 text-center text-xs text-neutral-500 dark:bg-neutral-800/50 dark:text-neutral-400">Loading times…</p>
+      <StandingsSkeleton label={label} aside={aside} />
     )
   }
 

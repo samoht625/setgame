@@ -114,9 +114,9 @@ test('the daily is one shared deal: played once, clocked from first paint, then 
   await expect(page.getByText('One try, against the clock.')).toBeVisible()
   const label = await page.getByText(/^Daily Deal #\d+$/).first().innerText()
   const number = Number(label.replace(/\D/g, ''))
-  // Nothing is dealt, and no clock runs, until the player asks to start.
+  // Nothing is dealt, and there's no clock, until the player asks to start.
   await expect(page.locator('[data-card-id]')).toHaveCount(0)
-  await expect(page.getByRole('timer')).toHaveText('—')
+  await expect(page.getByRole('timer')).toHaveCount(0)
 
   let requestedAt = 0
   await page.route('**/api/daily/games', async route => {

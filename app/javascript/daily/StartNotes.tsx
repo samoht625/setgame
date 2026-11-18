@@ -5,6 +5,7 @@ import type { SharedResult } from '../lib/boot'
 import { primaryButton } from '../lib/buttons'
 import { openTour } from '../rules/Tour'
 import StreakPill from './StreakPill'
+import { CARD_SLOT, CARD_TITLE } from './cardSlot'
 
 /** On the start card of a friend's shared link: their time, to beat. */
 export const Challenge: React.FC<{ shared: SharedResult; number: number; name: string }> = ({ shared, number, name }) => {
@@ -41,6 +42,8 @@ interface StartCardProps {
   streak: number
   /** The player is new to the rules: offer the tour. */
   offerRules: boolean
+  /** Today's status isn't in yet: the card at its full size, with Start waiting on it. */
+  loading?: boolean
 }
 
 /**
@@ -48,7 +51,7 @@ interface StartCardProps {
  * the one button: two lines above it, and under it only what this player has
  * (a streak) or may need (the tour).
  */
-export const StartCard: React.FC<StartCardProps> = ({ challenge, lines, action = 'Start', onStart, starting, streak, offerRules }) => (
+export const StartCard: React.FC<StartCardProps> = ({ challenge, lines, action = 'Start', onStart, starting, streak, offerRules, loading = false }) => (
   <>
     {challenge}
     <p className="mt-2 text-sm text-neutral-800 dark:text-neutral-100">
@@ -56,12 +59,12 @@ export const StartCard: React.FC<StartCardProps> = ({ challenge, lines, action =
       <br />
       {lines[1]}
     </p>
-    <button type="button" onClick={onStart} disabled={starting} className={`${primaryButton} mt-4 w-full`}>
+    <button type="button" onClick={onStart} disabled={starting || loading} className={`${primaryButton} mt-4 w-full`}>
       {action}
     </button>
     {/* The tour's button is taller than its text, for a finger; the row gives that back below. */}
-    {(streak > 0 || offerRules) && (
-      <div className={`mt-3 flex flex-wrap items-center justify-center gap-x-1 gap-y-1 ${offerRules ? '-mb-2' : ''}`}>
+    {(streak > 0 || offerRules || loading) && (
+      <div className={`mt-3 flex min-h-6 flex-wrap items-center justify-center gap-x-1 gap-y-1 ${offerRules ? '-mb-2' : ''}`}>
         {streak > 0 && <StreakPill streak={streak} />}
         {offerRules && (
           <button
@@ -76,4 +79,21 @@ export const StartCard: React.FC<StartCardProps> = ({ challenge, lines, action =
       </div>
     )}
   </>
+)
+
+/**
+ * The start card's frame, in the result card's place (see cardSlot). Below
+ * wide screens it floats over the board it's about to deal; on them it stands
+ * alone, as the result card does.
+ */
+export const StartStage: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+  <div className={CARD_SLOT}>
+    <div
+      data-game-card="start"
+      className="pointer-events-auto rounded-2xl border border-neutral-200 bg-white/95 px-5 pb-5 pt-4 text-center shadow-lg backdrop-blur lg:bg-white lg:shadow-sm lg:backdrop-blur-none dark:border-neutral-600 dark:bg-neutral-900/95 lg:dark:bg-neutral-900"
+    >
+      <div data-card-title className={CARD_TITLE}>{label}</div>
+      {children}
+    </div>
+  </div>
 )
