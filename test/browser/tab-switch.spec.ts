@@ -29,6 +29,10 @@ const RESULT = {
   entries: '[data-game-card] ol'
 }
 const BOARD = { board: 'main [aria-busy]' }
+/** What two games in progress share: the clock's place, and the board's place and width. Its height is the deal's. */
+const PLAY = { ...BOARD, timer: '[role="timer"]' }
+const PLAY_SIDES = { board: 3, timer: 2 }
+const FOUND_SETS = 'ol[aria-label="Sets found"]'
 
 type Box = [number, number, number, number]
 type Boxes = Record<string, Box | null>
@@ -103,7 +107,8 @@ async function stop(page: Page): Promise<Recording> {
 
 async function open(page: Page, kind: Kind, state: State | 'started') {
   await page.getByRole('navigation', { name: 'Game mode' }).getByRole('link', { name: TABS[kind], exact: true }).click()
-  if (state === 'started') await expect(page.locator('[data-card-id]')).toHaveCount(12)
+  // A deal without a set in it has more than twelve cards.
+  if (state === 'started') await expect(page.locator('[data-card-id]').nth(11)).toBeVisible()
   else await expect(page.locator(`[data-game-card="${state === 'new' ? 'start' : 'result'}"]`)).toBeVisible()
 }
 
@@ -207,12 +212,63 @@ test('a game in progress keeps its board where the other game’s backdrop is, o
   if (await page.locator('[data-card-id]').count() === 12) expect(Math.abs(dealt!.height - backdrop!.height)).toBeLessThan(0.5)
 })
 
+async function start(page: Page) {
+  await page.getByRole('button', { name: 'Start', exact: true }).click()
+  await expect(page.locator('[data-card-id]').nth(11)).toBeVisible()
+}
+
+/** Whether the cards on the board skipped their deal-in, read from the first card. */
+const dealtAlready = (page: Page) =>
+  page.locator('[data-card-id]').first().evaluate(card => getComputedStyle(card).animationDelay.startsWith('-'))
+
+for (const [width, viewport] of Object.entries({ desktop: VIEWPORTS.desktop, 'wide desktop': { width: 1600, height: 1000 } })) {
+  test(`two games in progress have their boards in one place on a ${width}`, async ({ page }) => {
+    await page.setViewportSize(viewport)
+    await page.goto('/')
+    await start(page)
+    expect(await dealtAlready(page)).toBe(false)
+    await open(page, 'daily', 'new')
+    await start(page)
+    expect(await dealtAlready(page)).toBe(false)
+
+    await expectSteadySwitch(page, 'puzzle', 'started', { ...SHARED, ...PLAY }, PLAY_SIDES)
+    // Cards that were dealt before are just there when the game is picked up again.
+    expect(await dealtAlready(page)).toBe(true)
+    // The Puzzle's found sets go under its board, so they don't push it aside.
+    const board = (await page.locator(BOARD.board).boundingBox())!
+    const sets = (await page.locator(FOUND_SETS).boundingBox())!
+    expect(sets.y).toBeGreaterThanOrEqual(board.y + board.height)
+    expect(Math.abs(sets.x - board.x)).toBeLessThan(0.5)
+    expect(Math.abs(sets.width - board.width)).toBeLessThan(0.5)
+
+    await expectSteadySwitch(page, 'daily', 'started', { ...SHARED, ...PLAY }, PLAY_SIDES)
+    expect(await dealtAlready(page)).toBe(true)
+  })
+}
+
+test('on a phone the Puzzle’s board fills the width, with its found sets in two columns under it', async ({ page }) => {
+  await page.setViewportSize(VIEWPORTS.phone)
+  await page.goto('/')
+  await start(page)
+  const board = (await page.locator(BOARD.board).boundingBox())!
+  expect(board.x).toBe(12)
+  const main = (await page.locator('main').boundingBox())!
+  expect(board.width).toBe(main.width - 24)
+  const slots = await page.locator(`${FOUND_SETS} > li`).evaluateAll(items => items.map(item => { const { x, y } = item.getBoundingClientRect(); return { x, y } }))
+  expect(slots).toHaveLength(6)
+  expect(slots[0]!.x).toBe(board.x)
+  expect(slots[0]!.y).toBeGreaterThanOrEqual(board.y + board.height)
+  expect(slots[1]!.y).toBe(slots[0]!.y)
+  expect(slots[2]!.x).toBe(slots[0]!.x)
+  expect(slots[2]!.y).toBeGreaterThan(slots[0]!.y)
+})
+
 test('wide screens show the start card alone, and the leaderboard column holds still', async ({ page }) => {
   await page.setViewportSize(VIEWPORTS.desktop)
   await page.addInitScript(() => localStorage.setItem('setgame_panel_open', '1'))
   await page.goto('/')
   await expect(page.locator('[data-game-card="start"]')).toBeVisible()
-  // The two games lay their boards out differently here, so neither shows one behind its start card.
+  // No board behind the start card here: the card stands where the result card will.
   await expect(page.locator(BOARD.board)).toBeHidden()
   await expect(page.getByRole('complementary', { name: 'Leaderboard' })).toBeVisible()
 
