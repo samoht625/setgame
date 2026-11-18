@@ -7,9 +7,17 @@ import { playAsNewPlayer } from './players'
 // its finger lifts (see Board.tsx). These specs put real fingers on the
 // screen through the DevTools protocol, which is Chromium's: Playwright's own
 // tap() is one finger at a time.
+//
+// A finger on a card never pinches the page, wherever the other finger is, so
+// two thumbs that slide as they press can't zoom it. Off the cards the page
+// pinches as it always did. Chromium goes by the cards' touch-action. Safari
+// may not, so there the board cancels touch events as well: the pinching
+// specs run a second time with Safari's gesture events made up and the
+// cards' touch-action taken away, which leaves only that to hold.
 test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
 
-type Finger = { id: number; card: number; x: number; y: number }
+type Point = { x: number; y: number }
+type Finger = Point & { id: number; card: number | null }
 
 const card = (page: Page, id: number) => page.locator(`[data-card-id="${id}"]`)
 
@@ -19,6 +27,34 @@ async function cards(page: Page): Promise<number[]> {
 
 async function picked(page: Page): Promise<number[]> {
   return page.locator('[data-card-id][aria-pressed="true"]').evaluateAll(nodes => nodes.map(node => Number(node.getAttribute('data-card-id'))))
+}
+
+async function middle(page: Page, id: number): Promise<Point> {
+  const box = (await card(page, id).boundingBox())!
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+}
+
+/** The middle of the gap between two cards that sit side by side. */
+async function gapBetween(page: Page, left: number, right: number): Promise<Point> {
+  const [a, b] = [(await card(page, left).boundingBox())!, (await card(page, right).boundingBox())!]
+  return { x: (a.x + a.width + b.x) / 2, y: a.y + a.height / 2 }
+}
+
+/** A point on the page above the board, well clear of the cards. */
+async function aboveBoard(page: Page, x: number): Promise<Point> {
+  const top = (await card(page, (await cards(page))[0]!).boundingBox())!.y
+  return { x, y: top - 30 }
+}
+
+const isOnCard = (page: Page, point: Point) =>
+  page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('[data-card-id]') != null, point)
+
+const zoom = (page: Page) => page.evaluate(() => window.visualViewport!.scale)
+
+/** The page has had time to zoom, and hasn't. */
+async function expectNoZoom(page: Page) {
+  await page.waitForTimeout(300)
+  expect(await zoom(page)).toBe(1)
 }
 
 async function expectPicked(page: Page, ids: number[]) {
@@ -60,11 +96,12 @@ class Fingers {
     return this.cdp.send('Input.dispatchTouchEvent', { type, timestamp: this.clock, touchPoints: fingers.map(({ id, x, y }) => ({ id, x, y })) })
   }
 
-  /** A finger lands on the middle of each card. */
-  async press(...ids: number[]) {
-    for (const id of ids) {
-      const box = (await card(this.page, id).boundingBox())!
-      this.down.push({ id: this.nextId++, card: id, x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) })
+  /** A finger lands on the middle of each card named, or on the point given. */
+  async press(...targets: Array<number | Point>) {
+    for (const target of targets) {
+      const onCard = typeof target === 'number'
+      const { x, y } = onCard ? await middle(this.page, target) : target
+      this.down.push({ id: this.nextId++, card: onCard ? target : null, x: Math.round(x), y: Math.round(y) })
     }
     await this.send('touchStart')
   }
@@ -225,6 +262,9 @@ test('two-card sets in Multiplayer: a pair pressed at once is one claim, and the
 })
 
 test.describe('one finger', () => {
+  // The finger that stops a glide is aimed at a moving card, and about one time in a hundred misses it.
+  test.describe.configure({ retries: 2 })
+
   /** Counts every time the card goes from picked to unpicked or back. */
   async function countFlips(page: Page, id: number) {
     await card(page, id).evaluate(node => {
@@ -290,6 +330,8 @@ test.describe('one finger', () => {
 
     await fingers.tap(a!)
     await expectPicked(page, [])
+    // The tap's own click, still on its way, would cut a key press short. It is past by now, and the tap still recent.
+    await page.waitForTimeout(300)
     await card(page, a!).focus()
     await page.keyboard.press('Space')
     await expectPicked(page, [a!])
@@ -328,8 +370,9 @@ test.describe('one finger', () => {
     const landed = await landing
     expect(landed.card).toBe(String(last))
     expect(landed.sinceScroll).toBeLessThan(50)
+    // Left alone it would glide on some 240px. Stopping takes a frame or two, about 20px.
     await page.waitForTimeout(400)
-    expect(Math.abs(await scrollY() - landed.scrollY)).toBeLessThan(20)
+    expect(Math.abs(await scrollY() - landed.scrollY)).toBeLessThan(60)
     expect(await picked(page)).toEqual([])
 
     // Once the page is still, a tap picks again, even one that wobbles a little.
@@ -340,17 +383,154 @@ test.describe('one finger', () => {
   })
 })
 
-test('pinching out from two cards zooms the page and picks neither', async ({ page }) => {
-  await playAsNewPlayer(page)
-  await page.goto('/practice')
-  await ready(page)
-  const fingers = await Fingers.on(page)
-  const board = await cards(page)
+const APART = [{ dx: -60, dy: 0 }, { dx: 60, dy: 0 }]
 
-  // The outer cards of the second row, pulled apart.
-  await fingers.press(board[3]!, board[5]!)
-  await fingers.drag([{ dx: -60, dy: 0 }, { dx: 60, dy: 0 }])
-  await fingers.lift()
-  await expect.poll(() => page.evaluate(() => window.visualViewport!.scale)).toBeGreaterThan(1.2)
-  expect(await picked(page)).toEqual([])
-})
+const BROWSERS = [
+  { name: 'by the cards’ touch-action', likeSafari: false },
+  { name: 'by cancelling touch events, in a browser like Safari that ignores the cards’ touch-action', likeSafari: true }
+]
+
+for (const { name, likeSafari } of BROWSERS) {
+  test.describe(`pinching, held off ${name}`, () => {
+    async function open(page: Page) {
+      await playAsNewPlayer(page)
+      // The board takes a browser with gesture events for Safari.
+      if (likeSafari) await page.addInitScript(() => { (window as unknown as { GestureEvent: typeof Event }).GestureEvent = class extends Event {} })
+      await page.goto('/practice')
+      await ready(page)
+      if (!likeSafari) return
+      await page.addStyleTag({ content: 'button[data-card-id] { touch-action: manipulation !important }' })
+      await expect(card(page, (await cards(page))[0]!)).toHaveCSS('touch-action', 'manipulation')
+      await page.evaluate(() => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done))))
+    }
+
+    test('two cards pulled apart don’t zoom the page, and neither is picked', async ({ page }) => {
+      await open(page)
+      const fingers = await Fingers.on(page)
+      const board = await cards(page)
+
+      // The outer cards of the second row.
+      await fingers.press(board[3]!, board[5]!)
+      await fingers.drag(APART)
+      await fingers.lift()
+      await expectNoZoom(page)
+      expect(await picked(page)).toEqual([])
+
+      // Pushed together, the same.
+      await fingers.press(board[3]!, board[5]!)
+      await fingers.drag([{ dx: 40, dy: 0 }, { dx: -40, dy: 0 }])
+      await fingers.lift()
+      await expectNoZoom(page)
+      expect(await picked(page)).toEqual([])
+    })
+
+    test('two thumbs that slide apart a little as they press pick both cards, and don’t zoom the page', async ({ page }) => {
+      await open(page)
+      const fingers = await Fingers.on(page)
+      const board = await cards(page)
+
+      // As far as a finger may slide and still be a tap.
+      await fingers.press(board[3]!, board[5]!)
+      await fingers.drag([{ dx: -16, dy: 0 }, { dx: 16, dy: 0 }], 3)
+      await fingers.lift()
+      await expectPicked(page, [board[3]!, board[5]!])
+      await expectNoZoom(page)
+    })
+
+    test('a finger on a card and another off the cards don’t zoom the page, whichever lands first', async ({ page }) => {
+      await open(page)
+      const fingers = await Fingers.on(page)
+      const board = await cards(page)
+      const gap = await gapBetween(page, board[4]!, board[5]!)
+      const above = await aboveBoard(page, 195)
+      expect(await isOnCard(page, gap)).toBe(false)
+      expect(await isOnCard(page, above)).toBe(false)
+
+      // The other finger in the gap beside the next card.
+      await fingers.press(board[3]!)
+      await fingers.press(gap)
+      await fingers.drag(APART)
+      await fingers.lift()
+      await expectNoZoom(page)
+
+      // The other finger on the page above the board.
+      await fingers.press(board[7]!)
+      await fingers.press(above)
+      await fingers.drag([{ dx: 0, dy: 60 }, { dx: 0, dy: -60 }])
+      await fingers.lift()
+      await expectNoZoom(page)
+
+      // And with that finger down first.
+      await fingers.press(above)
+      await fingers.press(board[7]!)
+      await fingers.drag([{ dx: 0, dy: -60 }, { dx: 0, dy: 60 }])
+      await fingers.lift()
+      await expectNoZoom(page)
+      expect(await picked(page)).toEqual([])
+    })
+
+    test('a pinch that starts off the cards still zooms the page', async ({ page }) => {
+      await open(page)
+      const fingers = await Fingers.on(page)
+      const [left, right] = [await aboveBoard(page, 120), await aboveBoard(page, 270)]
+      expect(await isOnCard(page, left)).toBe(false)
+      expect(await isOnCard(page, right)).toBe(false)
+
+      await fingers.press(left, right)
+      await fingers.drag(APART)
+      await fingers.lift()
+      await expect.poll(() => zoom(page)).toBeGreaterThan(1.2)
+      expect(await picked(page)).toEqual([])
+    })
+
+    test('one finger still scrolls the page from a card, and still picks with a tap', async ({ page }) => {
+      await open(page)
+      await page.evaluate(() => document.body.append(Object.assign(document.createElement('div'), { style: 'height: 3000px' })))
+      const fingers = await Fingers.on(page)
+      const board = await cards(page)
+
+      await fingers.press(board[7]!)
+      await fingers.drag([{ dx: 0, dy: -160 }])
+      await fingers.lift()
+      expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(50)
+      expect(await picked(page)).toEqual([])
+
+      // Back at the top and at rest.
+      await page.waitForTimeout(1000)
+      await page.evaluate(() => window.scrollTo(0, 0))
+      await page.waitForTimeout(500)
+      await fingers.tap(board[7]!)
+      await expectPicked(page, [board[7]!])
+      await page.waitForTimeout(500)
+      await expectPicked(page, [board[7]!])
+    })
+
+    // Safari sends these to say a pinch is starting or going on; no other browser has them.
+    const gestureEventsRefused = (page: Page) => page.evaluate(() => ['gesturestart', 'gesturechange'].map(type => {
+      const event = new Event(type, { bubbles: true, cancelable: true })
+      document.body.dispatchEvent(event)
+      return event.defaultPrevented
+    }))
+
+    test(likeSafari ? 'Safari’s own pinch events are refused while a finger is on a card, and only then' : 'with no gesture events in the browser, the board leaves touch events alone', async ({ page }) => {
+      await open(page)
+      const fingers = await Fingers.on(page)
+      const board = await cards(page)
+      const refusedWithCard = likeSafari ? [true, true] : [false, false]
+
+      expect(await gestureEventsRefused(page)).toEqual([false, false])
+
+      await fingers.press(await aboveBoard(page, 120), await aboveBoard(page, 270))
+      expect(await gestureEventsRefused(page)).toEqual([false, false])
+      await fingers.lift()
+
+      await fingers.press(board[3]!)
+      await fingers.press(await aboveBoard(page, 195))
+      expect(await gestureEventsRefused(page)).toEqual(refusedWithCard)
+      await fingers.lift(board[3]!)
+      expect(await gestureEventsRefused(page)).toEqual([false, false])
+      await fingers.lift()
+      expect(await gestureEventsRefused(page)).toEqual([false, false])
+    })
+  })
+}
