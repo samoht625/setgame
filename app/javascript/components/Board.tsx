@@ -1,6 +1,27 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import CardFace, { describeCard } from './CardFace'
 import type { RevealTone } from '../hooks/useAutoCompleteReveal'
+
+// A browser only turns a touch into a click when that finger was the only one
+// on the screen from landing to lifting. Two thumbs pressing two cards at
+// once, or one landing before the other lifts, get no click at all. So a
+// finger picks its card when it lifts (pointerup), each finger on its own,
+// and the click the browser may still send for it is dropped. Mouse, pen and
+// keyboard still pick on click.
+//
+// The browser cancels the pointer when it takes the touch for itself, to
+// scroll or pinch the page, and a cancelled finger picks nothing. A finger
+// that lands while the page is still gliding from a flick only stops it, as
+// before: that touch is left to the browser, which sends no click for it.
+
+/** How far (CSS px) a finger may drift between landing and lifting and still be a tap. */
+const TAP_SLOP = 16
+/** How long after a finger's tap the browser's click for it can still arrive. */
+const TOUCH_CLICK_MS = 1000
+/** The page counts as still scrolling for this long after it last moved. */
+const SCROLL_SETTLE_MS = 100
+
+type Press = { card: HTMLButtonElement; x: number; y: number }
 
 // Dark mode keeps the card faces light, and a card's ring hugs the card there as
 // it does in the light theme: the border takes the ring's colour, with nothing
@@ -69,6 +90,51 @@ const Board: React.FC<BoardProps> = ({
   // Empty slots keep the board's footprint when there are no cards to show.
   const placeholders = loading || (gameOver && cards.length === 0)
 
+  // Fingers now on a card, by pointer id.
+  const presses = useRef(new Map<number, Press>())
+  // When a finger last lifted from a card; null once a press has been left to the browser's click since.
+  const touchLiftedAt = useRef<number | null>(null)
+  // When the page, or anything in it, last scrolled.
+  const scrolledAt = useRef(-Infinity)
+
+  useEffect(() => {
+    const onScroll = () => { scrolledAt.current = performance.now() }
+    document.addEventListener('scroll', onScroll, { capture: true, passive: true })
+    return () => document.removeEventListener('scroll', onScroll, true)
+  }, [])
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    // A mouse or pen, or a finger stopping a scroll: the browser's click decides.
+    if (event.pointerType !== 'touch' || performance.now() - scrolledAt.current < SCROLL_SETTLE_MS) {
+      touchLiftedAt.current = null
+      return
+    }
+    // No other finger is down, so a press still held here never got its lift.
+    if (event.isPrimary) presses.current.clear()
+    const card = (event.target as Element).closest<HTMLButtonElement>('button[data-card-id]')
+    if (card) presses.current.set(event.pointerId, { card, x: event.clientX, y: event.clientY })
+  }
+
+  const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    const press = presses.current.get(event.pointerId)
+    if (!press) return
+    presses.current.delete(event.pointerId)
+    touchLiftedAt.current = performance.now()
+    if (interactionLocked || !press.card.isConnected) return
+    if (Math.hypot(event.clientX - press.x, event.clientY - press.y) > TAP_SLOP) return
+    onCardClick(Number(press.card.dataset.cardId))
+  }
+
+  const handlePointerCancel = (event: React.PointerEvent<HTMLDivElement>) => {
+    presses.current.delete(event.pointerId)
+  }
+
+  // The click a browser sends after a finger's tap, already handled when the
+  // finger lifted. Safari calls its pointer a mouse, so the time since the lift
+  // tells it apart; a keyboard's click (detail 0) is never one.
+  const fromTouch = (event: React.MouseEvent) =>
+    event.detail !== 0 && touchLiftedAt.current !== null && performance.now() - touchLiftedAt.current < TOUCH_CLICK_MS
+
   return (
     // Grid geometry stays constant regardless of how many cards are dealt:
     // extra cards simply add rows below, so existing cards never move or resize.
@@ -99,6 +165,9 @@ const Board: React.FC<BoardProps> = ({
 
       <div
         className={`col-start-1 row-start-1 grid grid-cols-3 content-start gap-2 sm:gap-3 lg:grid-cols-4 ${gameOver || paused ? 'opacity-40 saturate-50' : ''}`}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
       >
         {placeholders ? Array.from({ length: 12 }, (_, index) => (
           <div key={index} aria-hidden="true" className="aspect-[258/167] rounded-xl border border-neutral-200 bg-white/60 dark:border-neutral-700 dark:bg-neutral-900" />
@@ -131,7 +200,7 @@ const Board: React.FC<BoardProps> = ({
               data-repeat={isRepeat ? completedRole : undefined}
               aria-label={describeCard(cardId)}
               data-card-id={cardId}
-              onClick={() => onCardClick(cardId)}
+              onClick={event => { if (!fromTouch(event)) onCardClick(cardId) }}
               className={`animate-card-in block w-full touch-manipulation select-none overflow-hidden rounded-xl border bg-white transition-[border-color,box-shadow,transform] ${isCompleted ? 'duration-0' : 'duration-200'} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900 dark:bg-[#f1f0ec] dark:focus-visible:outline-offset-0! ${
                 interactionLocked ? 'cursor-default' : 'cursor-pointer active:scale-[0.98]'
               } ${borderStyle}`}
