@@ -107,9 +107,11 @@ const DailyCard: React.FC<DailyCardProps> = ({
               </p>
               {/* Room for the Daily Deal's three rows of squares, whichever game this is and before they're in:
                   what's under them is at one height on both games' cards. */}
-              <div className="mt-1.5 flex min-h-14 items-center justify-center">
-                {result.marks && <MarkGrid marks={result.marks} label={marksLabel} />}
-              </div>
+              {(result.marks || !stale) && (
+                <div className="mt-1.5 flex min-h-14 items-center justify-center">
+                  {result.marks && <MarkGrid marks={result.marks} label={marksLabel} />}
+                </div>
+              )}
               {rivalMs !== undefined && <RivalLine mine={result.elapsedMs} theirs={rivalMs} />}
               {/* A finish makes a streak, so its row is there before the server has counted it. */}
               {(streak > 0 || !stale) && (
