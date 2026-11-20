@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "minitest/mock"
 
 module ApplicationCable
   # Player ids are broadcast to every multiplayer client, so the cable must
@@ -52,6 +53,19 @@ module ApplicationCable
         connect
         assert connection.player_id
       end
+    end
+
+    test "an error after reserving an IP slot releases it instead of leaking" do
+      failing = ->(_player_id) { raise RuntimeError, "transient db error" }
+      GAME_ENGINE.stub(:register_connection, failing) do
+        (Connection::OPEN_PER_IP + 2).times do
+          assert_raises(RuntimeError) { connect }
+          @connection = nil
+        end
+      end
+
+      connect
+      assert connection.player_id
     end
   end
 end

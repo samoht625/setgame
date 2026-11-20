@@ -48,6 +48,7 @@ module PlayerMerger
       else
         PlayerSetting.where(player_id: from).update_all(player_id: to, updated_at: now)
       end
+      PlayerSetting.bump_cache_version!
       PlayerMerge.create!(account: account, from_player_id: from, to_player_id: to, dropped: dropped, created_at: now)
     end
     dropped

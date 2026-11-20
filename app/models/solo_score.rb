@@ -10,6 +10,11 @@ class SoloScore < ApplicationRecord
 
   PERIODS = %w[daily weekly monthly].freeze
   SUMMARY_COLUMNS = %i[id player_id display_name elapsed_ms completed_at].freeze
+  HAS_REPLAY_SQL = Arel.sql(
+    "CASE WHEN json_valid(events) AND json_type(events) = 'array' AND json_array_length(events) > 0 " \
+    "AND json_extract(events, '$[0].type') = 'claim' AND json_type(events, '$[0].t_ms') = 'integer' " \
+    "THEN 1 ELSE 0 END AS has_replay"
+  )
 
   # Today, this week (from Monday) and this month, by the dailies' clock: a
   # practice day starts and ends when the Puzzle's and the Daily Deal's does.
@@ -39,7 +44,7 @@ class SoloScore < ApplicationRecord
   end
 
   def self.daily_leaderboard(date:, limit:)
-    select(*SUMMARY_COLUMNS, :misses, :events)
+    select(*SUMMARY_COLUMNS, :misses, HAS_REPLAY_SQL)
       .where(daily_on: date)
       .order(:elapsed_ms, :completed_at)
       .limit(limit)
@@ -60,6 +65,14 @@ class SoloScore < ApplicationRecord
       monthly: personal_best(player_id: player_id, period: "monthly"),
       all_time: regular.select(*SUMMARY_COLUMNS).where(player_id: player_id).order(:elapsed_ms, :created_at).first
     }
+  end
+
+  def replay?
+    if has_attribute?(:has_replay)
+      ActiveModel::Type::Boolean.new.cast(read_attribute(:has_replay))
+    else
+      claims.present?
+    end
   end
 
   # The run's claims as the server verified them: each set's cards and when it

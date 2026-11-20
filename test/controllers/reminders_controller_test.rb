@@ -152,4 +152,41 @@ class RemindersControllerTest < ActionDispatch::IntegrationTest
     patch "/api/reminder", params: { minutes: 7 }, as: :json
     assert_response :unprocessable_entity
   end
+
+  test "unsubscribe skips CSRF for RFC 8058 while resubscribe requires a CSRF token" do
+    token = Reminder.unsubscribe_token(@account)
+    previous = ActionController::Base.allow_forgery_protection
+    ActionController::Base.allow_forgery_protection = true
+
+    post "/reminders/unsubscribe?#{{ t: token }.to_query}", params: { "List-Unsubscribe" => "One-Click" }
+    assert_response :success
+    refute @account.reload.reminder_enabled
+    csrf_token = css_select("form[action='/reminders/resubscribe'] input[name='authenticity_token']").first["value"]
+    assert csrf_token.present?
+
+    post "/reminders/resubscribe", params: { t: token }
+    assert_response :unprocessable_entity
+    refute @account.reload.reminder_enabled
+
+    post "/reminders/resubscribe", params: { t: token, authenticity_token: csrf_token }
+    assert_response :success
+    assert @account.reload.reminder_enabled
+  ensure
+    ActionController::Base.allow_forgery_protection = previous
+  end
+
+  test "POST reminder actions are rate-limited" do
+    RemindersController::POSTS_PER_MINUTE.times do
+      post "/reminders/unsubscribe", params: { t: "nope" }
+      assert_response :not_found
+    end
+
+    post "/reminders/unsubscribe", params: { t: "nope" }
+    assert_response :too_many_requests
+
+    travel 61.seconds do
+      post "/reminders/unsubscribe", params: { t: "nope" }
+      assert_response :not_found
+    end
+  end
 end

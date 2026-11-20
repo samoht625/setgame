@@ -68,10 +68,6 @@ class SoloRng
     end
   end
 
-  def imul(a, b)
-    imul_signed(a, b) & MASK
-  end
-
   def imul_signed(a, b)
     to_int32((to_int32(a) * to_int32(b)) & MASK)
   end
@@ -79,10 +75,6 @@ class SoloRng
   def to_int32(n)
     n = n & MASK
     n >= 0x80000000 ? n - 0x100000000 : n
-  end
-
-  def to_int(n)
-    to_int32(n)
   end
 
   def ushr(value, bits)

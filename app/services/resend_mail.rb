@@ -9,8 +9,6 @@ module ResendMail
   URL = URI("https://api.resend.com/emails")
   Result = Struct.new(:ok, :id, :status, :error, keyword_init: true) do
     def ok? = ok
-    # Resend's rate limit or a server/network error: worth retrying later.
-    def retryable? = !ok && (status.nil? || status == 429 || status >= 500)
   end
 
   mattr_accessor :deliveries, default: []

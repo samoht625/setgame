@@ -18,10 +18,16 @@ class SetStats
   CACHE_KEY = "set_stats/v12"
   CACHE_FOR = 5.minutes
 
+  # Precomputed [number, color, shape, shading] for card ids 1..81 (indexed by id - 1).
+  CARD_ATTRS = Array.new(81) do |i|
+    [i % 3, (i / 3) % 3, (i / 9) % 3, (i / 27) % 3].freeze
+  end.freeze
+  private_constant :CARD_ATTRS
+
   # At most CACHE_FOR old, and never a day behind: the per-day chart ends on
   # today, so numbers worked out before midnight are worked out again after it.
   def self.cached
-    stats = Rails.cache.fetch(CACHE_KEY, expires_in: CACHE_FOR) { new.compute }
+    stats = Rails.cache.fetch(CACHE_KEY, expires_in: CACHE_FOR, race_condition_ttl: 30.seconds) { new.compute }
     return stats if stats[:activity_by_day].last[:date] == DailyPuzzle.today.date
 
     new.compute.tap { |fresh| Rails.cache.write(CACHE_KEY, fresh, expires_in: CACHE_FOR) }
@@ -32,8 +38,15 @@ class SetStats
   end
 
   def self.kind(cards)
-    attrs = cards.map { |c| Rules.card_attributes(c) }
-    ATTRS.map { |a| attrs.map { |h| h[a.to_sym] }.uniq.length == 3 }
+    a = CARD_ATTRS[cards[0] - 1]
+    b = CARD_ATTRS[cards[1] - 1]
+    c = CARD_ATTRS[cards[2] - 1]
+    [
+      a[0] != b[0] && b[0] != c[0] && a[0] != c[0],
+      a[1] != b[1] && b[1] != c[1] && a[1] != c[1],
+      a[2] != b[2] && b[2] != c[2] && a[2] != c[2],
+      a[3] != b[3] && b[3] != c[3] && a[3] != c[3]
+    ]
   end
 
   def compute
@@ -55,19 +68,26 @@ class SetStats
       end
     end
 
-    counts = finds.map(&:first).tally
-    timed = finds.select { |_, gap, _| gap <= IDLE_MS }
+    counts = Hash.new(0)
     by_triple = Hash.new { |h, k| h[k] = [] }
-    timed.each { |cards, gap, _| by_triple[cards] << gap }
     type_counts = Hash.new(0)
-    finds.each { |cards, _, _| type_counts[self.class.kind(cards).count(true)] += 1 }
     by_kind = Hash.new { |h, k| h[k] = [] }
-    timed.each { |cards, gap, _| by_kind[self.class.kind(cards)] << gap }
+    first_set = nil
+
+    finds.each do |cards, gap, _|
+      counts[cards] += 1
+      k = self.class.kind(cards)
+      type_counts[k.count(true)] += 1
+      next if gap > IDLE_MS
+
+      by_triple[cards] << gap
+      by_kind[k] << gap
+      first_set = [cards, gap] if first_set.nil? || gap < first_set[1]
+    end
 
     fastest = by_triple.select { |_, g| g.length >= MIN_SAMPLE }
       .map { |c, g| { cards: c, median_ms: median(g), n: g.length } }
       .sort_by { |h| h[:median_ms] }.first(10)
-    first_set = timed.min_by { |_, gap, _| gap }
 
     games = SoloGame.where("sets_found > 0 OR status = 'completed'")
     hours = games.pluck(:started_at).map { |t| t.in_time_zone(ZONE) }
@@ -140,24 +160,49 @@ class SetStats
   # and fastest finished Puzzle (a device with no named run goes by the name on
   # its Puzzle run).
   def most_games(limit = 10)
-    rows = SoloScore.order(:completed_at).pluck(:player_id, :display_name, :daily_on, :elapsed_ms)
-    names = {}
-    rows.each { |pid, name, _, _| names[pid] = name.strip if name.present? }
-    tally = Hash.new { |h, k| h[k] = { name: k, solo: 0, daily: 0, best_daily_ms: nil, best_puzzle_ms: nil } }
-    rows.each do |pid, _, daily, ms|
-      next unless (name = names[pid])
+    score_rows = ApplicationRecord.connection.select_rows(<<~SQL)
+      WITH latest_names AS (
+        SELECT player_id, TRIM(display_name) AS name,
+               ROW_NUMBER() OVER (PARTITION BY player_id ORDER BY completed_at DESC, id DESC) AS rn
+        FROM solo_scores
+        WHERE display_name IS NOT NULL AND TRIM(display_name) != ''
+      )
+      SELECT
+        s.player_id,
+        ln.name,
+        SUM(CASE WHEN s.daily_on IS NULL THEN 1 ELSE 0 END) AS solo_count,
+        SUM(CASE WHEN s.daily_on IS NOT NULL THEN 1 ELSE 0 END) AS daily_count,
+        MIN(CASE WHEN s.daily_on IS NOT NULL THEN s.elapsed_ms END) AS best_daily_ms
+      FROM solo_scores s
+      INNER JOIN latest_names ln ON ln.player_id = s.player_id AND ln.rn = 1
+      GROUP BY s.player_id, ln.name
+      ORDER BY MAX(s.completed_at) ASC
+    SQL
 
+    names = {}
+    tally = Hash.new { |h, k| h[k] = { name: k, solo: 0, daily: 0, best_daily_ms: nil, best_puzzle_ms: nil } }
+    score_rows.each do |pid, raw_name, solo_count, daily_count, best_daily_ms|
+      name = raw_name.to_s.strip
+      next if name.empty?
+
+      names[pid] = name
       entry = tally[name.downcase]
       entry[:name] = name
-      entry[daily ? :daily : :solo] += 1
-      entry[:best_daily_ms] = [entry[:best_daily_ms], ms].compact.min if daily
+      entry[:solo] += solo_count.to_i
+      entry[:daily] += daily_count.to_i
+      entry[:best_daily_ms] = [entry[:best_daily_ms], best_daily_ms.to_i].compact.min if best_daily_ms
     end
-    PuzzleRun.finished.where.not(elapsed_ms: nil).pluck(:player_id, :display_name, :elapsed_ms).each do |pid, name, ms|
-      key = (names[pid] || name.presence)&.strip&.downcase
-      next unless key && tally.key?(key)
+    return [] if tally.empty?
 
-      tally[key][:best_puzzle_ms] = [tally[key][:best_puzzle_ms], ms].compact.min
-    end
+    PuzzleRun.finished.where.not(elapsed_ms: nil)
+      .group(:player_id, :display_name)
+      .pluck(:player_id, :display_name, Arel.sql("MIN(elapsed_ms)"))
+      .each do |pid, name, ms|
+        key = (names[pid] || name.presence)&.strip&.downcase
+        next unless key && tally.key?(key)
+
+        tally[key][:best_puzzle_ms] = [tally[key][:best_puzzle_ms], ms].compact.min
+      end
     tally.values.map { |h| h.merge(total: h[:solo] + h[:daily]) }
       .sort_by { |h| [-h[:total], h[:name].downcase] }.first(limit)
   end

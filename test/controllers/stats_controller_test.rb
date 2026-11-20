@@ -291,6 +291,79 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     assert_select "section.sr-only", 0, "the longer About text stays on the game pages"
   end
 
+  test "SetStats.kind lookup table agrees with Rules.card_attributes for all 1,080 valid sets" do
+    SetStats.all_sets.each do |cards|
+      attrs = cards.map { |c| Rules.card_attributes(c) }
+      expected = SetStats::ATTRS.map { |a| attrs.map { |h| h[a.to_sym] }.uniq.length == 3 }
+      assert_equal expected, SetStats.kind(cards), "mismatch for #{cards.inspect}"
+    end
+  end
+
+  test "most_games SQL aggregation merges unnamed device runs, renames, and multi-device names" do
+    reset_games
+    now = Time.current
+    add = lambda do |pid, name, elapsed_ms:, completed_at:, daily_on: nil|
+      game = SoloGame.create!(
+        id: SecureRandom.uuid,
+        player_id: pid,
+        seed: "1",
+        status: "completed",
+        started_at: completed_at - 2.minutes,
+        completed_at: completed_at,
+        daily_on: daily_on
+      )
+      SoloScore.create!(
+        solo_game: game,
+        player_id: pid,
+        display_name: name,
+        elapsed_ms: elapsed_ms,
+        completed_at: completed_at,
+        daily_on: daily_on,
+        events: []
+      )
+    end
+
+    # Device 1: unnamed first, named later, then renamed.
+    add.call("dev-1", nil, elapsed_ms: 80_000, completed_at: now - 3.hours)
+    add.call("dev-1", "OldName", elapsed_ms: 70_000, completed_at: now - 2.hours)
+    add.call("dev-1", "  Ada  ", elapsed_ms: 60_000, completed_at: now - 1.hour, daily_on: Date.current)
+    # Device 2: same person with different casing.
+    add.call("dev-2", "ada", elapsed_ms: 50_000, completed_at: now, daily_on: Date.current - 1)
+    # Device 3: never named -> excluded.
+    add.call("dev-3", "   ", elapsed_ms: 40_000, completed_at: now)
+
+    PuzzleRun.create!(id: SecureRandom.uuid, player_id: "dev-1", puzzle_on: Date.current - 1, cards: [],
+                      started_at: now - 2.hours, completed_at: now - 1.hour, elapsed_ms: 35_000)
+    PuzzleRun.create!(id: SecureRandom.uuid, player_id: "dev-phone", display_name: "ADA", puzzle_on: Date.current, cards: [],
+                      started_at: now - 1.hour, completed_at: now, elapsed_ms: 29_000)
+
+    top = SetStats.new.compute[:most_games]
+    assert_equal [{ name: "ada", solo: 2, daily: 2, best_daily_ms: 50_000, best_puzzle_ms: 29_000, total: 4 }], top
+  end
+
+  test "ShareGrid caches daily medians for 1 hour and computes them from selected columns" do
+    assert_equal 1.hour, ShareGrid::CACHE_TTL
+    reset_games
+    now = Time.current
+    game = SoloGame.create!(id: SecureRandom.uuid, player_id: "p1", seed: "1", status: "completed", started_at: now - 2.minutes, daily_on: Date.current)
+    SoloScore.create!(
+      solo_game: game,
+      player_id: "p1",
+      elapsed_ms: 10_000,
+      completed_at: now,
+      daily_on: Date.current,
+      events: [
+        { "type" => "claim", "cards" => [1, 2, 3], "t_ms" => 3_000 },
+        { "type" => "claim", "cards" => [4, 5, 6], "t_ms" => 10_000 }
+      ]
+    )
+
+    medians = ShareGrid.compute_daily_medians
+    assert_equal({ 0 => 3_000, 1 => 7_000 }, medians[:by_index])
+    assert_equal({ 0 => 1, 1 => 1 }, medians[:samples])
+    assert_equal 5_000, medians[:overall]
+  end
+
   private
 
   def pacific(*args)

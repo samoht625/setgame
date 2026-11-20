@@ -467,4 +467,25 @@ class ArchiveControllerTest < ActionDispatch::IntegrationTest
       assert_equal false, JSON.parse(response.body).dig("me", "attempted")
     end
   end
+
+  test "archive index computes per-day stats with two combined GROUP BY queries" do
+    travel_to NOON do
+      create_daily_score(Date.new(2026, 10, 3), elapsed_ms: 200_000)
+      create_daily_score(DAY, elapsed_ms: 185_000)
+      create_puzzle_run(DAY, elapsed_ms: 42_000)
+
+      queries = []
+      subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        queries << payload[:sql] if payload[:sql].include?("GROUP BY")
+      end
+      begin
+        get "/archive"
+        assert_response :success
+      ensure
+        ActiveSupport::Notifications.unsubscribe(subscriber)
+      end
+
+      assert_equal 2, queries.length, "expected 1 GROUP BY for solo_scores and 1 for puzzle_runs"
+    end
+  end
 end

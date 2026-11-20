@@ -25,7 +25,11 @@ module ActiveSupport
     # SQLite + WAL: keep tests in a single process to avoid lock contention.
     parallelize(workers: 1)
 
-    setup { RateLimit.reset! }
+    setup do
+      RateLimit.reset!
+      DailyPuzzle.reset_launch_date!
+      SoloGame.reset_expire_stale_throttle!
+    end
 
     # Plays the whole deal with the server-side simulator, claiming the first
     # available set each turn, and returns the claim events a client would send.

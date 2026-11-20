@@ -6,8 +6,12 @@ class SoloGame < ApplicationRecord
   RULES_VERSION = 1
   MAX_OPEN_PER_PLAYER = 5
   EXPIRES_AFTER = 7.days
+  EXPIRE_STALE_INTERVAL = 5.minutes
   # 81 cards make at most 27 disjoint sets.
   MAX_SETS = 27
+
+  @expire_stale_lock = Mutex.new
+  @last_expire_stale_at = nil
 
   has_one :solo_score, dependent: :destroy
 
@@ -17,11 +21,29 @@ class SoloGame < ApplicationRecord
 
   scope :open_games, -> { where(status: "open") }
 
-  def self.expire_stale!
+  def self.expire_stale!(force: false)
+    now = Time.current
+    should_run = @expire_stale_lock.synchronize do
+      if force || @last_expire_stale_at.nil? || now < @last_expire_stale_at || (now - @last_expire_stale_at) >= EXPIRE_STALE_INTERVAL
+        @last_expire_stale_at = now
+        true
+      else
+        false
+      end
+    end
+    return 0 unless should_run
+
     open_games.where("started_at < ?", EXPIRES_AFTER.ago).update_all(
       status: "expired",
-      updated_at: Time.current
+      updated_at: now
     )
+  rescue StandardError
+    @expire_stale_lock.synchronize { @last_expire_stale_at = nil if @last_expire_stale_at == now }
+    raise
+  end
+
+  def self.reset_expire_stale_throttle!
+    @expire_stale_lock.synchronize { @last_expire_stale_at = nil }
   end
 
   # Starting a new game abandons the player's oldest open games so the open
