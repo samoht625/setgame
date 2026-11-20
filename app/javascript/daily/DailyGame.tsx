@@ -1,11 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { knownStatus, sharedResult } from '../lib/boot'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { withTimeout } from '../lib/abort'
+import { isStatusFresh, knownStatus, sharedResult } from '../lib/boot'
 import { useOtherDailyDone, PRACTICE_LINK } from '../hooks/useOtherDailyDone'
+import { useFeedback } from '../hooks/useFeedback'
 import { secondaryButtonSmall } from '../lib/buttons'
 import Board from '../components/Board'
 import GameLayout from '../components/GameLayout'
 import SidePanel from '../components/SidePanel'
-import Toast, { type ToastMessage, type ToastType } from '../components/Toast'
+import Toast from '../components/Toast'
 import { Hud, HudChip, HudDivider, HudStat } from '../components/Hud'
 import { useGameMenu } from '../components/GameMenu'
 import ScoreValue from '../components/ScoreValue'
@@ -46,6 +48,7 @@ const SAVE_KEY = 'setgame_daily_v1'
 // Session-scoped so a reload mid-game doesn't report the same quit twice.
 const QUIT_REPORTED_KEY = 'setgame_daily_quit_reported'
 const START_LINES: [string, string] = ['Same deal for everyone today.', 'One try, against the clock.']
+const EMPTY_CARDS: number[] = []
 
 type DailyRun = {
   date: string
@@ -112,19 +115,9 @@ function storeSave(save: DailySave): void {
   }
 }
 
-function useNow(intervalMs: number): number {
-  const [now, setNow] = useState(Date.now)
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), intervalMs)
-    return () => clearInterval(timer)
-  }, [intervalMs])
-  return now
-}
-
 const DailyGame: React.FC = () => {
   const { playSelection, playSet } = useSound()
   const panel = useSidePanel()
-  const nowMs = useNow(30_000)
   const [save, setSave] = useState<DailySave>(() => loadSave(dailyDate()))
   const saveRef = useRef(save)
   const [status, setStatus] = useState<DailyStatus | null>(() => knownStatus('daily'))
@@ -133,14 +126,11 @@ const DailyGame: React.FC = () => {
   const [starting, setStarting] = useState(false)
   const [clockPending, setClockPending] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [selectedCards, setSelectedCards] = useState<number[]>([])
+  const [selectedCards, setSelectedCards] = useState<number[]>(EMPTY_CARDS)
   const autoReveal = useAutoCompleteReveal()
-  const [rejectedCards, setRejectedCards] = useState<number[]>([])
+  const { toast, rejectedCards, showToast, dismissToast, flashRejection, clearRejection } = useFeedback()
   const [claimAnimationKey, setClaimAnimationKey] = useState(0)
-  const [toast, setToast] = useState<ToastMessage | null>(null)
   const [shareNote, setShareNote] = useState<string | null>(null)
-  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const rejectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const shareNoteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const progressSentRef = useRef<{ gameId: string; sets: number } | null>(null)
   const namedScoreRef = useRef<string | null>(null)
@@ -164,21 +154,11 @@ const DailyGame: React.FC = () => {
 
   const refreshStatus = () => setStatusRevision(value => value + 1)
 
-  const showToast = (text: string, type: ToastType = 'success') => {
-    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
-    setToast({ text, type })
-    toastTimeoutRef.current = setTimeout(() => setToast(null), 2500)
-  }
-
-  const flashRejection = (cards: number[]) => {
-    if (rejectTimeoutRef.current) clearTimeout(rejectTimeoutRef.current)
-    setRejectedCards(cards)
-    rejectTimeoutRef.current = setTimeout(() => setRejectedCards([]), 650)
-  }
-
   useEffect(() => {
+    if (statusRevision === 0 && isStatusFresh('daily')) return
     const request = new AbortController()
-    fetchDailyStatus(AbortSignal.any([request.signal, AbortSignal.timeout(10000)]))
+    const { signal, cleanup } = withTimeout(10000, request.signal)
+    fetchDailyStatus(signal)
       .then(data => {
         if (request.signal.aborted) return
         setStatus(data)
@@ -187,7 +167,11 @@ const DailyGame: React.FC = () => {
       .catch(() => {
         if (!request.signal.aborted) setStatusError(true)
       })
-    return () => request.abort()
+      .finally(cleanup)
+    return () => {
+      request.abort()
+      cleanup()
+    }
   }, [statusRevision])
 
   useEffect(() => {
@@ -200,8 +184,6 @@ const DailyGame: React.FC = () => {
   }, [shared])
 
   useEffect(() => () => {
-    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
-    if (rejectTimeoutRef.current) clearTimeout(rejectTimeoutRef.current)
     if (shareNoteTimeoutRef.current) clearTimeout(shareNoteTimeoutRef.current)
   }, [])
 
@@ -265,8 +247,8 @@ const DailyGame: React.FC = () => {
   const begin = async () => {
     if (starting) return
     setStarting(true)
-    setSelectedCards([])
-    setRejectedCards([])
+    setSelectedCards(EMPTY_CARDS)
+    clearRejection()
     const started = await startDailyGame()
     setStarting(false)
     if (started === 'already_played') {
@@ -330,7 +312,7 @@ const DailyGame: React.FC = () => {
     const sortedCards = [...cardIds].sort((a, b) => a - b)
     const deal = restoreSoloDeal(current.board, current.deck, current.rngState)
     const result = thirdCardMissing ? { ok: false as const, error: THIRD_CARD_MISSING } : applySoloClaim(deal, sortedCards)
-    setSelectedCards([])
+    setSelectedCards(EMPTY_CARDS)
     if (!result.ok) {
       putRun({ ...current, misses: current.misses + 1 })
       showToast(missMessage(result.error), 'error')
@@ -386,12 +368,16 @@ const DailyGame: React.FC = () => {
         : selectedCards
     const pick = autoCompletePick(picked, run.board, twoCardModeOn(getPlayerDisplayName()))
     if (pick.cards.length > selectedCards.length && pick.cards.length < 3 && !pick.missing) playSelection()
-    setSelectedCards(pick.cards)
+    setSelectedCards(pick.cards.length ? pick.cards : EMPTY_CARDS)
     if (pick.filled !== null) {
       const atMs = Date.now()
       autoReveal.reveal(pick.cards, pick.filled, () => claimRef.current(pick.cards, false, atMs), true)
     } else if (pick.cards.length === 3 || pick.missing) claimSet(pick.cards, pick.missing)
   }
+
+  const handleCardClickRef = useRef(handleCardClick)
+  handleCardClickRef.current = handleCardClick
+  const onCardClick = useCallback((cardId: number) => handleCardClickRef.current(cardId), [])
 
   const share = async (result: DailyShare) => {
     const outcome = await shareLink(dailyShareLink(result))
@@ -466,7 +452,7 @@ const DailyGame: React.FC = () => {
     void nameScoreRef.current(name)
   }), [])
 
-  const toastNode = toast && <Toast message={toast} onClose={() => setToast(null)} />
+  const toastNode = toast && <Toast message={toast} onClose={dismissToast} />
   const playing = starting || run?.status === 'playing'
 
   const showCard = !playing && Boolean(result || status?.me.attempted)
@@ -501,7 +487,6 @@ const DailyGame: React.FC = () => {
           statusError={statusError}
           onRetryStatus={refreshStatus}
           playerId={playerId}
-          nowMs={nowMs}
           onShare={result ? () => void share(result) : undefined}
           shareNote={shareNote}
           onNextDeal={goToToday}
@@ -589,13 +574,13 @@ const DailyGame: React.FC = () => {
         }
         board={
           <Board
-            cards={run && !starting ? run.board : []}
+            cards={run && !starting ? run.board : EMPTY_CARDS}
             selectedCards={selectedCards}
             rejectedCards={rejectedCards}
             completedCards={autoReveal.cards}
             autoFilledCard={autoReveal.filled}
             completedLeaving={autoReveal.leaving}
-            onCardClick={handleCardClick}
+            onCardClick={onCardClick}
             claiming={clockPending}
             loading={starting}
             gameOver={overlay !== null}
@@ -604,7 +589,7 @@ const DailyGame: React.FC = () => {
         }
         panel={
           <SidePanel open={panel.open} onClose={() => panel.setOpen(false)} title="Leaderboard" isDesktop={panel.isDesktop}>
-            <DailyPanel status={status} error={statusError} onRetry={refreshStatus} playerId={playerId} nowMs={nowMs} />
+            <DailyPanel status={status} error={statusError} onRetry={refreshStatus} playerId={playerId} />
           </SidePanel>
         }
       />

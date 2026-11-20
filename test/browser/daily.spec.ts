@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { isSet } from '../../app/javascript/lib/rules'
+import { routeBootStatus } from './players'
 
 const SAVE_KEY = 'setgame_daily_v1'
 type Event = [string, Record<string, unknown> | undefined]
@@ -294,8 +295,8 @@ test('the result card offers the Puzzle until it is done, then Practice, and not
   })
   const mine = { display_name: null, elapsed_ms: 132_000, misses: 2, rank: 1, total: 1, share_token: 'c-3gk0-abcdefghijkl', replay: true, streak: 1, marks: 'gggyyyrrrgy' }
   let puzzleFinished = false
-  await page.route('**/api/daily', route => route.fulfill({ json: status(mine) }))
-  await page.route('**/api/puzzle', route => route.fulfill({ json: status(puzzleFinished ? { ...mine, elapsed_ms: 40_000 } : null) }))
+  await routeBootStatus(page, 'daily', () => status(mine))
+  await routeBootStatus(page, 'puzzle', () => status(puzzleFinished ? { ...mine, elapsed_ms: 40_000 } : null))
   await page.goto('/daily')
   await seedFinishedRun(page, [4, 8, 12, 20, 28, 36, 48, 60, 72, 92, 112, 132].map(s => s * 1000), 2)
   await page.reload()
@@ -475,15 +476,13 @@ test.describe('on a phone', () => {
     const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date())
     const part = (type: string) => parts.find(p => p.type === type)!.value
     const token = 'c-3gk0-abcdefghijkl'
-    await page.route('**/api/daily', route => route.fulfill({
-      json: {
-        date: `${part('year')}-${part('month')}-${part('day')}`,
-        number: 7,
-        next_at: new Date(Date.now() + 3600_000).toISOString(),
-        total: 1,
-        leaderboard: [],
-        me: { attempted: true, streak: 3, result: { display_name: null, elapsed_ms: 132_000, misses: 2, rank: 1, total: 1, share_token: token, replay: true, streak: 3, marks: 'gggyyyrrrgy' } }
-      }
+    await routeBootStatus(page, 'daily', () => ({
+      date: `${part('year')}-${part('month')}-${part('day')}`,
+      number: 7,
+      next_at: new Date(Date.now() + 3600_000).toISOString(),
+      total: 1,
+      leaderboard: [],
+      me: { attempted: true, streak: 3, result: { display_name: null, elapsed_ms: 132_000, misses: 2, rank: 1, total: 1, share_token: token, replay: true, streak: 3, marks: 'gggyyyrrrgy' } }
     }))
     await page.goto('/daily')
     await seedFinishedRun(page, [4, 8, 12, 20, 28, 36, 48, 60, 72, 92, 112, 132].map(s => s * 1000), 2)

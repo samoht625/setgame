@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchDailyStatus } from '../lib/solo_api'
 import { fetchPuzzleStatus } from '../lib/puzzle_api'
-import { knownStatus } from '../lib/boot'
+import { isStatusFresh, knownStatus } from '../lib/boot'
 import type { DailyStatus } from '../lib/solo_api'
 
 const SAVE_KEYS = { daily: 'setgame_daily_v1', puzzle: 'setgame_puzzle_v1' } as const
@@ -36,7 +36,12 @@ export function useOtherDailyDone(other: 'daily' | 'puzzle', enabled = true): bo
     }
     const onStorage = (event: StorageEvent) => { if (event.key === SAVE_KEYS[other]) check() }
     const onVisible = () => { if (document.visibilityState === 'visible') check() }
-    check()
+    if (isStatusFresh(other)) {
+      const fresh = knownStatus(other)
+      if (fresh) setDone(isDone(other, fresh))
+    } else {
+      check()
+    }
     window.addEventListener('storage', onStorage)
     window.addEventListener('focus', check)
     document.addEventListener('visibilitychange', onVisible)

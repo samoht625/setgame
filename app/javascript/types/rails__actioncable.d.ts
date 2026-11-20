@@ -4,8 +4,19 @@ declare module '@rails/actioncable' {
     perform(action: string, data?: Record<string, unknown>): boolean
   }
 
+  export interface SubscriptionMixin<TReceived = unknown> {
+    initialized?(): void
+    connected?(): void
+    disconnected?(options?: { willAttemptReconnect?: boolean }): void
+    rejected?(): void
+    received?(data: TReceived): void
+  }
+
   export interface Subscriptions {
-    create(channel: string | { channel: string; [key: string]: unknown }, mixin?: object): Subscription & Record<string, any>
+    create<TReceived = unknown>(
+      channel: string | { channel: string; [key: string]: unknown },
+      mixin?: SubscriptionMixin<TReceived>
+    ): Subscription
   }
 
   export interface Consumer {
@@ -14,5 +25,5 @@ declare module '@rails/actioncable' {
     disconnect(): void
   }
 
-  export function createConsumer(url?: string): Consumer
+  export function createConsumer(url?: string | (() => string)): Consumer
 }

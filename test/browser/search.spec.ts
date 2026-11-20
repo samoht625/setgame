@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { routeBootStatus } from './players'
 
 // What the front door (the Puzzle) and the Daily Deal's page tell search
 // engines, and what the tab says. The same strings are in app/views/home
@@ -316,11 +317,10 @@ test.describe('on a small phone', () => {
 
 test('once today’s deal is played, the result card’s heading sits under the page’s one main heading', async ({ page }) => {
   // Today's try already used (as on another device): the page is the result card, not the game.
-  await page.route('**/api/daily', async route => {
-    const response = await route.fetch()
-    const status = await response.json()
-    await route.fulfill({ response, json: { ...status, me: { ...status.me, attempted: true } } })
-  })
+  await routeBootStatus(page, 'daily', status => ({
+    ...status,
+    me: { ...(status.me as Record<string, unknown>), attempted: true }
+  }))
   await page.goto('/daily')
   const card = page.getByRole('region', { name: /^Daily Deal #\d+$/ })
   await expect(card).toBeVisible()

@@ -1,11 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { knownStatus, sharedResult } from '../lib/boot'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { withTimeout } from '../lib/abort'
+import { isStatusFresh, knownStatus, sharedResult } from '../lib/boot'
 import { useOtherDailyDone, PRACTICE_LINK } from '../hooks/useOtherDailyDone'
+import { useFeedback } from '../hooks/useFeedback'
 import { secondaryButtonSmall } from '../lib/buttons'
 import Board from '../components/Board'
 import GameLayout from '../components/GameLayout'
 import SidePanel from '../components/SidePanel'
-import Toast, { type ToastMessage, type ToastType } from '../components/Toast'
+import Toast from '../components/Toast'
 import { Hud, HudChip, HudDivider, HudStat } from '../components/Hud'
 import { useGameMenu } from '../components/GameMenu'
 import ScoreValue from '../components/ScoreValue'
@@ -40,6 +42,7 @@ const QUIT_REPORTED_KEY = 'setgame_puzzle_quit_reported'
 const SET_COUNT = 6
 const MODE = 'puzzle'
 const START_LINES: [string, string] = ['12 cards. 6 sets. Find them all.', 'One try, against the clock.']
+const EMPTY_CARDS: number[] = []
 
 type PuzzleRun = {
   date: string
@@ -94,19 +97,9 @@ function storeRun(run: PuzzleRun | null): void {
   }
 }
 
-function useNow(intervalMs: number): number {
-  const [now, setNow] = useState(Date.now)
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), intervalMs)
-    return () => clearInterval(timer)
-  }, [intervalMs])
-  return now
-}
-
 const PuzzleGame: React.FC = () => {
   const { playSelection, playSet } = useSound()
   const panel = useSidePanel()
-  const nowMs = useNow(30_000)
   const [run, setRun] = useState<PuzzleRun | null>(() => loadRun(dailyDate()))
   const runRef = useRef(run)
   const [status, setStatus] = useState<PuzzleStatus | null>(() => knownStatus('puzzle'))
@@ -115,16 +108,15 @@ const PuzzleGame: React.FC = () => {
   const [starting, setStarting] = useState(false)
   const [clockPending, setClockPending] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [selectedCards, setSelectedCards] = useState<number[]>([])
+  const [selectedCards, setSelectedCards] = useState<number[]>(EMPTY_CARDS)
   const autoReveal = useAutoCompleteReveal()
-  const [rejectedCards, setRejectedCards] = useState<number[]>([])
+  const { toast, rejectedCards, showToast, dismissToast, flashRejection, clearRejection } = useFeedback()
   const [claimAnimationKey, setClaimAnimationKey] = useState(0)
-  const [toast, setToast] = useState<ToastMessage | null>(null)
   const [shareNote, setShareNote] = useState<string | null>(null)
-  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const rejectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const shareNoteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const namedRef = useRef<string | null>(null)
+  const showingTimes = panel.open
+  const showedTimesRef = useRef(showingTimes)
   const playerId = getPlayerId()
   const [shared] = useState(() => sharedResult('puzzle'))
   const [newPlayer] = useState(newToRules)
@@ -137,21 +129,11 @@ const PuzzleGame: React.FC = () => {
 
   const refreshStatus = () => setStatusRevision(value => value + 1)
 
-  const showToast = (text: string, type: ToastType = 'success') => {
-    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
-    setToast({ text, type })
-    toastTimeoutRef.current = setTimeout(() => setToast(null), 2500)
-  }
-
-  const flashRejection = (cards: number[]) => {
-    if (rejectTimeoutRef.current) clearTimeout(rejectTimeoutRef.current)
-    setRejectedCards(cards)
-    rejectTimeoutRef.current = setTimeout(() => setRejectedCards([]), 650)
-  }
-
   useEffect(() => {
+    if (statusRevision === 0 && isStatusFresh('puzzle')) return
     const request = new AbortController()
-    fetchPuzzleStatus(AbortSignal.any([request.signal, AbortSignal.timeout(10000)]))
+    const { signal, cleanup } = withTimeout(10000, request.signal)
+    fetchPuzzleStatus(signal)
       .then(data => {
         if (request.signal.aborted) return
         setStatus(data)
@@ -160,20 +142,23 @@ const PuzzleGame: React.FC = () => {
       .catch(() => {
         if (!request.signal.aborted) setStatusError(true)
       })
-    return () => request.abort()
+      .finally(cleanup)
+    return () => {
+      request.abort()
+      cleanup()
+    }
   }, [statusRevision])
 
   useEffect(() => {
-    if (panel.open) refreshStatus()
-  }, [panel.open])
+    if (showingTimes && !showedTimesRef.current) refreshStatus()
+    showedTimesRef.current = showingTimes
+  }, [showingTimes])
 
   useEffect(() => {
     if (shared) track('shared_landing', { mode: MODE })
   }, [shared])
 
   useEffect(() => () => {
-    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
-    if (rejectTimeoutRef.current) clearTimeout(rejectTimeoutRef.current)
     if (shareNoteTimeoutRef.current) clearTimeout(shareNoteTimeoutRef.current)
   }, [])
 
@@ -212,8 +197,8 @@ const PuzzleGame: React.FC = () => {
   const begin = async () => {
     if (starting) return
     setStarting(true)
-    setSelectedCards([])
-    setRejectedCards([])
+    setSelectedCards(EMPTY_CARDS)
+    clearRejection()
     const started = await startPuzzle()
     setStarting(false)
     if (started === 'already_played') {
@@ -270,7 +255,7 @@ const PuzzleGame: React.FC = () => {
     const current = runRef.current
     if (!current || current.status !== 'playing') return
     const sorted = [...cards].sort((a, b) => a - b)
-    setSelectedCards([])
+    setSelectedCards(EMPTY_CARDS)
 
     if (thirdCardMissing || !isSet(sorted[0]!, sorted[1]!, sorted[2]!)) {
       putRun({ ...current, misses: current.misses + 1, attempts: `${current.attempts ?? ''}m` })
@@ -320,14 +305,13 @@ const PuzzleGame: React.FC = () => {
       : selectedCards.length < 3 ? [...selectedCards, cardId] : selectedCards
     const pick = autoCompletePick(picked, run.cards, twoCardModeOn(getSavedName()))
     if (pick.cards.length > selectedCards.length && pick.cards.length < 3 && !pick.missing) playSelection()
-    setSelectedCards(pick.cards)
+    setSelectedCards(pick.cards.length ? pick.cards : EMPTY_CARDS)
     if (pick.filled !== null) {
       const sorted = [...pick.cards].sort((a, b) => a - b)
       if (run.found.some(found => sameSet(found.cards, sorted))) {
         // Same outcome as a 3-card repeat in claim(): a toast, no miss.
-        if (rejectTimeoutRef.current) clearTimeout(rejectTimeoutRef.current)
-        setRejectedCards([])
-        setSelectedCards([])
+        clearRejection()
+        setSelectedCards(EMPTY_CARDS)
         showToast('Already found', 'error')
         autoReveal.reveal(pick.cards, pick.filled, undefined, false, 'repeat')
         return
@@ -336,6 +320,10 @@ const PuzzleGame: React.FC = () => {
       autoReveal.reveal(pick.cards, pick.filled, () => claimRef.current(pick.cards, false, atMs))
     } else if (pick.cards.length === 3 || pick.missing) claim(pick.cards, pick.missing)
   }
+
+  const handleCardClickRef = useRef(handleCardClick)
+  handleCardClickRef.current = handleCardClick
+  const onCardClick = useCallback((cardId: number) => handleCardClickRef.current(cardId), [])
 
   const share = async (result: DailyShare) => {
     const outcome = await shareLink(puzzleShareLink(result))
@@ -401,7 +389,7 @@ const PuzzleGame: React.FC = () => {
     void nameRunRef.current(name)
   }), [])
 
-  const toastNode = toast && <Toast message={toast} onClose={() => setToast(null)} />
+  const toastNode = toast && <Toast message={toast} onClose={dismissToast} />
   const playing = starting || run?.status === 'playing'
   // An unfinished run (wiped browser, other device) resumes instead of showing a card.
   const showCard = !playing && Boolean(result)
@@ -435,7 +423,6 @@ const PuzzleGame: React.FC = () => {
           statusError={statusError}
           onRetryStatus={refreshStatus}
           playerId={playerId}
-          nowMs={nowMs}
           onShare={() => void share(result)}
           shareNote={shareNote}
           onNextDeal={goToToday}
@@ -518,13 +505,13 @@ const PuzzleGame: React.FC = () => {
         board={
           <>
             <Board
-              cards={run && !starting && playing ? run.cards : []}
+              cards={run && !starting && playing ? run.cards : EMPTY_CARDS}
               selectedCards={selectedCards}
               rejectedCards={rejectedCards}
               completedCards={autoReveal.cards}
               autoFilledCard={autoReveal.filled}
               completedTone={autoReveal.tone}
-              onCardClick={handleCardClick}
+              onCardClick={onCardClick}
               claiming={clockPending}
               loading={starting}
               gameOver={overlay !== null}
@@ -540,7 +527,6 @@ const PuzzleGame: React.FC = () => {
               error={statusError}
               onRetry={refreshStatus}
               playerId={playerId}
-              nowMs={nowMs}
               noun="puzzle"
               label={status ? `Puzzle #${status.number}` : undefined}
               emptyText="No times yet — find all 6 sets to take the top spot."

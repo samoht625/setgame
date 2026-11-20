@@ -1,3 +1,4 @@
+import { withTimeout } from './abort'
 import { adoptServerPlayer, getPlayerId, getPlayerKey, isNewPlayer } from './player_id'
 import { getSavedName } from './player_name'
 import { rememberStatus } from './boot'
@@ -99,18 +100,21 @@ export type DailyStart = {
   game_id: string
 }
 
-export async function startSoloGame(signal?: AbortSignal): Promise<SoloGameStart | null> {
+export async function startSoloGame(parentSignal?: AbortSignal): Promise<SoloGameStart | null> {
+  const { signal, cleanup } = withTimeout(8000, parentSignal)
   try {
     const res = await apiFetch('/api/solo/games', {
       method: 'POST',
       headers: headers(),
       credentials: 'same-origin',
-      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(8000)]) : AbortSignal.timeout(8000)
+      signal
     })
     if (!res.ok) return null
     return (await res.json()) as SoloGameStart
   } catch {
     return null
+  } finally {
+    cleanup()
   }
 }
 
@@ -193,15 +197,20 @@ export async function fetchDailyStatus(signal?: AbortSignal): Promise<DailyStatu
 }
 
 /** The player's finished run and another finisher's from the same day, claim by claim. */
-export async function fetchDailyComparison(date: string, playerId: string, signal?: AbortSignal): Promise<DailyComparison> {
-  const query = new URLSearchParams({ date, player_id: playerId })
-  const res = await apiFetch(`/api/daily/compare?${query}`, {
-    headers: headers(false),
-    credentials: 'same-origin',
-    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(10000)]) : AbortSignal.timeout(10000)
-  })
-  if (!res.ok) throw new Error('Could not load the replay')
-  return await res.json()
+export async function fetchDailyComparison(date: string, playerId: string, parentSignal?: AbortSignal): Promise<DailyComparison> {
+  const { signal, cleanup } = withTimeout(10000, parentSignal)
+  try {
+    const query = new URLSearchParams({ date, player_id: playerId })
+    const res = await apiFetch(`/api/daily/compare?${query}`, {
+      headers: headers(false),
+      credentials: 'same-origin',
+      signal
+    })
+    if (!res.ok) throw new Error('Could not load the replay')
+    return await res.json()
+  } finally {
+    cleanup()
+  }
 }
 
 /** Deals today's one try, or says it's already been used. */

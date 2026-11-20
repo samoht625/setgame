@@ -1,12 +1,14 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import Board from '../components/Board'
 import { Hud, HudChip, HudDivider, HudStat } from '../components/Hud'
 import MarkGrid from '../components/MarkGrid'
 import ScoreValue from '../components/ScoreValue'
 import { useSound } from '../components/SoundProvider'
-import Toast, { type ToastMessage, type ToastType } from '../components/Toast'
+import Toast from '../components/Toast'
 import { StartCard } from '../daily/StartNotes'
 import { useAutoCompleteReveal } from '../hooks/useAutoCompleteReveal'
+import { useFeedback } from '../hooks/useFeedback'
+import { withTimeout } from '../lib/abort'
 import { afterNextPaint } from '../lib/after_paint'
 import { seconds, track } from '../lib/analytics'
 import {
@@ -35,6 +37,7 @@ import { SoloTimer } from '../solitaire/SolitaireHud'
 import { formatTime } from '../solitaire/time'
 
 const SET_COUNT = 6
+const EMPTY_CARDS: number[] = []
 const NAMES: Record<ArchiveKind, string> = { daily: 'Daily Deal', puzzle: 'Puzzle' }
 const START_LINES: Record<ArchiveKind, [string, string]> = {
   daily: ['The deal everyone got that day.', 'Practice: your time isn’t ranked.'],
@@ -63,13 +66,10 @@ const ArchivePlay: React.FC<{ day: ArchiveDay }> = ({ day }) => {
   const runRef = useRef(run)
   const [viewing, setViewing] = useState(false)
   const [clockPending, setClockPending] = useState(false)
-  const [selectedCards, setSelectedCards] = useState<number[]>([])
-  const [rejectedCards, setRejectedCards] = useState<number[]>([])
+  const [selectedCards, setSelectedCards] = useState<number[]>(EMPTY_CARDS)
+  const { toast, rejectedCards, showToast, dismissToast, flashRejection, clearRejection } = useFeedback()
   const [claimAnimationKey, setClaimAnimationKey] = useState(0)
-  const [toast, setToast] = useState<ToastMessage | null>(null)
   const autoReveal = useAutoCompleteReveal()
-  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const rejectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const putRun = (next: PracticeRun | null) => {
     runRef.current = next
@@ -77,21 +77,10 @@ const ArchivePlay: React.FC<{ day: ArchiveDay }> = ({ day }) => {
     savePracticeRun(next)
   }
 
-  const showToast = (text: string, type: ToastType = 'success') => {
-    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
-    setToast({ text, type })
-    toastTimeoutRef.current = setTimeout(() => setToast(null), 2500)
-  }
-
-  const flashRejection = (cards: number[]) => {
-    if (rejectTimeoutRef.current) clearTimeout(rejectTimeoutRef.current)
-    setRejectedCards(cards)
-    rejectTimeoutRef.current = setTimeout(() => setRejectedCards([]), 650)
-  }
-
   useEffect(() => {
     const request = new AbortController()
-    fetchRankedResult(day, AbortSignal.any([request.signal, AbortSignal.timeout(8000)]))
+    const { signal, cleanup } = withTimeout(8000, request.signal)
+    fetchRankedResult(day, signal)
       .then(found => {
         if (!request.signal.aborted) setRanked(current => found ?? current ?? null)
       })
@@ -99,13 +88,12 @@ const ArchivePlay: React.FC<{ day: ArchiveDay }> = ({ day }) => {
         // Unreachable: go by what this browser remembers.
         if (!request.signal.aborted) setRanked(current => current ?? null)
       })
-    return () => request.abort()
+      .finally(cleanup)
+    return () => {
+      request.abort()
+      cleanup()
+    }
   }, [day])
-
-  useEffect(() => () => {
-    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
-    if (rejectTimeoutRef.current) clearTimeout(rejectTimeoutRef.current)
-  }, [])
 
   // A fresh board's clock starts once its cards are on screen.
   useEffect(() => {
@@ -139,8 +127,8 @@ const ArchivePlay: React.FC<{ day: ArchiveDay }> = ({ day }) => {
         throw new Error(`Unknown archive day: ${JSON.stringify(unknown)}`)
       }
     }
-    setSelectedCards([])
-    setRejectedCards([])
+    setSelectedCards(EMPTY_CARDS)
+    clearRejection()
     setClockPending(true)
     track('archive_start', { mode: day.kind, number: day.number })
   }
@@ -148,7 +136,7 @@ const ArchivePlay: React.FC<{ day: ArchiveDay }> = ({ day }) => {
   const stop = () => {
     autoReveal.cancel()
     putRun(null)
-    setSelectedCards([])
+    setSelectedCards(EMPTY_CARDS)
     setViewing(true)
     track('archive_quit', { mode: day.kind, number: day.number })
   }
@@ -173,7 +161,7 @@ const ArchivePlay: React.FC<{ day: ArchiveDay }> = ({ day }) => {
     if (!current) return
     const sorted = [...cards].sort((a, b) => a - b)
     const tMs = atMs - current.startedAtMs
-    setSelectedCards([])
+    setSelectedCards(EMPTY_CARDS)
     if (thirdCardMissing) return miss(current, cards, THIRD_CARD_MISSING)
 
     switch (current.kind) {
@@ -215,7 +203,7 @@ const ArchivePlay: React.FC<{ day: ArchiveDay }> = ({ day }) => {
   const claimRef = useRef(claim)
   claimRef.current = claim
 
-  const board = run ? (run.kind === 'puzzle' && day.kind === 'puzzle' ? day.cards : run.kind === 'daily' ? run.board : []) : []
+  const board = run ? (run.kind === 'puzzle' && day.kind === 'puzzle' ? day.cards : run.kind === 'daily' ? run.board : EMPTY_CARDS) : EMPTY_CARDS
 
   const handleCardClick = (cardId: number) => {
     if (!run || clockPending || autoReveal.revealing) return
@@ -224,13 +212,12 @@ const ArchivePlay: React.FC<{ day: ArchiveDay }> = ({ day }) => {
       : selectedCards.length < 3 ? [...selectedCards, cardId] : selectedCards
     const pick = autoCompletePick(picked, board, twoCardModeOn(getSavedName()))
     if (pick.cards.length > selectedCards.length && pick.cards.length < 3 && !pick.missing) playSelection()
-    setSelectedCards(pick.cards)
+    setSelectedCards(pick.cards.length ? pick.cards : EMPTY_CARDS)
     if (pick.filled !== null) {
       const sorted = [...pick.cards].sort((a, b) => a - b)
       if (run.kind === 'puzzle' && run.found.some(found => sameSet(found.cards, sorted))) {
-        if (rejectTimeoutRef.current) clearTimeout(rejectTimeoutRef.current)
-        setRejectedCards([])
-        setSelectedCards([])
+        clearRejection()
+        setSelectedCards(EMPTY_CARDS)
         showToast('Already found', 'error')
         autoReveal.reveal(pick.cards, pick.filled, undefined, false, 'repeat')
         return
@@ -240,8 +227,12 @@ const ArchivePlay: React.FC<{ day: ArchiveDay }> = ({ day }) => {
     } else if (pick.cards.length === 3 || pick.missing) claim(pick.cards, pick.missing)
   }
 
+  const handleCardClickRef = useRef(handleCardClick)
+  handleCardClickRef.current = handleCardClick
+  const onCardClick = useCallback((cardId: number) => handleCardClickRef.current(cardId), [])
+
   const name = `${NAMES[day.kind]} #${day.number}`
-  const toastNode = toast && <Toast message={toast} onClose={() => setToast(null)} />
+  const toastNode = toast && <Toast message={toast} onClose={dismissToast} />
 
   if (shown === 'ranked' && ranked) {
     const standing = ranked.rank !== undefined && ranked.total !== undefined ? `${ordinal(ranked.rank)} of ${ranked.total}` : null
@@ -315,7 +306,7 @@ const ArchivePlay: React.FC<{ day: ArchiveDay }> = ({ day }) => {
         autoFilledCard={autoReveal.filled}
         completedLeaving={autoReveal.leaving}
         completedTone={autoReveal.tone}
-        onCardClick={handleCardClick}
+        onCardClick={onCardClick}
         claiming={clockPending}
         gameOver={!run}
         gameOverLabel={name}

@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { routeBootStatus } from './players'
 
 // Switching between the Puzzle and the Daily Deal in the header swaps what's
 // in the page, and nothing the two share may move: the header, the card each
@@ -67,10 +68,7 @@ function finished(kind: Kind, status: Record<string, unknown>) {
 }
 
 async function finish(page: Page, kind: Kind) {
-  await page.route(`**/api/${kind}`, async route => {
-    const response = await route.fetch()
-    await route.fulfill({ response, json: finished(kind, await response.json()) })
-  })
+  await routeBootStatus(page, kind, status => finished(kind, status))
 }
 
 /** Starts sampling the boxes of `selectors` on every frame, and the browser's own layout-shift entries. */

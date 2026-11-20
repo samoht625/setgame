@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { isSet } from '../../app/javascript/lib/rules'
-import { playAsNewPlayer } from './players'
+import { playAsNewPlayer, routeBootStatus } from './players'
 
 const SAVE_KEY = 'setgame_daily_v1'
 const PHONE = { width: 375, height: 740 }
@@ -36,21 +36,19 @@ const savedName = (page: Page) => page.evaluate(() => localStorage.getItem(`setg
 async function finishedAnonymously(page: Page) {
   const date = today()
   let myName: string | null = null
-  await page.route('**/api/daily', route => route.fulfill({
-    json: {
-      date,
-      number: 12,
-      next_at: new Date(Date.now() + 5 * 3600_000).toISOString(),
-      total: 5,
-      leaderboard: [
-        { player_id: 'p1', display_name: 'Maya', elapsed_ms: 71_000, misses: 0, completed_at: new Date().toISOString() },
-        { player_id: 'p2', display_name: 'Jonah', elapsed_ms: 84_000, misses: 1, completed_at: new Date().toISOString() },
-        { player_id: ME, display_name: myName, elapsed_ms: 96_000, misses: 0, completed_at: new Date().toISOString() },
-        { player_id: 'p3', display_name: null, elapsed_ms: 103_000, misses: 2, completed_at: new Date().toISOString() },
-        { player_id: 'p4', display_name: 'Priya', elapsed_ms: 128_000, misses: 0, completed_at: new Date().toISOString() }
-      ],
-      me: { attempted: true, streak: 3, result: { display_name: myName, elapsed_ms: 96_000, misses: 0, rank: 3, total: 5, share_token: 'x' } }
-    }
+  await routeBootStatus(page, 'daily', () => ({
+    date,
+    number: 12,
+    next_at: new Date(Date.now() + 5 * 3600_000).toISOString(),
+    total: 5,
+    leaderboard: [
+      { player_id: 'p1', display_name: 'Maya', elapsed_ms: 71_000, misses: 0, completed_at: new Date().toISOString() },
+      { player_id: 'p2', display_name: 'Jonah', elapsed_ms: 84_000, misses: 1, completed_at: new Date().toISOString() },
+      { player_id: ME, display_name: myName, elapsed_ms: 96_000, misses: 0, completed_at: new Date().toISOString() },
+      { player_id: 'p3', display_name: null, elapsed_ms: 103_000, misses: 2, completed_at: new Date().toISOString() },
+      { player_id: 'p4', display_name: 'Priya', elapsed_ms: 128_000, misses: 0, completed_at: new Date().toISOString() }
+    ],
+    me: { attempted: true, streak: 3, result: { display_name: myName, elapsed_ms: 96_000, misses: 0, rank: 3, total: 5, share_token: 'x' } }
   }))
   const renames: Array<Record<string, unknown>> = []
   let failNext = false

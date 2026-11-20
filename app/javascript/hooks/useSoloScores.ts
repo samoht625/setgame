@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { withTimeout } from '../lib/abort'
 import { fetchLeaderboard, fetchPersonalBests, type LeaderboardEntry } from '../lib/solo_api'
 
 type Period = 'daily' | 'weekly' | 'monthly'
@@ -53,7 +54,7 @@ export function useSoloScores(period: Period, enabled: boolean) {
     requestsRef.current[p] = request
     setPending(previous => ({ ...previous, [p]: true }))
 
-    const signal = AbortSignal.any([request.signal, AbortSignal.timeout(10000)])
+    const { signal, cleanup } = withTimeout(10000, request.signal)
     fetchLeaderboard(p, 20, signal)
       .then(leaderboard => {
         if (request.signal.aborted) return
@@ -66,6 +67,7 @@ export function useSoloScores(period: Period, enabled: boolean) {
         setErrors(previous => ({ ...previous, [p]: 'Could not load times.' }))
       })
       .finally(() => {
+        cleanup()
         if (requestsRef.current[p] !== request) return
         delete requestsRef.current[p]
         setPending(previous => without(previous, p))
@@ -106,7 +108,7 @@ export function useSoloScores(period: Period, enabled: boolean) {
     const request = new AbortController()
     setPersonalBests(previous => ({ ...previous, loading: true, error: null }))
 
-    const signal = AbortSignal.any([request.signal, AbortSignal.timeout(10000)])
+    const { signal, cleanup } = withTimeout(10000, request.signal)
     fetchPersonalBests(signal)
       .then(entries => {
         if (!request.signal.aborted) {
@@ -118,8 +120,12 @@ export function useSoloScores(period: Period, enabled: boolean) {
           setPersonalBests(previous => ({ ...previous, loading: false, error: 'Could not load your best times.' }))
         }
       })
+      .finally(cleanup)
 
-    return () => request.abort()
+    return () => {
+      request.abort()
+      cleanup()
+    }
   }, [revision, enabled])
 
   // The period whose rows are on screen: the selected one once it has loaded,

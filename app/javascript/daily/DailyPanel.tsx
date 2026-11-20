@@ -5,7 +5,7 @@ import { getSavedName } from '../lib/player_name'
 import LeaderboardList from '../components/LeaderboardList'
 import { SectionLabel } from '../solitaire/SolitairePanel'
 import { formatTime } from '../solitaire/time'
-import { formatCountdown } from '../lib/daily'
+import NextDealCountdown from './NextDealCountdown'
 import type { DailyEntry, DailyStatus } from '../lib/solo_api'
 
 interface DailyStandingsProps {
@@ -152,7 +152,6 @@ interface DailyPanelProps {
   error: boolean
   onRetry: () => void
   playerId: string
-  nowMs: number
   /** What rolls over at midnight, e.g. "deal" or "puzzle". */
   noun?: string
   label?: string
@@ -160,11 +159,10 @@ interface DailyPanelProps {
 }
 
 /** Your streak, today's leaderboard and when the next deal lands. */
-const DailyPanel: React.FC<DailyPanelProps> = ({ status, error, onRetry, playerId, nowMs, noun = 'deal', label, emptyText }) => {
+const DailyPanel: React.FC<DailyPanelProps> = ({ status, error, onRetry, playerId, noun = 'deal', label, emptyText }) => {
   if (!status) return <DailyStandings status={status} error={error} onRetry={onRetry} playerId={playerId} />
 
   const { streak } = status.me
-  const msLeft = Date.parse(status.next_at) - nowMs
 
   return (
     <div>
@@ -182,7 +180,7 @@ const DailyPanel: React.FC<DailyPanelProps> = ({ status, error, onRetry, playerI
       </div>
 
       <p className="mt-4 text-[11px] leading-relaxed text-neutral-600 dark:text-neutral-300">
-        {msLeft > 0 ? `Next ${noun} in ${formatCountdown(msLeft)}` : `A new ${noun} is ready`} · new {noun}s at midnight Pacific
+        <NextDealCountdown nextAt={status.next_at} noun={noun} variant="panel" /> · new {noun}s at midnight Pacific
       </p>
     </div>
   )
