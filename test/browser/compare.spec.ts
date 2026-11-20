@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { isSet } from '../../app/javascript/lib/rules'
 import { applySoloClaim, isRoundOver, startSoloDeal } from '../../app/javascript/lib/solo_deal'
-import { mintPlayers, playAsNewPlayer } from './players'
+import { mintPlayers, playAsNewPlayer, routeBootStatus } from './players'
 
 // These finish a deal signed out; keep the one-time reminder prompt (daily.spec covers it) out of the way.
 test.beforeEach(async ({ page }) => {
@@ -65,24 +65,22 @@ async function finished(page: Page, { myResult = true, myReplay = true } = {}) {
   ME = await playAsNewPlayer(page)
   const entry = (player_id: string, display_name: string | null, elapsed_ms: number, replay: boolean) =>
     ({ player_id, display_name, elapsed_ms, misses: 0, completed_at: new Date().toISOString(), replay })
-  await page.route('**/api/daily', route => route.fulfill({
-    json: {
-      date,
-      number: 12,
-      next_at: new Date(Date.now() + 5 * 3600_000).toISOString(),
-      total: 5,
-      leaderboard: [
-        entry('p1', 'Maya', 71_000, true),
-        entry('p2', 'Jonah', 84_000, true),
-        entry(ME, 'Tido', 96_000, myReplay),
-        entry('p3', null, 103_000, false),
-        entry('p4', 'Priya', 128_000, true)
-      ],
-      me: {
-        attempted: true,
-        streak: 3,
-        result: myResult ? { display_name: 'Tido', elapsed_ms: 96_000, misses: 0, rank: 3, total: 5, share_token: 'x', replay: myReplay } : null
-      }
+  await routeBootStatus(page, 'daily', () => ({
+    date,
+    number: 12,
+    next_at: new Date(Date.now() + 5 * 3600_000).toISOString(),
+    total: 5,
+    leaderboard: [
+      entry('p1', 'Maya', 71_000, true),
+      entry('p2', 'Jonah', 84_000, true),
+      entry(ME, 'Tido', 96_000, myReplay),
+      entry('p3', null, 103_000, false),
+      entry('p4', 'Priya', 128_000, true)
+    ],
+    me: {
+      attempted: true,
+      streak: 3,
+      result: myResult ? { display_name: 'Tido', elapsed_ms: 96_000, misses: 0, rank: 3, total: 5, share_token: 'x', replay: myReplay } : null
     }
   }))
   const requests: URLSearchParams[] = []

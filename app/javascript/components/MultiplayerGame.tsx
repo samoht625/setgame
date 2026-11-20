@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { consumer } from '../cable'
+import type { Consumer, Subscription } from '@rails/actioncable'
+import { getConsumer } from '../cable'
 import Board from './Board'
 import GameLayout from './GameLayout'
 import MultiplayerHud from './MultiplayerHud'
 import PlayersPanel from './PlayersPanel'
 import SidePanel from './SidePanel'
-import Toast, { ToastMessage } from './Toast'
+import Toast from './Toast'
 import { useHeartbeat } from '../hooks/useHeartbeat'
 import { useMultiplayerFunnel } from '../hooks/useMultiplayerFunnel'
 import { useSidePanel } from '../hooks/useSidePanel'
 import { useAutoCompleteReveal } from '../hooks/useAutoCompleteReveal'
+import { useFeedback } from '../hooks/useFeedback'
 import { useSound } from './SoundProvider'
 import { onNameChange } from '../lib/player_name'
 import { twoCardModeOn, THIRD_CARD_MISSING } from '../lib/two_card_mode'
@@ -53,6 +55,8 @@ type ServerMessage =
   | { your_id: string }
   | ({ success: boolean } & GameState)
 
+const EMPTY_CARDS: number[] = []
+
 const EMPTY_STATE: GameState = {
   board: [],
   deck_count: 0,
@@ -72,10 +76,9 @@ const EMPTY_STATE: GameState = {
 const MultiplayerGame: React.FC = () => {
   const { playSelection, playSet } = useSound()
   const [gameState, setGameState] = useState<GameState>(EMPTY_STATE)
-  const [selectedCards, setSelectedCards] = useState<number[]>([])
-  const [rejectedCards, setRejectedCards] = useState<number[]>([])
+  const [selectedCards, setSelectedCards] = useState<number[]>(EMPTY_CARDS)
   const [claiming, setClaiming] = useState(false)
-  const [toast, setToast] = useState<ToastMessage | null>(null)
+  const { toast, rejectedCards, showToast, dismissToast, flashRejection } = useFeedback()
   const [playerId, setPlayerId] = useState<string>('')
   const [isConnected, setIsConnected] = useState(false)
   const [scoreAnimationKeys, setScoreAnimationKeys] = useState<Record<string, string>>({})
@@ -89,11 +92,10 @@ const MultiplayerGame: React.FC = () => {
     gameState.placements.find(placement => placement.player_id === playerId)?.place ?? null
   )
 
-  const subscriptionRef = useRef<any>(null)
+  const consumerRef = useRef<Consumer | null>(null)
+  const subscriptionRef = useRef<Subscription | null>(null)
   const claimTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const rejectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const selectedCardsRef = useRef<number[]>([])
+  const selectedCardsRef = useRef<number[]>(EMPTY_CARDS)
   // The pair behind our claim in flight, when the server is to pick the third card.
   const pairClaimRef = useRef<number[] | null>(null)
   const playerIdRef = useRef('')
@@ -104,12 +106,6 @@ const MultiplayerGame: React.FC = () => {
     selectedCardsRef.current = selectedCards
   }, [selectedCards])
 
-  const showToast = useCallback((text: string, type: ToastMessage['type']) => {
-    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
-    setToast({ text, type })
-    toastTimeoutRef.current = setTimeout(() => setToast(null), 2500)
-  }, [])
-
   const clearClaimTimeout = () => {
     if (claimTimeoutRef.current) {
       clearTimeout(claimTimeoutRef.current)
@@ -117,14 +113,10 @@ const MultiplayerGame: React.FC = () => {
     }
   }
 
-  const flashRejection = (cards: number[]) => {
-    if (rejectTimeoutRef.current) clearTimeout(rejectTimeoutRef.current)
-    setRejectedCards(cards)
-    rejectTimeoutRef.current = setTimeout(() => setRejectedCards([]), 650)
-  }
-
   useEffect(() => {
-    const sub = consumer.subscriptions.create('GameChannel', {
+    const cable = getConsumer()
+    consumerRef.current = cable
+    const sub = cable.subscriptions.create<ServerMessage>('GameChannel', {
       connected() {
         setIsConnected(true)
       },
@@ -134,7 +126,7 @@ const MultiplayerGame: React.FC = () => {
         setIsConnected(false)
         clearClaimTimeout()
         pairClaimRef.current = null
-        setSelectedCards([])
+        setSelectedCards(EMPTY_CARDS)
         setClaiming(false)
       },
 
@@ -153,7 +145,7 @@ const MultiplayerGame: React.FC = () => {
             clearClaimTimeout()
             pairClaimRef.current = null
             flashRejection(selectedCardsRef.current)
-            setSelectedCards([])
+            setSelectedCards(EMPTY_CARDS)
             setClaiming(false)
           }
           return
@@ -186,7 +178,7 @@ const MultiplayerGame: React.FC = () => {
           clearClaimTimeout()
           pairClaimRef.current = null
           setGameState(data)
-          setSelectedCards([])
+          setSelectedCards(EMPTY_CARDS)
           setClaiming(false)
           return
         }
@@ -197,9 +189,11 @@ const MultiplayerGame: React.FC = () => {
         const state = data as GameState
         if (!state.active_claim) cancelAutoComplete()
         setGameState(state)
-        setSelectedCards(prev => (
-          state.active_claim ? [] : prev.filter(id => state.board.includes(id))
-        ))
+        setSelectedCards(prev => {
+          if (state.active_claim) return EMPTY_CARDS
+          const remaining = prev.filter(id => state.board.includes(id))
+          return remaining.length === prev.length ? prev : remaining.length ? remaining : EMPTY_CARDS
+        })
       }
     })
 
@@ -207,14 +201,13 @@ const MultiplayerGame: React.FC = () => {
 
     return () => {
       clearClaimTimeout()
-      if (rejectTimeoutRef.current) clearTimeout(rejectTimeoutRef.current)
-      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
       sub.unsubscribe()
       subscriptionRef.current = null
       // Close the socket so we don't appear online while playing solo
-      consumer.disconnect()
+      cable.disconnect()
+      if (consumerRef.current === cable) consumerRef.current = null
     }
-  }, [playSet, noteMiss, revealAutoComplete, cancelAutoComplete])
+  }, [playSet, noteMiss, revealAutoComplete, cancelAutoComplete, showToast, flashRejection])
 
   useEffect(() => {
     const onOffline = () => {
@@ -222,10 +215,10 @@ const MultiplayerGame: React.FC = () => {
       setIsConnected(false)
       clearClaimTimeout()
       setClaiming(false)
-      setSelectedCards([])
-      consumer.disconnect()
+      setSelectedCards(EMPTY_CARDS)
+      consumerRef.current?.disconnect()
     }
-    const onOnline = () => consumer.connect()
+    const onOnline = () => consumerRef.current?.connect()
 
     window.addEventListener('offline', onOffline)
     window.addEventListener('online', onOnline)
@@ -293,7 +286,7 @@ const MultiplayerGame: React.FC = () => {
 
     if (!isConnected || !subscriptionRef.current || typeof subscriptionRef.current.perform !== 'function') {
       showToast('Not connected to the game. Trying to reconnect…', 'error')
-      setSelectedCards([])
+      setSelectedCards(EMPTY_CARDS)
       return
     }
 
@@ -307,7 +300,7 @@ const MultiplayerGame: React.FC = () => {
       pairClaimRef.current = null
       showToast('Request timed out. Please try again.', 'error')
       setClaiming(false)
-      setSelectedCards([])
+      setSelectedCards(EMPTY_CARDS)
     }, 5000)
 
     pairClaimRef.current = cardIds.length === 2 ? cardIds : null
@@ -334,13 +327,17 @@ const MultiplayerGame: React.FC = () => {
     const pairClaim = nextSelected.length === 2 && twoCardModeOn(gameState.names[playerId])
 
     if (nextSelected.length > selectedCards.length && nextSelected.length < 3 && !pairClaim) playSelection()
-    setSelectedCards(nextSelected)
+    setSelectedCards(nextSelected.length ? nextSelected : EMPTY_CARDS)
 
     // Auto-claim when the third card is selected
     if (nextSelected.length === 3 || pairClaim) {
       handleClaimSet(nextSelected)
     }
   }
+
+  const handleCardClickRef = useRef(handleCardClick)
+  handleCardClickRef.current = handleCardClick
+  const onCardClick = useCallback((cardId: number) => handleCardClickRef.current(cardId), [])
 
   const activeClaim = gameState.active_claim
   const announcement = activeClaim
@@ -376,7 +373,7 @@ const MultiplayerGame: React.FC = () => {
 
   return (
     <>
-      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
+      {toast && <Toast message={toast} onClose={dismissToast} />}
 
       <GameLayout
         hud={
@@ -403,10 +400,10 @@ const MultiplayerGame: React.FC = () => {
             cards={gameState.board}
             selectedCards={selectedCards}
             rejectedCards={rejectedCards}
-            foundCards={activeClaim?.cards || []}
+            foundCards={activeClaim?.cards || EMPTY_CARDS}
             completedCards={autoReveal.cards}
             autoFilledCard={autoReveal.filled}
-            onCardClick={handleCardClick}
+            onCardClick={onCardClick}
             claiming={claiming || !isConnected}
             loading={gameState.board.length === 0 && gameState.status === 'playing'}
             gameOver={gameState.status === 'round_over'}

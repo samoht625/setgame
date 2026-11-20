@@ -1,12 +1,13 @@
 import React, { useEffect, useId, useState } from 'react'
 import { formatTime } from '../solitaire/time'
 import { track } from '../lib/analytics'
-import { formatCountdown, ordinal, type DailyShare } from '../lib/daily'
+import { ordinal, type DailyShare } from '../lib/daily'
 import MarkGrid from '../components/MarkGrid'
 import type { DailyEntry, DailyStatus } from '../lib/solo_api'
 import DailyCompare from './DailyCompare'
 import { DailyStandings } from './DailyPanel'
-import { primaryButton, secondaryButton, secondaryButtonSmall } from '../lib/buttons'
+import NextDealCountdown from './NextDealCountdown'
+import { primaryButton, secondaryButton } from '../lib/buttons'
 import { openReminderDialog } from '../components/ReminderDialog'
 import { signedInEmail, signInEnabled } from '../lib/player_id'
 import { useReminder } from '../hooks/useReminder'
@@ -32,7 +33,6 @@ interface DailyCardProps {
   statusError: boolean
   onRetryStatus: () => void
   playerId: string
-  nowMs: number
   onShare?: () => void
   shareNote: string | null
   onNextDeal: () => void
@@ -55,7 +55,7 @@ interface DailyCardProps {
 
 /** What the Daily Deal (and the Puzzle) show once today's try is used: the result, today's leaderboard and what's next. */
 const DailyCard: React.FC<DailyCardProps> = ({
-  number, result, streak, note, submitting = false, status, statusError, onRetryStatus, playerId, nowMs, onShare, shareNote, onNextDeal, stale = false, onNameScore,
+  number, result, streak, note, submitting = false, status, statusError, onRetryStatus, playerId, onShare, shareNote, onNextDeal, stale = false, onNameScore,
   title, next = { href: '/', label: 'Puzzle' }, noun = 'deal', emptyText, marksLabel = 'Your pace on each set', rivalMs
 }) => {
   const titleId = useId()
@@ -76,7 +76,6 @@ const DailyCard: React.FC<DailyCardProps> = ({
     setSheet(due ? 'install' : promptReminder ? 'reminder' : null)
   }, [finished, promptReminder])
   const [comparing, setComparing] = useState<DailyEntry | null>(null)
-  const msLeft = status ? Date.parse(status.next_at) - nowMs : null
   // Other finishers' runs are only for a player who has finished this deal too.
   const canCompare = !stale && Boolean(status?.me.result?.replay)
   const compare = (entry: DailyEntry) => {
@@ -162,13 +161,9 @@ const DailyCard: React.FC<DailyCardProps> = ({
             onNameScore={onNameScore}
             onCompare={canCompare ? compare : undefined}
             emptyText={emptyText}
-            aside={msLeft === null ? undefined : !stale && msLeft > 0 ? (
-              <span className="text-[11px] text-neutral-500 dark:text-neutral-400">Next {noun} in {formatCountdown(msLeft)}</span>
-            ) : (
-              <button type="button" onClick={onNextDeal} className={secondaryButtonSmall}>
-                Play today’s {noun}
-              </button>
-            )}
+            aside={status ? (
+              <NextDealCountdown nextAt={status.next_at} noun={noun} stale={stale} onNextDeal={onNextDeal} />
+            ) : undefined}
           />
           <div className="-mb-1.5 mt-2 flex justify-center">
             <a

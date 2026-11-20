@@ -8,13 +8,15 @@ const LEAVE_MS = 120
 /** `found` is a new set (amber); `repeat` is a set already found (red). */
 export type RevealTone = 'found' | 'repeat'
 
+const EMPTY_CARDS: number[] = []
+
 /**
  * Two-card mode's "here's your set" moment: the three cards (and
  * which one the game filled in) stay highlighted briefly, then `then` runs.
  * With `leave`, the cards fade out at the end, for boards that replace them.
  */
 export function useAutoCompleteReveal() {
-  const [cards, setCards] = useState<number[]>([])
+  const [cards, setCards] = useState<number[]>(EMPTY_CARDS)
   const [filled, setFilled] = useState<number | null>(null)
   const [leaving, setLeaving] = useState(false)
   const [tone, setTone] = useState<RevealTone>('found')
@@ -27,7 +29,7 @@ export function useAutoCompleteReveal() {
 
   const cancel = useCallback(() => {
     clearTimers()
-    setCards([])
+    setCards(EMPTY_CARDS)
     setFilled(null)
     setLeaving(false)
   }, [])
@@ -41,7 +43,7 @@ export function useAutoCompleteReveal() {
     if (leave) timersRef.current.push(setTimeout(() => setLeaving(true), AUTO_COMPLETE_REVEAL_MS - LEAVE_MS))
     timersRef.current.push(setTimeout(() => {
       timersRef.current = []
-      setCards([])
+      setCards(EMPTY_CARDS)
       setFilled(null)
       setLeaving(false)
       then?.()

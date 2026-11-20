@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useCallback, useState, useEffect, useRef } from 'react'
 import { primaryButton, secondaryButton, secondaryButtonSmall } from '../lib/buttons'
 import Board from '../components/Board'
 import GameLayout from '../components/GameLayout'
 import ResultDialog from '../components/ResultDialog'
 import SidePanel from '../components/SidePanel'
-import Toast, { ToastMessage, ToastType } from '../components/Toast'
+import Toast from '../components/Toast'
 import SolitaireHud from './SolitaireHud'
 import SolitairePanel, { SoloLeaderboard, type LeaderboardPeriod } from './SolitairePanel'
 import { formatTime } from './time'
@@ -14,6 +14,7 @@ import { useSound } from '../components/SoundProvider'
 import { useSoloScores } from '../hooks/useSoloScores'
 import { useSidePanel } from '../hooks/useSidePanel'
 import { useAutoCompleteReveal } from '../hooks/useAutoCompleteReveal'
+import { useFeedback } from '../hooks/useFeedback'
 import {
   applySoloClaim,
   isRoundOver,
@@ -42,10 +43,9 @@ const QUIT_REPORTED_KEY = 'setgame_quit_reported'
 const BEST_TIMES_KEY = 'setgame_solo_best_times'
 // Discard an in-progress solo game once the player has been away this long.
 const IDLE_RESET_MS = 15 * 60 * 1000
-// While playing with the tab visible, refresh the saved activity stamp this often.
-const ACTIVITY_SAVE_INTERVAL_MS = 10_000
 // The results dialog shows the top of the leaderboard; the side panel has the rest.
 const RESULTS_LEADERBOARD_SIZE = 5
+const EMPTY_CARDS: number[] = []
 
 
 interface RecentClaim {
@@ -148,13 +148,12 @@ const SolitaireGame: React.FC = () => {
   const [bestImprovement, setBestImprovement] = useState<{ finalMs: number; ms: number; scope: PersonalBestScope } | null>(null)
   const deviceBestRef = useRef<number | null>(null)
   const [claimAnimationKey, setClaimAnimationKey] = useState(0)
-  const [board, setBoard] = useState<number[]>([])
-  const [deck, setDeck] = useState<number[]>([])
+  const [board, setBoard] = useState<number[]>(EMPTY_CARDS)
+  const [deck, setDeck] = useState<number[]>(EMPTY_CARDS)
   const [status, setStatus] = useState<SoloStatus>('playing')
-  const [selectedCards, setSelectedCards] = useState<number[]>([])
+  const [selectedCards, setSelectedCards] = useState<number[]>(EMPTY_CARDS)
   const autoReveal = useAutoCompleteReveal()
-  const [rejectedCards, setRejectedCards] = useState<number[]>([])
-  const [toast, setToast] = useState<ToastMessage | null>(null)
+  const { toast, rejectedCards, showToast, dismissToast, flashRejection, clearRejection } = useFeedback()
   const [elapsedMs, setElapsedMs] = useState(0)
   const [recentClaims, setRecentClaims] = useState<RecentClaim[]>([])
   const [startedAtMs, setStartedAtMs] = useState(Date.now())
@@ -172,8 +171,6 @@ const SolitaireGame: React.FC = () => {
   const scores = useSoloScores(period, panel.open || resultsOpen)
   const startRequestRef = useRef<AbortController | null>(null)
   const gameGenerationRef = useRef(0)
-  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const rejectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dealStateRef = useRef<SoloDealState | null>(null)
   const eventsRef = useRef<ClaimEvent[]>([])
   const eligibleRef = useRef(false)
@@ -183,25 +180,14 @@ const SolitaireGame: React.FC = () => {
   const recentClaimsRef = useRef<RecentClaim[]>([])
   const missesRef = useRef(0)
   const progressSentRef = useRef<{ gameId: string; sets: number } | null>(null)
-  // Wall-clock time of the last meaningful activity (save or visible timer tick).
+  // Wall-clock time of the last meaningful activity (save or card interaction),
+  // and the last activity timestamp already written to localStorage.
   const lastActivityAtRef = useRef(Date.now())
-  const lastActivitySaveRef = useRef(0)
+  const lastSavedActivityAtRef = useRef(lastActivityAtRef.current)
 
   useEffect(() => {
     recentClaimsRef.current = recentClaims
   }, [recentClaims])
-
-  const showToast = (text: string, type: ToastType = 'success') => {
-    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
-    setToast({ text, type })
-    toastTimeoutRef.current = setTimeout(() => setToast(null), 2500)
-  }
-
-  const flashRejection = (cards: number[]) => {
-    if (rejectTimeoutRef.current) clearTimeout(rejectTimeoutRef.current)
-    setRejectedCards(cards)
-    rejectTimeoutRef.current = setTimeout(() => setRejectedCards([]), 650)
-  }
 
   const writeSave = (
     deal: SoloDealState,
@@ -231,7 +217,9 @@ const SolitaireGame: React.FC = () => {
       misses: missesRef.current,
       submissionStatus: submissionStatusRef.current
     })
-    lastActivityAtRef.current = Date.now()
+    const savedAt = Date.now()
+    lastActivityAtRef.current = savedAt
+    lastSavedActivityAtRef.current = savedAt
   }
 
   const syncProgress = () => {
@@ -305,12 +293,13 @@ const SolitaireGame: React.FC = () => {
     setStatus(st)
     setIsStarting(false)
     setClockPending(opts.startedAtMs === undefined && st === 'playing')
-    setSelectedCards([])
-    setRejectedCards([])
+    setSelectedCards(EMPTY_CARDS)
+    clearRejection()
     submittedRef.current = st === 'round_over'
 
     if (opts.savedAtMs !== undefined) {
       lastActivityAtRef.current = opts.savedAtMs
+      lastSavedActivityAtRef.current = opts.savedAtMs
       return
     }
 
@@ -341,9 +330,8 @@ const SolitaireGame: React.FC = () => {
     setBestImprovement(null)
     deviceBestRef.current = null
     submissionStatusRef.current = undefined
-    setSelectedCards([])
-    setRejectedCards([])
-    if (rejectTimeoutRef.current) clearTimeout(rejectTimeoutRef.current)
+    setSelectedCards(EMPTY_CARDS)
+    clearRejection()
 
     const remote = await startSoloGame(request.signal)
     if (request.signal.aborted) return
@@ -469,7 +457,7 @@ const SolitaireGame: React.FC = () => {
       })
       showToast(missMessage(result.error), 'error')
       flashRejection(cardIds)
-      setSelectedCards([])
+      setSelectedCards(EMPTY_CARDS)
       return
     }
 
@@ -484,7 +472,7 @@ const SolitaireGame: React.FC = () => {
 
     setBoard([...deal.board])
     setDeck([...deal.deck])
-    setSelectedCards([])
+    setSelectedCards(EMPTY_CARDS)
     setClaimAnimationKey(value => value + 1)
     playSet()
     showToast('Set found!', 'success')
@@ -546,6 +534,7 @@ const SolitaireGame: React.FC = () => {
       startFreshAfterIdle()
       return
     }
+    lastActivityAtRef.current = Date.now()
 
     const picked = selectedCards.includes(cardId)
       ? selectedCards.filter(id => id !== cardId)
@@ -555,7 +544,7 @@ const SolitaireGame: React.FC = () => {
     const pick = autoCompletePick(picked, board, twoCardModeOn(getPlayerDisplayName()))
 
     if (pick.cards.length > selectedCards.length && pick.cards.length < 3 && !pick.missing) playSelection()
-    setSelectedCards(pick.cards)
+    setSelectedCards(pick.cards.length ? pick.cards : EMPTY_CARDS)
     if (pick.filled !== null) {
       const atMs = Date.now()
       autoReveal.reveal(pick.cards, pick.filled, () => claimSetRef.current(pick.cards, false, atMs), true)
@@ -564,6 +553,10 @@ const SolitaireGame: React.FC = () => {
     }
   }
 
+  const handleCardClickRef = useRef(handleCardClick)
+  handleCardClickRef.current = handleCardClick
+  const onCardClick = useCallback((cardId: number) => handleCardClickRef.current(cardId), [])
+
   const togglePause = () => {
     if (isStarting) return
     autoReveal.cancel()
@@ -571,7 +564,7 @@ const SolitaireGame: React.FC = () => {
       const nowElapsed = Date.now() - startedAtMs
       setElapsedMs(nowElapsed)
       setStatus('paused')
-      setSelectedCards([])
+      setSelectedCards(EMPTY_CARDS)
       // The paused card says so; no toast on top of it.
       eligibleRef.current = false
       if (dealStateRef.current) {
@@ -609,6 +602,10 @@ const SolitaireGame: React.FC = () => {
     }
   }
 
+  const togglePauseRef = useRef(togglePause)
+  togglePauseRef.current = togglePause
+  const onResume = useCallback(() => togglePauseRef.current(), [])
+
   useEffect(() => {
     if (!clockPending) return
     return afterNextPaint(() => {
@@ -633,35 +630,42 @@ const SolitaireGame: React.FC = () => {
   useEffect(() => {
     if (isStarting || clockPending || status !== 'playing') return
 
-    const saveActivity = () => {
-      if (document.visibilityState !== 'visible' || startRequestRef.current) return
+    const persistActivity = () => {
+      if (!dealStateRef.current || startRequestRef.current) return
+      if (lastActivityAtRef.current <= lastSavedActivityAtRef.current) return
       const now = Date.now()
-      if (now - lastActivityAtRef.current >= IDLE_RESET_MS) {
-        startFreshAfterIdle()
-        return
-      }
+      if (now - lastActivityAtRef.current >= IDLE_RESET_MS) return
+      writeSave(dealStateRef.current, {
+        status: 'playing',
+        recentClaims: recentClaimsRef.current,
+        startedAtMs,
+        elapsedMs: now - startedAtMs,
+        gameId: gameIdRef.current,
+        seed: seedRef.current,
+        events: eventsRef.current,
+        eligible: eligibleRef.current
+      })
+    }
 
-      lastActivityAtRef.current = now
-      if (now - lastActivitySaveRef.current >= ACTIVITY_SAVE_INTERVAL_MS && dealStateRef.current) {
-        lastActivitySaveRef.current = now
-        writeSave(dealStateRef.current, {
-          status: 'playing',
-          recentClaims: recentClaimsRef.current,
-          startedAtMs,
-          elapsedMs: now - startedAtMs,
-          gameId: gameIdRef.current,
-          seed: seedRef.current,
-          events: eventsRef.current,
-          eligible: eligibleRef.current
-        })
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        if (!startRequestRef.current && Date.now() - lastActivityAtRef.current >= IDLE_RESET_MS) {
+          startFreshAfterIdle()
+        }
+      } else {
+        persistActivity()
       }
     }
 
-    const timer = setInterval(saveActivity, 1000)
-    document.addEventListener('visibilitychange', saveActivity)
+    const onPageHide = () => {
+      persistActivity()
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    window.addEventListener('pagehide', onPageHide)
     return () => {
-      clearInterval(timer)
-      document.removeEventListener('visibilitychange', saveActivity)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      window.removeEventListener('pagehide', onPageHide)
     }
   }, [isStarting, clockPending, status, startedAtMs])
 
@@ -718,14 +722,12 @@ const SolitaireGame: React.FC = () => {
     return () => {
       startRequestRef.current?.abort()
       gameGenerationRef.current += 1
-      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
-      if (rejectTimeoutRef.current) clearTimeout(rejectTimeoutRef.current)
     }
   }, [])
 
   const isFinished = !isStarting && status === 'round_over'
   const showResults = resultsOpen && isFinished
-  const toastNode = toast && <Toast message={toast} onClose={() => setToast(null)} />
+  const toastNode = toast && <Toast message={toast} onClose={dismissToast} />
 
   const resultTime = (
     <>
@@ -844,13 +846,13 @@ const SolitaireGame: React.FC = () => {
             completedCards={autoReveal.cards}
             autoFilledCard={autoReveal.filled}
             completedLeaving={autoReveal.leaving}
-            onCardClick={handleCardClick}
+            onCardClick={onCardClick}
             claiming={isStarting || clockPending}
             loading={isStarting}
             gameOver={isFinished}
             gameOverContent={showResults ? undefined : finishCard}
             paused={!isStarting && status === 'paused'}
-            onResume={togglePause}
+            onResume={onResume}
             pausedNote="This game won’t count for the leaderboard."
           />
         }

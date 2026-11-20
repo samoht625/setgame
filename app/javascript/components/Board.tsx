@@ -50,6 +50,7 @@ const DARK_FOCUS = 'dark:focus-visible:border-blue-500 dark:focus-visible:outlin
 
 // For a card that was on the board already: its deal-in is over before it shows (see card-in in application.tailwind.css).
 const DEALT = { '--deal-in-delay': '-1s' } as React.CSSProperties
+const EMPTY_CARDS: number[] = []
 
 interface BoardProps {
   cards: number[]
@@ -83,9 +84,9 @@ interface BoardProps {
 const Board: React.FC<BoardProps> = ({
   cards,
   selectedCards,
-  rejectedCards = [],
-  foundCards = [],
-  completedCards = [],
+  rejectedCards = EMPTY_CARDS,
+  foundCards = EMPTY_CARDS,
+  completedCards = EMPTY_CARDS,
   autoFilledCard = null,
   completedLeaving = false,
   completedTone = 'found',
@@ -270,4 +271,4 @@ const Board: React.FC<BoardProps> = ({
   )
 }
 
-export default Board
+export default React.memo(Board)

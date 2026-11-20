@@ -1,12 +1,13 @@
 import { useEffect, useRef } from 'react'
+import type { Subscription } from '@rails/actioncable'
 
 /**
  * Manages presence heartbeats for an ActionCable/GameChannel subscription.
  * Sends heartbeats only when the document is visible and the window is focused,
  * and only while `isConnected` is true.
  */
-export function useHeartbeat(subscriptionRef: React.MutableRefObject<any>, isConnected: boolean) {
-  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null)
+export function useHeartbeat(subscriptionRef: React.RefObject<Subscription | null>, isConnected: boolean) {
+  const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const isConnectedRef = useRef<boolean>(isConnected)
 
   const HEARTBEAT_INTERVAL_MS = 5000

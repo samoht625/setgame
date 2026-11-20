@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { routeBootStatus } from './players'
 
 const SAVE_KEY = 'setgame_daily_v1'
 const INSTALL_KEY = 'setgame_install_prompt_v1'
@@ -93,7 +94,7 @@ test('the start card shows a streak under Start, as the pill alone', async ({ pa
     date: today(), number: 7, next_at: new Date(Date.now() + 3600_000).toISOString(), total: 0, leaderboard: [],
     me: { attempted: false, streak: 5, result: null }
   }
-  await page.route('**/api/daily', route => route.fulfill({ json: status }))
+  await routeBootStatus(page, 'daily', () => status)
   await page.goto('/daily')
 
   const streak = page.locator('[data-streak]')
@@ -112,7 +113,7 @@ test('the streak shows on the result card and in the menu, and the menu row goes
     date: today(), number: 7, next_at: new Date(Date.now() + 3600_000).toISOString(), total: 1, leaderboard: [],
     me: { attempted: true, streak: 3, result: { display_name: null, elapsed_ms: 132_000, misses: 0, rank: 1, total: 1, share_token: 'x', replay: false, streak: 3, marks: '' } }
   }
-  await page.route('**/api/daily', route => route.fulfill({ json: status }))
+  await routeBootStatus(page, 'daily', () => status)
   await page.goto('/daily')
 
   const streak = page.locator('[data-streak]')

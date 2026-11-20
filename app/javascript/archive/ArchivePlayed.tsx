@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { withTimeout } from '../lib/abort'
 import { dayPlays, fetchRankedTimes, readArchiveTile, rememberedPlays, type ArchiveTile, type DayPlay, type RankedTimes } from '../lib/archive'
 import { formatTime } from '../solitaire/time'
 
@@ -71,22 +72,19 @@ const ArchivePlayed: React.FC<{ page: number }> = ({ page }) => {
   const [server, setServer] = useState<RankedTimes | null | undefined>(undefined)
 
   useEffect(() => {
-    let wanted = true
-    // One signal for both leaving the page and giving up: AbortSignal.any is newer than the oldest browsers the app allows.
     const request = new AbortController()
-    const giveUp = window.setTimeout(() => request.abort(), 8000)
-    fetchRankedTimes(page, request.signal)
+    const { signal, cleanup } = withTimeout(8000, request.signal)
+    fetchRankedTimes(page, signal)
       .then(times => {
-        if (wanted) setServer(times)
+        if (!request.signal.aborted) setServer(times)
       })
       .catch(() => {
-        if (wanted) setServer(null)
+        if (!request.signal.aborted) setServer(null)
       })
-      .finally(() => window.clearTimeout(giveUp))
+      .finally(cleanup)
     return () => {
-      wanted = false
-      window.clearTimeout(giveUp)
       request.abort()
+      cleanup()
     }
   }, [page])
 

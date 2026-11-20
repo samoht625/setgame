@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { getPlayerId } from '../cable'
+import { useEffect, useRef, useState } from 'react'
+import { getPlayerId } from '../lib/player_id'
 
 // Presence is best-effort decoration, so keep it cheap: a tiny JSON poll on a
 // slow cadence, only while the tab is visible and the hook is enabled.
@@ -12,22 +12,34 @@ function countOthers(ids: unknown): number {
 }
 
 // The server seeds the root element with the current online ids so the jewel
-// can appear on first paint without an extra request.
-function readSeededCount(): number {
+// can appear on first paint without an extra request. Returns null if the
+// attribute was absent or unreadable.
+function readSeededCount(): number | null {
   try {
     const raw = document.getElementById('root')?.dataset.onlineIds
-    return raw ? countOthers(JSON.parse(raw)) : 0
+    if (raw === undefined) return null
+    const parsed: unknown = JSON.parse(raw)
+    return Array.isArray(parsed) ? countOthers(parsed) : null
   } catch {
-    return 0
+    return null
   }
 }
 
 // How many *other* people are currently in the multiplayer game.
 export function usePresence(enabled: boolean): number {
-  const [othersOnline, setOthersOnline] = useState<number>(readSeededCount)
+  const initialSeedRef = useRef<number | null | undefined>(undefined)
+  if (initialSeedRef.current === undefined) {
+    initialSeedRef.current = readSeededCount()
+  }
+  const [othersOnline, setOthersOnline] = useState<number>(() => initialSeedRef.current ?? 0)
+  // Skip the immediate mount fetch once when the server already seeded data-online-ids.
+  const skipInitialFetchRef = useRef(enabled && initialSeedRef.current !== null)
 
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled) {
+      skipInitialFetchRef.current = false
+      return
+    }
 
     let cancelled = false
 
@@ -47,7 +59,11 @@ export function usePresence(enabled: boolean): number {
       if (document.visibilityState === 'visible') refresh()
     }
 
-    refresh()
+    if (skipInitialFetchRef.current) {
+      skipInitialFetchRef.current = false
+    } else {
+      refresh()
+    }
     const timer = window.setInterval(refresh, POLL_INTERVAL_MS)
     document.addEventListener('visibilitychange', onVisibility)
 
