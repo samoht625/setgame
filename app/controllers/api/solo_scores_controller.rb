@@ -19,17 +19,20 @@ module Api
 
       display_name = sanitize_name(params[:display_name])
 
-      score = SoloScore.create!(
-        solo_game: game,
-        player_id: current_player_id,
-        display_name: display_name,
-        elapsed_ms: params[:elapsed_ms].to_i,
-        completed_at: Time.current,
-        events: events,
-        daily_on: game.daily_on,
-        misses: params[:misses].presence&.to_i&.clamp(0, 9_999)
-      )
-      game.mark_completed!(sets_found: events.length)
+      score = nil
+      ApplicationRecord.transaction do
+        score = SoloScore.create!(
+          solo_game: game,
+          player_id: current_player_id,
+          display_name: display_name,
+          elapsed_ms: params[:elapsed_ms].to_i,
+          completed_at: Time.current,
+          events: events,
+          daily_on: game.daily_on,
+          misses: params[:misses].presence&.to_i&.clamp(0, 9_999)
+        )
+        game.mark_completed!(sets_found: events.length)
+      end
 
       if game.daily_on
         puzzle = DailyPuzzle.new(game.daily_on)
@@ -63,6 +66,8 @@ module Api
           monthly: personal[:monthly]&.id == score.id
         }
       }
+    rescue ActiveRecord::RecordNotUnique
+      render json: { error: "already_completed" }, status: :unprocessable_entity
     rescue ActiveRecord::RecordInvalid => e
       render json: { error: "invalid_score", message: e.message }, status: :unprocessable_entity
     end
@@ -108,13 +113,19 @@ module Api
     end
 
     def normalize_events(raw)
-      Array(raw).map do |e|
-        h = e.respond_to?(:to_unsafe_h) ? e.to_unsafe_h : e.to_h
+      return [] unless raw.is_a?(Array)
+
+      raw.first(SoloGame::MAX_SETS + 1).map do |e|
+        next {} unless e.is_a?(Hash) || e.is_a?(ActionController::Parameters)
+
+        h = e.respond_to?(:to_unsafe_h) ? e.to_unsafe_h : e
         h = h.deep_stringify_keys
+        cards = h["cards"].is_a?(Array) ? h["cards"].first(4).map { |c| Integer(c, exception: false) || 0 } : []
+        t_ms = Integer(h["t_ms"], exception: false)
         {
           "type" => h["type"],
-          "cards" => Array(h["cards"]).map(&:to_i),
-          "t_ms" => h["t_ms"].to_i
+          "cards" => cards,
+          "t_ms" => t_ms.nil? ? -1 : t_ms
         }
       end
     end

@@ -120,6 +120,41 @@ class DailyPuzzleTest < ActiveSupport::TestCase
     assert_equal 3, puzzle.total
   end
 
+  test "launch_date is memoized once non-nil and resettable in tests" do
+    assert_nil DailyPuzzle.launch_date
+    day = Date.new(2026, 10, 1)
+    create_daily_game(day)
+    assert_equal day, DailyPuzzle.launch_date
+
+    queries = []
+    subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") { |*, payload| queries << payload[:sql] unless payload[:name] == "SCHEMA" }
+    begin
+      assert_equal day, DailyPuzzle.launch_date
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscriber)
+    end
+    assert_empty queries, "memoized launch_date does not hit SQLite again"
+
+    DailyPuzzle.reset_launch_date!
+    SoloGame.delete_all
+    assert_nil DailyPuzzle.launch_date
+  end
+
+  test "daily_leaderboard omits events JSON blobs while accurately computing replay?" do
+    day = Date.new(2026, 10, 3)
+    at = Time.utc(2026, 10, 4, 1)
+    timed = create_daily_score(day, elapsed_ms: 40_000, completed_at: at)
+    timed.update!(events: [{ "type" => "claim", "cards" => [1, 2, 3], "t_ms" => 5_000 }])
+    empty = create_daily_score(day, elapsed_ms: 50_000, completed_at: at)
+    untimed = create_daily_score(day, elapsed_ms: 60_000, completed_at: at)
+    untimed.update!(events: [{ "type" => "claim", "cards" => [1, 2, 3] }])
+
+    rows = SoloScore.daily_leaderboard(date: day, limit: 20).to_a
+    assert_equal [timed.id, empty.id, untimed.id], rows.map(&:id)
+    rows.each { |row| refute row.has_attribute?(:events), "leaderboard rows should not load events JSON" }
+    assert_equal [true, false, false], rows.map(&:replay?)
+  end
+
   private
 
   def create_daily_game(date, player_id: SecureRandom.uuid, seed: "1")

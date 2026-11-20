@@ -92,5 +92,35 @@ module Api
         assert_equal a.fetch("cards"), b.fetch("cards")
       end
     end
+
+    test "PuzzleStatus.for computes total and streak once when the player has finished" do
+      travel_to NOON do
+        started = start
+        claims = claims_for(started.fetch("cards"))
+        travel 20.seconds
+        post "/api/puzzle/games/#{started["game_id"]}/finish",
+             params: { elapsed_ms: 13_000, claims: claims, misses: 0, display_name: "Rose" }, headers: @headers, as: :json
+        assert_response :success
+
+        queries = []
+        subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+          queries << payload[:sql] unless %w[SCHEMA TRANSACTION].include?(payload[:name])
+        end
+        begin
+          status = PuzzleStatus.for(@player_id)
+          assert_equal 1, status[:total]
+          assert_equal 1, status.dig(:me, :result, :total)
+          assert_equal 1, status.dig(:me, :streak)
+          assert_equal 1, status.dig(:me, :result, :streak)
+        ensure
+          ActiveSupport::Notifications.unsubscribe(subscriber)
+        end
+
+        total_queries = queries.select { |sql| sql.include?("COUNT(*)") && sql.include?("puzzle_runs") && !sql.include?("elapsed_ms <") }
+        streak_queries = queries.select { |sql| sql.include?("SELECT \"puzzle_runs\".\"puzzle_on\"") }
+        assert_equal 1, total_queries.length, "total should only be counted once"
+        assert_equal 1, streak_queries.length, "streak should only be plucked once"
+      end
+    end
   end
 end

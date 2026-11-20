@@ -39,22 +39,31 @@ module ApplicationCable
       reject_unauthorized_connection unless self.class.reserve(ip)
       @reserved_ip = ip
 
-      account = AccountSession.authenticate(cookies.signed[CurrentAccount::SESSION_COOKIE])&.account
-      self.player_id = PlayerResolver.resolve(
-        claimed: request.params["player_id"],
-        key: request.params["key"],
-        cookie: cookies.signed[:player_id],
-        freshly_minted: request.params["new"] == "1",
-        account: account
-      )
-      cookies.signed[:player_id] = { value: player_id, expires: 1.year.from_now, httponly: true, same_site: :lax, secure: Rails.env.production? }
+      begin
+        account = AccountSession.authenticate(cookies.signed[CurrentAccount::SESSION_COOKIE])&.account
+        self.player_id = PlayerResolver.resolve(
+          claimed: request.params["player_id"],
+          key: request.params["key"],
+          cookie: cookies.signed[:player_id],
+          freshly_minted: request.params["new"] == "1",
+          account: account
+        )
+        cookies.signed[:player_id] = { value: player_id, expires: 1.year.from_now, httponly: true, same_site: :lax, secure: Rails.env.production? }
 
-      GAME_ENGINE.register_connection(self.player_id)
+        GAME_ENGINE.register_connection(self.player_id)
+      rescue StandardError
+        self.class.release(@reserved_ip)
+        @reserved_ip = nil
+        raise
+      end
     end
 
     def disconnect
       GAME_ENGINE.unregister_connection(self.player_id) if player_id
-      self.class.release(@reserved_ip) if @reserved_ip
+      if @reserved_ip
+        self.class.release(@reserved_ip)
+        @reserved_ip = nil
+      end
     end
   end
 end

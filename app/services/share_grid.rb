@@ -10,7 +10,7 @@ module ShareGrid
   FAST = 0.8
   SLOW = 1.25
   MIN_SAMPLES = 5
-  CACHE_TTL = 10.minutes
+  CACHE_TTL = 1.hour
 
   module_function
 
@@ -38,12 +38,12 @@ module ShareGrid
   end
 
   def daily_medians
-    Rails.cache.fetch("share_grid/daily_medians/v1", expires_in: CACHE_TTL) { compute_daily_medians }
+    Rails.cache.fetch("share_grid/daily_medians/v1", expires_in: CACHE_TTL, race_condition_ttl: 30.seconds) { compute_daily_medians }
   end
 
   def compute_daily_medians
     columns = Hash.new { |hash, key| hash[key] = [] }
-    SoloScore.where.not(daily_on: nil).find_each do |score|
+    SoloScore.where.not(daily_on: nil).select(:id, :events).find_each do |score|
       claims = score.claims
       next unless claims
 

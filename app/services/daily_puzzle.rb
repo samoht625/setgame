@@ -28,8 +28,16 @@ class DailyPuzzle
   end
 
   # The first day anyone played a Daily Deal (day #1); nil before then.
+  # Once a Daily Deal exists, the launch date never changes, so memoize it.
   def self.launch_date
-    SoloGame.where.not(daily_on: nil).minimum(:daily_on)
+    return @launch_date if @launch_date
+
+    date = SoloGame.where.not(daily_on: nil).minimum(:daily_on)
+    @launch_date = date if date
+  end
+
+  def self.reset_launch_date!
+    @launch_date = nil
   end
 
   # Consecutive completed days ending today, or ending yesterday while today's

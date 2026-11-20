@@ -30,7 +30,6 @@ class GameEngine
     @names = {}  # player_id => display name
     @active_connections = Hash.new(0) # player_id => connection count
     @last_seen = {} # player_id => Time
-    @presence_timeout_seconds = 15
     @idle_timeout_seconds = 60
     @online_player_ids = Set.new
     @idle_player_ids = Set.new
@@ -291,6 +290,10 @@ class GameEngine
       # Allow letters, numbers, spaces, underscore and hyphen
       unless name.match?(/\A[\p{L}\p{Nd} _\-]+\z/u)
         return { success: false, message: 'Name contains invalid characters' }
+      end
+
+      if @names[player_id] == name
+        return { success: true, unchanged: true, message: 'Name unchanged', new_state: current_state }
       end
 
       @names[player_id] = name

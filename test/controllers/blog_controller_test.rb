@@ -417,4 +417,32 @@ class BlogControllerTest < ActionDispatch::IntegrationTest
   ensure
     Rails.cache.clear
   end
+
+  test "blog index and post support conditional ETag caching and vary by player identity" do
+    # First request sets the player cookie (@known_player_new is true); second establishes steady-state ETag.
+    get "/blog"
+    assert_response :success
+    get "/blog"
+    assert_response :success
+    index_etag = response.headers["ETag"]
+    assert index_etag.present?
+
+    get "/blog", headers: { "If-None-Match" => index_etag }
+    assert_response :not_modified
+
+    get "/blog/spotting-sets"
+    assert_response :success
+    post_etag = response.headers["ETag"]
+    assert post_etag.present?
+    player_id = css_select("meta[name='setgame-player-id']").first["content"]
+
+    get "/blog/spotting-sets", headers: { "If-None-Match" => post_etag }
+    assert_response :not_modified
+
+    # Changing a setting rendered in the page's identity meta tags changes the ETag.
+    PlayerSetting.choose_two_card!(player_id, true)
+    get "/blog/spotting-sets", headers: { "If-None-Match" => post_etag }
+    assert_response :success
+    refute_equal post_etag, response.headers["ETag"]
+  end
 end

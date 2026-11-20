@@ -9,13 +9,15 @@ module DailyStatus
   def for(player_id)
     puzzle = DailyPuzzle.today
     score = puzzle.score_for(player_id)
+    total = puzzle.total
+    streak = puzzle.streak_for(player_id)
     summary(puzzle).merge(
-      total: puzzle.total,
-      leaderboard: puzzle.leaderboard.map { |score| entry(score) },
+      total: total,
+      leaderboard: puzzle.leaderboard.map { |entry_score| entry(entry_score) },
       me: {
-        attempted: puzzle.attempted?(player_id),
-        streak: puzzle.streak_for(player_id),
-        result: score && result(puzzle, score)
+        attempted: score.present? || puzzle.attempted?(player_id),
+        streak: streak,
+        result: score && result(puzzle, score, total: total, streak: streak)
       }
     )
   end
@@ -31,15 +33,14 @@ module DailyStatus
       elapsed_ms: score.elapsed_ms,
       misses: score.misses,
       completed_at: score.completed_at.iso8601,
-      replay: score.claims.present?
+      replay: score.replay?
     }
   end
 
-  def result(puzzle, score)
+  def result(puzzle, score, total: puzzle.total, streak: puzzle.streak_for(score.player_id))
     rank = puzzle.rank_of(score)
-    total = puzzle.total
-    streak = puzzle.streak_for(score.player_id)
-    marks = score.claims ? ShareGrid.daily_marks(score.claims) : ""
+    claims = score.claims
+    marks = claims ? ShareGrid.daily_marks(claims) : ""
     {
       display_name: score.display_name,
       elapsed_ms: score.elapsed_ms,
@@ -49,7 +50,7 @@ module DailyStatus
       streak: streak,
       marks: marks,
       share_token: DailyShare.token(number: puzzle.number, elapsed_ms: score.elapsed_ms, rank: rank, total: total, streak: streak, marks: marks),
-      replay: score.claims.present?
+      replay: claims.present?
     }
   end
 end

@@ -139,14 +139,19 @@ class ClassicPuzzle
     # Hits and misses in order ("hmhh…"), kept only when it agrees with the run.
     attempts = attempts.to_s
     attempts = nil unless attempts.match?(/\A[hm]{0,60}\z/) && attempts.count("h") == SET_COUNT && attempts.count("m") == misses
-    run.update!(
+    now = Time.current
+    updated = PuzzleRun.where(id: run.id, completed_at: nil).update_all(
       claims: claims,
       elapsed_ms: elapsed,
       misses: misses,
       attempts: attempts,
-      completed_at: Time.current,
-      display_name: PlayerName.sanitize(display_name) || run.display_name
+      completed_at: now,
+      display_name: PlayerName.sanitize(display_name) || run.display_name,
+      updated_at: now
     )
+    return :already_finished unless updated == 1
+
+    run.reload
     :ok
   end
 

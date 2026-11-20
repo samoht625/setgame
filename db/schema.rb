@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_11_12_180000) do
+ActiveRecord::Schema[8.0].define(version: 2026_11_20_000000) do
   create_table "account_sessions", force: :cascade do |t|
     t.integer "account_id", null: false
     t.string "token_digest", null: false
@@ -86,7 +86,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_12_180000) do
     t.datetime "updated_at", null: false
     t.string "attempts"
     t.index ["player_id"], name: "index_puzzle_runs_on_player_id"
+    t.index ["player_id", "completed_at"], name: "index_puzzle_runs_on_player_id_and_completed_at"
     t.index ["puzzle_on", "elapsed_ms"], name: "index_puzzle_runs_on_puzzle_on_and_elapsed_ms"
+    t.index ["puzzle_on", "elapsed_ms", "completed_at"], name: "index_puzzle_runs_on_puzzle_on_and_elapsed_ms_and_completed_at", where: "completed_at IS NOT NULL"
     t.index ["puzzle_on", "player_id"], name: "index_puzzle_runs_on_puzzle_on_and_player_id", unique: true
   end
 
@@ -136,8 +138,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_12_180000) do
     t.json "events", default: [], null: false
     t.index ["daily_on", "player_id"], name: "index_solo_games_on_daily_on_and_player_id", unique: true, where: "daily_on IS NOT NULL"
     t.index ["player_id"], name: "index_solo_games_on_player_id"
+    t.index ["player_id", "status", "started_at"], name: "index_solo_games_on_player_id_and_status_and_started_at"
     t.index ["started_at"], name: "index_solo_games_on_started_at"
     t.index ["status"], name: "index_solo_games_on_status"
+    t.index ["status", "started_at"], name: "index_solo_games_on_status_and_started_at"
   end
 
   create_table "solo_scores", force: :cascade do |t|
@@ -152,9 +156,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_11_12_180000) do
     t.date "daily_on"
     t.integer "misses"
     t.index ["completed_at"], name: "index_solo_scores_on_completed_at"
+    t.index ["completed_at", "elapsed_ms"], name: "index_solo_scores_on_completed_at_and_elapsed_ms", where: "daily_on IS NULL"
     t.index ["daily_on", "elapsed_ms"], name: "index_solo_scores_on_daily_on_and_elapsed_ms"
+    t.index ["daily_on", "elapsed_ms", "completed_at"], name: "index_solo_scores_on_daily_on_and_elapsed_ms_and_completed_at"
     t.index ["elapsed_ms"], name: "index_solo_scores_on_elapsed_ms"
     t.index ["player_id", "completed_at"], name: "index_solo_scores_on_player_id_and_completed_at"
+    t.index ["player_id", "daily_on"], name: "index_solo_scores_on_player_id_and_daily_on", where: "daily_on IS NOT NULL"
+    t.index ["player_id", "elapsed_ms"], name: "index_solo_scores_on_player_id_and_elapsed_ms", where: "daily_on IS NULL"
     t.index ["solo_game_id"], name: "index_solo_scores_on_solo_game_id", unique: true
   end
 

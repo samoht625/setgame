@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "minitest/mock"
 
 module Api
   class SoloScoresControllerTest < ActionDispatch::IntegrationTest
@@ -172,6 +173,54 @@ module Api
       result = finish_run({ "X-Player-Id" => phone })
       assert_equal account_player, result.dig("score", "player_id")
       assert_equal 144_000, result.fetch("previous_best_ms")
+    end
+
+    test "malformed and oversized event payloads return 422 instead of 500" do
+      post "/api/solo/games", headers: @headers
+      game = SoloGame.find(JSON.parse(response.body).fetch("game_id"))
+      game.update!(started_at: 2.minutes.ago)
+
+      [
+        "not-an-array",
+        ["x", 123, nil],
+        [{ type: "claim", cards: "bad", t_ms: {} }],
+        Array.new(SoloGame::MAX_SETS + 50) { |i| { type: "claim", cards: [1, 2, 3], t_ms: (i + 1) * 1_500 } }
+      ].each do |bad_events|
+        post "/api/solo/scores",
+          headers: @headers,
+          params: { game_id: game.id, elapsed_ms: 40_000, events: bad_events },
+          as: :json
+        assert_response :unprocessable_entity
+      end
+    end
+
+    test "duplicate score race returns 422 already_completed and rolls back on failure" do
+      post "/api/solo/games", headers: @headers
+      game = SoloGame.find(JSON.parse(response.body).fetch("game_id"))
+      events = play_to_completion(game.seed.to_i)
+      elapsed_ms = events.last.fetch(:t_ms)
+      game.update!(started_at: (elapsed_ms / 1000.0 + 5).seconds.ago)
+
+      SoloScore.stub(:create!, ->(**_) { raise ActiveRecord::RecordNotUnique, "duplicate solo_game_id" }) do
+        post "/api/solo/scores",
+          headers: @headers,
+          params: { game_id: game.id, elapsed_ms: elapsed_ms, events: events },
+          as: :json
+        assert_response :unprocessable_entity
+        assert_equal "already_completed", JSON.parse(response.body).fetch("error")
+      end
+      assert_equal "open", game.reload.status
+
+      failing_game = SoloGame.find(game.id)
+      failing_game.define_singleton_method(:mark_completed!) { |**_| raise ActiveRecord::RecordInvalid.new(self) }
+      SoloGame.stub(:find_by, failing_game) do
+        post "/api/solo/scores",
+          headers: @headers,
+          params: { game_id: game.id, elapsed_ms: elapsed_ms, events: events },
+          as: :json
+        assert_response :unprocessable_entity
+      end
+      assert_equal 0, SoloScore.where(solo_game_id: game.id).count, "transaction rolls back SoloScore when mark_completed! fails"
     end
 
     private

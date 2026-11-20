@@ -33,4 +33,23 @@ class ClassicPuzzleTest < ActiveSupport::TestCase
     assert_equal 1, ClassicPuzzle.new(Date.new(2026, 10, 25)).number
     assert_equal 8, ClassicPuzzle.new(Date.new(2026, 11, 1)).number
   end
+
+  test "finish! uses an atomic guard so a stale run cannot overwrite a finished run" do
+    day = Date.new(2026, 11, 4)
+    travel_to Time.utc(2026, 11, 4, 20) do
+      puzzle = ClassicPuzzle.new(day)
+      player = SecureRandom.uuid
+      run = puzzle.start_run(player)
+      stale = PuzzleRun.find(run.id)
+      claims = puzzle.sets.each_with_index.map { |set, i| { "cards" => set, "t_ms" => (i + 1) * 2_000 } }
+
+      travel 30.seconds
+      assert_equal :ok, puzzle.finish!(run, elapsed_ms: 15_000, claims: claims, misses: 0, display_name: "First")
+      assert_equal :already_finished, puzzle.finish!(stale, elapsed_ms: 12_000, claims: claims, misses: 0, display_name: "Second")
+
+      saved = PuzzleRun.find(run.id)
+      assert_equal 15_000, saved.elapsed_ms
+      assert_equal "First", saved.display_name
+    end
+  end
 end

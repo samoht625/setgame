@@ -243,4 +243,34 @@ class SignInFlowTest < ActionDispatch::IntegrationTest
     refute again.reminder_enabled, "turned off stays off"
   end
 
+  test "sign-in token redemption is rate-limited" do
+    SignInController::REDEEMS_PER_MINUTE.times do
+      post "/signin", params: { token: "x" * 43 }
+      assert_response :unprocessable_entity
+    end
+
+    post "/signin", params: { token: "x" * 43 }
+    assert_response :too_many_requests
+
+    travel 61.seconds do
+      post "/signin", params: { token: "x" * 43 }
+      assert_response :unprocessable_entity
+    end
+  end
+
+  test "AccountSignIn caps RecordNotUnique retries instead of looping forever" do
+    attempts = 0
+    failing = lambda do |**_attrs|
+      attempts += 1
+      raise ActiveRecord::RecordNotUnique, "duplicate"
+    end
+
+    Account.stub(:create!, failing) do
+      assert_raises(ActiveRecord::RecordNotUnique) do
+        AccountSignIn.call(email: "loop@example.com", browser_player_id: nil)
+      end
+    end
+
+    assert_equal AccountSignIn::MAX_RETRIES + 1, attempts
+  end
 end

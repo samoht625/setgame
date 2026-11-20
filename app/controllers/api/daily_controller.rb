@@ -52,16 +52,19 @@ module Api
       mine = puzzle.score_for(current_player_id)
       return render json: { error: "not_finished" }, status: :forbidden unless mine
 
+      mine_claims = mine.claims
       other_id = params[:player_id].to_s
-      theirs = puzzle.leaderboard.find { |score| score.player_id == other_id } unless other_id == current_player_id
-      unless theirs&.claims && mine.claims
+      theirs = puzzle.score_for(other_id) if other_id.present? && other_id != current_player_id
+      their_claims = theirs&.claims
+      their_rank = theirs && puzzle.rank_of(theirs)
+      unless mine_claims && their_claims && their_rank <= DailyPuzzle::LEADERBOARD_SIZE
         return render json: { error: "not_found" }, status: :not_found
       end
 
       render json: summary(puzzle).merge(
         seed: puzzle.seed,
-        me: serialize_run(puzzle, mine),
-        them: serialize_run(puzzle, theirs)
+        me: serialize_run(mine, rank: puzzle.rank_of(mine), claims: mine_claims),
+        them: serialize_run(theirs, rank: their_rank, claims: their_claims)
       )
     end
 
@@ -81,12 +84,12 @@ module Api
       nil
     end
 
-    def serialize_run(puzzle, score)
+    def serialize_run(score, rank:, claims:)
       {
         display_name: score.display_name,
         elapsed_ms: score.elapsed_ms,
-        rank: puzzle.rank_of(score),
-        claims: score.claims
+        rank: rank,
+        claims: claims
       }
     end
   end
