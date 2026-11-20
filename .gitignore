@@ -49,6 +49,7 @@ deploy/setgame.env
 
 # Vendor gems (bundle install)
 /vendor/bundle/
+/.bundle/
 
 # npm's lockfile: yarn.lock is the one this repo keeps
 /package-lock.json

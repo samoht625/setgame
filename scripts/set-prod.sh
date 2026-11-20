@@ -13,6 +13,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ORCHESTRATOR="$(cd "$ROOT/.." && pwd)/scripts/www-restart.sh"
+cd "$ROOT"
 
 if [[ -d "${HOME}/.rbenv/bin" ]]; then
   export PATH="${HOME}/.rbenv/bin:${HOME}/.rbenv/shims:${PATH}"
@@ -44,19 +45,13 @@ install_ruby_deps() {
 
 build_assets() {
   echo "==> JS / CSS"
-  if command -v yarn >/dev/null 2>&1; then
-    yarn install --frozen-lockfile
-    yarn build
-    yarn build:css
-  elif command -v npm >/dev/null 2>&1; then
-    # yarn.lock is the only lockfile, so npm resolves versions from package.json.
-    npm install --no-package-lock --no-audit --no-fund
-    npm run build
-    npm run build:css
-  else
-    echo "set-prod: need yarn or npm" >&2
+  if ! command -v yarn >/dev/null 2>&1; then
+    echo "set-prod: yarn is required (yarn.lock pins JS dependencies)" >&2
     exit 1
   fi
+  yarn install --frozen-lockfile
+  yarn build
+  yarn build:css
 
   echo "==> Rails assets"
   RAILS_ENV=production "$ROOT/scripts/setgame-with-bundle.sh" rake assets:precompile

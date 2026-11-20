@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "minitest/mock"
 
 module Api
   class DailyControllerTest < ActionDispatch::IntegrationTest
@@ -218,6 +219,46 @@ module Api
         assert_response :bad_request
         compare(theirs.player_id, date: "yesterday")
         assert_response :bad_request
+      end
+    end
+
+    test "compare looks up the single opponent directly without loading the leaderboard" do
+      travel_to EVENING do
+        day = Date.new(2026, 10, 3)
+        create_daily_score(day, elapsed_ms: 50_000, events: claim_events, player_id: @player_id)
+        theirs = create_daily_score(day, elapsed_ms: 40_000, events: claim_events, name: "Maya")
+
+        SoloScore.stub(:daily_leaderboard, ->(**_) { flunk "compare should not load full leaderboard" }) do
+          compare(theirs.player_id)
+          assert_response :success
+          assert_equal "Maya", JSON.parse(response.body).dig("them", "display_name")
+        end
+      end
+    end
+
+    test "DailyStatus.for computes total and streak once when the player has finished" do
+      travel_to EVENING do
+        day = Date.new(2026, 10, 3)
+        create_daily_score(day, elapsed_ms: 50_000, events: claim_events, player_id: @player_id)
+
+        queries = []
+        subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+          queries << payload[:sql] unless %w[SCHEMA TRANSACTION].include?(payload[:name])
+        end
+        begin
+          status = DailyStatus.for(@player_id)
+          assert_equal 1, status[:total]
+          assert_equal 1, status.dig(:me, :result, :total)
+          assert_equal 1, status.dig(:me, :streak)
+          assert_equal 1, status.dig(:me, :result, :streak)
+        ensure
+          ActiveSupport::Notifications.unsubscribe(subscriber)
+        end
+
+        count_queries = queries.select { |sql| sql.include?("COUNT(*)") && sql.include?("solo_scores") && !sql.include?("elapsed_ms <") }
+        streak_queries = queries.select { |sql| sql.include?('SELECT "solo_scores"."daily_on"') }
+        assert_equal 1, count_queries.length, "total should only be counted once"
+        assert_equal 1, streak_queries.length, "streak should only be plucked once"
       end
     end
 

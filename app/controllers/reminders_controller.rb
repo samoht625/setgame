@@ -6,10 +6,13 @@
 class RemindersController < ApplicationController
   include CurrentAccount
 
+  POSTS_PER_MINUTE = 30
+
   layout "sign_in"
   # Mail providers POST List-Unsubscribe=One-Click without a form token; the
   # signed token in the URL is the authorization.
-  skip_forgery_protection only: %i[unsubscribe resubscribe]
+  skip_forgery_protection only: :unsubscribe
+  before_action :limit_posts!, only: %i[sign_in_and_play unsubscribe resubscribe]
 
   # Where a Play link's `to` opens: it names the game. Emails sent while the
   # Daily Deal was the home page said "/" for the Deal and "/puzzle" for the
@@ -69,6 +72,12 @@ class RemindersController < ApplicationController
   end
 
   private
+
+  def limit_posts!
+    return unless RateLimit.exceeded?("reminders-post", request.remote_ip, to: POSTS_PER_MINUTE, within: 1.minute)
+
+    head :too_many_requests
+  end
 
   def play_path
     PLAY_PATHS.fetch(params[:to].to_s, "/")

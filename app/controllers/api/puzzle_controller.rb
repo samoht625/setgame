@@ -49,7 +49,8 @@ module Api
         return render json: { error: outcome.to_s }, status: :unprocessable_entity
       end
 
-      render json: { ok: true, result: serialize_result(puzzle, run.reload), streak: puzzle.streak_for(current_player_id) }
+      streak = puzzle.streak_for(current_player_id)
+      render json: { ok: true, result: serialize_result(puzzle, run.reload, streak: streak), streak: streak }
     end
 
     # Names the player's own finished run for today; the game id proves it's theirs.
@@ -67,6 +68,6 @@ module Api
     private
 
     def summary(puzzle) = PuzzleStatus.summary(puzzle)
-    def serialize_result(puzzle, run) = PuzzleStatus.result(puzzle, run)
+    def serialize_result(puzzle, run, streak: nil) = streak ? PuzzleStatus.result(puzzle, run, streak: streak) : PuzzleStatus.result(puzzle, run)
   end
 end

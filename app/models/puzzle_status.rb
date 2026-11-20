@@ -8,13 +8,15 @@ module PuzzleStatus
   def for(player_id)
     puzzle = ClassicPuzzle.today
     run = puzzle.run_for(player_id)
+    total = puzzle.total
+    streak = puzzle.streak_for(player_id)
     summary(puzzle).merge(
-      total: puzzle.total,
-      leaderboard: puzzle.leaderboard.map { |run| entry(run) },
+      total: total,
+      leaderboard: puzzle.leaderboard.map { |entry_run| entry(entry_run) },
       me: {
         attempted: run.present?,
-        streak: puzzle.streak_for(player_id),
-        result: run&.finished? ? result(puzzle, run) : nil
+        streak: streak,
+        result: run&.finished? ? result(puzzle, run, total: total, streak: streak) : nil
       }
     )
   end
@@ -34,10 +36,8 @@ module PuzzleStatus
     }
   end
 
-  def result(puzzle, run)
+  def result(puzzle, run, total: puzzle.total, streak: puzzle.streak_for(run.player_id))
     rank = puzzle.rank_of(run)
-    total = puzzle.total
-    streak = puzzle.streak_for(run.player_id)
     marks = run.marks
     {
       display_name: run.display_name,

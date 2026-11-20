@@ -83,5 +83,43 @@ module Api
       game = SoloGame.find(game_id)
       assert_empty Array(game.events), "[1, 2, 4] isn't a set"
     end
+
+    test "expire_stale! is throttled to once per interval and can be forced or reset" do
+      stale_one = SoloGame.create!(id: SecureRandom.uuid, player_id: @player_id, seed: "1", status: "open", started_at: 8.days.ago)
+      post "/api/solo/games", headers: @headers
+      assert_response :created
+      assert_equal "expired", stale_one.reload.status
+
+      stale_two = SoloGame.create!(id: SecureRandom.uuid, player_id: @player_id, seed: "2", status: "open", started_at: 8.days.ago)
+      post "/api/solo/games", headers: @headers
+      assert_response :created
+      assert_equal "open", stale_two.reload.status, "second create within 5 minutes skips global expire_stale!"
+
+      travel SoloGame::EXPIRE_STALE_INTERVAL + 1.second do
+        post "/api/solo/games", headers: @headers
+        assert_response :created
+        assert_equal "expired", stale_two.reload.status
+      end
+
+      stale_three = SoloGame.create!(id: SecureRandom.uuid, player_id: @player_id, seed: "3", status: "open", started_at: 8.days.ago)
+      assert_equal 1, SoloGame.expire_stale!(force: true)
+      assert_equal "expired", stale_three.reload.status
+    end
+
+    test "composite and partial performance indexes are installed" do
+      conn = ActiveRecord::Base.connection
+      score_indexes = conn.indexes(:solo_scores).map(&:name)
+      game_indexes = conn.indexes(:solo_games).map(&:name)
+      puzzle_indexes = conn.indexes(:puzzle_runs).map(&:name)
+
+      assert_includes score_indexes, "index_solo_scores_on_player_id_and_daily_on"
+      assert_includes score_indexes, "index_solo_scores_on_daily_on_and_elapsed_ms_and_completed_at"
+      assert_includes score_indexes, "index_solo_scores_on_completed_at_and_elapsed_ms"
+      assert_includes score_indexes, "index_solo_scores_on_player_id_and_elapsed_ms"
+      assert_includes game_indexes, "index_solo_games_on_status_and_started_at"
+      assert_includes game_indexes, "index_solo_games_on_player_id_and_status_and_started_at"
+      assert_includes puzzle_indexes, "index_puzzle_runs_on_puzzle_on_and_elapsed_ms_and_completed_at"
+      assert_includes puzzle_indexes, "index_puzzle_runs_on_player_id_and_completed_at"
+    end
   end
 end

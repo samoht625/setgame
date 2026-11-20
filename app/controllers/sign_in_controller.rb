@@ -9,7 +9,10 @@
 class SignInController < ApplicationController
   include CurrentAccount
 
+  REDEEMS_PER_MINUTE = 20
+
   layout "sign_in"
+  before_action :limit_create!, only: :create
 
   def show
     @token = params[:token].to_s
@@ -48,6 +51,12 @@ class SignInController < ApplicationController
   end
 
   private
+
+  def limit_create!
+    return unless RateLimit.exceeded?("sign-in-create", request.remote_ip, to: REDEEMS_PER_MINUTE, within: 1.minute)
+
+    head :too_many_requests
+  end
 
   # The game shows a brief "Signed in as …" when it sees ?signed_in=1 (or
   # "Reminder on · 8:00 AM" with &reminder=480), then drops them from the URL.

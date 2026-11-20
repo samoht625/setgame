@@ -16,7 +16,11 @@ FileUtils.chdir APP_ROOT do
   system("bundle check") || system!("bundle install")
 
   # Install JavaScript dependencies
-  system("yarn install --check-files")
+  system! "yarn install --check-files"
+
+  puts "\n== Building assets =="
+  system! "yarn build"
+  system! "yarn build:css"
 
   puts "\n== Preparing database =="
   system! "bin/rails db:prepare"

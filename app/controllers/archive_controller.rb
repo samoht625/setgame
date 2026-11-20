@@ -51,15 +51,14 @@ class ArchiveController < ApplicationController
   def day_stats(dates)
     return { "daily" => {}, "puzzle" => {} } if dates.empty?
 
-    scores = SoloScore.where(daily_on: dates).group(:daily_on)
-    runs = PuzzleRun.finished.where(puzzle_on: dates).group(:puzzle_on)
     {
-      "daily" => merge_stats(scores.count, scores.minimum(:elapsed_ms)),
-      "puzzle" => merge_stats(runs.count, runs.minimum(:elapsed_ms))
+      "daily" => grouped_stats(SoloScore.where(daily_on: dates), :daily_on),
+      "puzzle" => grouped_stats(PuzzleRun.finished.where(puzzle_on: dates), :puzzle_on)
     }
   end
 
-  def merge_stats(counts, bests)
-    counts.to_h { |date, count| [date.to_date, { count: count, best_ms: bests[date] }] }
+  def grouped_stats(relation, date_column)
+    relation.group(date_column).pluck(date_column, Arel.sql("COUNT(*)"), Arel.sql("MIN(elapsed_ms)"))
+      .to_h { |date, count, best_ms| [date.to_date, { count: count, best_ms: best_ms }] }
   end
 end
