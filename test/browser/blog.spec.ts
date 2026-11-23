@@ -58,7 +58,7 @@ test('the post is all there without scripts: headline, text, both charts and the
   ])
   await expect(page.locator('main .deck')).toContainText('multiplies search time')
   await expect(page.locator('main .versus .side')).toHaveCount(2)
-  await expect(page.locator('main .versus .time b')).toHaveText(['3.0s', '15.0s'])
+  await expect(page.locator('main .versus .time b')).toHaveText(['2.9s', '15.1s'])
   await expect(page.locator('main .kind')).toHaveCount(15)
   await expect(page.locator('main .kind').first()).toBeVisible()
   await expect(page.locator('main .kind-scale i')).toHaveText(['0s', '5s', '10s', '15s', '20s', '25s', '30s'])

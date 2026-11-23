@@ -30,7 +30,10 @@
 <%# What a set's three cards have in common, the two features the eye seems to catch first leading. %>
 <% glance = %w[color shading] %>
 <% shared = ->(set) { (glance | SetStats::ATTRS) - post.differing(set[:cards]) } %>
-<% color_diff_quickest = post.quickest.count { |set| post.differing(set[:cards]) == ["color"] } %>
+<% same_glance_quickest = post.quickest.count { |set| (glance - shared.(set)).empty? } %>
+<% all_four_least = post.least_found.count { |set| post.differing(set[:cards]).length == SetStats::ATTRS.length } %>
+<% least_exceptions = post.least_found.reject { |set| post.differing(set[:cards]).length == SetStats::ATTRS.length } %>
+<% shape_only, number_only = secs(post.median_ms("all but shape")), secs(post.median_ms("all but number")) %>
 <%= render "shared/card_symbols" %>
 <main class="blog">
   <article>
@@ -121,11 +124,11 @@
 
       <p>
         With two features shared, color and shading together are the fastest pair at <%= secs(post.median_ms("number + shape")) %>, and number and shape together are the slowest at <%= secs(post.median_ms("color + shading")) %>.
-        Every kind that shares color beats every kind that does not, though the four in the middle sit within a second of each other.
+        The four pairs in the middle, each pairing color or shading with shape or number, sit within a second of each other and more than a second ahead of sharing neither.
       </p>
       <p>
-        The sharpest crossover sits across the two- and three-difference boundary: sharing color alone (<%= secs(post.median_ms("all but color")) %>) beats sharing both number and shape (<%= secs(post.median_ms("color + shading")) %>) by nearly a full second, and sharing shading alone (<%= secs(post.median_ms("all but shading")) %>) nearly ties them.
-        Number and shape on their own help much less: <%= secs(post.median_ms("all but shape")) %> each, against <%= secs(post.median_ms("all four")) %> for sharing nothing.
+        The sharpest crossover sits across the two- and three-difference boundary: sharing color alone (<%= secs(post.median_ms("all but color")) %>) beats sharing both number and shape (<%= secs(post.median_ms("color + shading")) %>) by over half a second, and sharing shading alone (<%= secs(post.median_ms("all but shading")) %>) stays within a second of them.
+        Shape and number on their own help much less: <%= shape_only == number_only ? "#{shape_only} each" : "#{shape_only} and #{number_only}" %>, against <%= secs(post.median_ms("all four")) %> for sharing nothing.
       </p>
       <p>
         This matches visual-search research (Treisman’s feature integration theory): color and fill density are preattentive features that the eye groups in parallel across a board, while matching shapes and counts takes slower, serial scrutiny.
@@ -185,9 +188,15 @@
       </figure>
 
       <p>
-        All <%= number_word(post.quickest.length) %> of the quickest sets differ in a single feature, and in <%= number_word(post.quickest.count { |set| (glance - shared.(set)).empty? }) %> of them the three cards share both color and shading.
-        <%= number_word(shadings["solid"]).capitalize %> are solid, <%= number_word(shadings["striped"]) %> are striped, and <%= number_word(shadings["open"]) %> <%= shadings["open"] == 1 ? "is" : "are" %> open<% if color_diff_quickest == 1 && shadings["open"] == 1 %> (the lone set in the top <%= number_word(post.quickest.length) %> where color differs)<% end %>.
-        All <%= number_word(post.least_found.length) %> of the least found differ in all four features.
+        All <%= number_word(post.quickest.length) %> of the quickest sets differ in a single feature<% if same_glance_quickest == post.quickest.length %> and share both color and shading<% else %>, and in <%= number_word(same_glance_quickest) %> of them the three cards share both color and shading<% end %>.
+        <%= number_word(shadings["solid"]).capitalize %> are solid, <%= number_word(shadings["striped"]) %> are striped, and <%= shadings["open"].zero? ? "none are" : "#{number_word(shadings["open"])} #{shadings["open"] == 1 ? "is" : "are"}" %> open.
+        <% if least_exceptions.empty? %>
+          All <%= number_word(post.least_found.length) %> of the least found differ in all four features.
+        <% elsif least_exceptions.length == 1 && shared.(least_exceptions.first).length == 1 %>
+          <%= number_word(all_four_least).capitalize %> of the <%= number_word(post.least_found.length) %> least found differ in all four features, and the lone exception shares only <%= shared.(least_exceptions.first).first %>.
+        <% else %>
+          <%= number_word(all_four_least).capitalize %> of the <%= number_word(post.least_found.length) %> least found differ in all four features.
+        <% end %>
       </p>
 
       <figure class="fact">
