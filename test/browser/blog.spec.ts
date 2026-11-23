@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 
 const POST = '/blog/spotting-sets'
-const TITLE = 'Spotting “all different” Sets takes 5x longer'
+const TITLE = 'Why “all different” Sets take 5x longer'
 
 const overflow = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
 
@@ -50,23 +50,25 @@ test('the post is all there without scripts: headline, text, both charts and the
   await expect(page).toHaveTitle(`${TITLE} | Set Daily`)
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(TITLE)
   await expect(page.getByRole('heading', { level: 2 })).toHaveText([
-    'Every difference costs seconds',
+    'Every difference multiplies the search',
     'Color and shading do the work',
     'The hard ones get left on the board',
     'The quickest and the rarest',
     'How this was counted'
   ])
-  await expect(page.locator('main .deck')).toContainText('which sets people see at once')
+  await expect(page.locator('main .deck')).toContainText('multiplies search time')
   await expect(page.locator('main .versus .side')).toHaveCount(2)
   await expect(page.locator('main .versus .time b')).toHaveText(['3.0s', '15.0s'])
   await expect(page.locator('main .kind')).toHaveCount(15)
   await expect(page.locator('main .kind').first()).toBeVisible()
+  await expect(page.locator('main .kind-scale i')).toHaveText(['0s', '5s', '10s', '15s', '20s', '25s', '30s'])
+  await expect(page.locator('main .kind-iqr.clipped')).toHaveCount(0)
   await expect(page.locator('main .stairs dd')).toHaveText(['3–4s', '4–8s', '7–11s', '15s'])
   await expect(page.locator('main .shared li')).toHaveCount(10)
   await expect(page.locator('main table.shares tbody tr')).toHaveCount(4)
   await expect(page.locator('main .pair ol.sets')).toHaveCount(2)
   await expect(page.locator('main .pair ol.sets li')).toHaveCount(20)
-  await expect(page.locator('main .prose > p').first()).toContainText('Both of these are sets')
+  await expect(page.locator('main .prose > p').first()).toContainText('Look at the two sets above')
   await expect(page.locator('main .notes li')).toHaveCount(5)
   await expect(page.locator('main .prose a[href="/"]').first()).toBeVisible()
   await expect(page.locator('main .play a[href="/daily"]')).toHaveText(['Daily Deal', 'Play the Daily Deal'])
@@ -165,9 +167,18 @@ for (const [name, width, height] of [['a phone', 390, 844], ['a small phone', 32
         expect(drawn).toBe(true)
       }
     }
-    // The median line sits on its bar, and slower kinds sit further right.
+    // The median line sits on its bar, slower kinds sit further right, and the slowest p75 stays unclipped inside 0–30s.
     const medians = await page.locator('main .kind-mid').evaluateAll(lines => lines.map(line => line.getBoundingClientRect().left - line.parentElement!.getBoundingClientRect().left))
     expect(medians).toEqual([...medians].sort((a, b) => a - b))
+    const lastTrack = (await rows.last().locator('.kind-track').boundingBox())!
+    const lastBar = (await rows.last().locator('.kind-iqr').boundingBox())!
+    expect(lastBar.x + lastBar.width).toBeLessThan(lastTrack.x + lastTrack.width - 1)
+    const visibleLabels = await page.locator('main .kind-scale i').evaluateAll(nodes =>
+      nodes.filter(n => getComputedStyle(n).display !== 'none').map(n => n.getBoundingClientRect())
+    )
+    for (let i = 1; i < visibleLabels.length; i++) {
+      expect(visibleLabels[i]!.left, `axis label ${i} does not overlap previous`).toBeGreaterThan(visibleLabels[i - 1]!.right + 2)
+    }
 
     const shares = (await page.locator('main .card.shares-card').boundingBox())!
     expect(shares.x + shares.width).toBeLessThanOrEqual(width)
@@ -268,7 +279,8 @@ test('on phones the headline breaks into two even lines, down to the smallest', 
     const size = await page.locator('main h1').evaluate(node => parseFloat(getComputedStyle(node).fontSize))
     expect(headline.room / size, `${width}px`).toBeGreaterThan(10.8)
     expect(size, `${width}px`).toBeGreaterThanOrEqual(25)
-    if (headline.single <= headline.room * 1.9) expect(headline.lines, `${width}px`).toHaveLength(2)
+    if (headline.single <= headline.room) expect(headline.lines, `${width}px`).toHaveLength(1)
+    else if (headline.single <= headline.room * 1.9) expect(headline.lines, `${width}px`).toHaveLength(2)
     expect(headline.lines.length, `${width}px`).toBeLessThanOrEqual(3)
     expect(evenness(headline.lines), `${width}px`).toBeGreaterThan(0.75)
     expect(await overflow(page)).toBeLessThanOrEqual(0)

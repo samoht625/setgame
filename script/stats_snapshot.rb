@@ -40,8 +40,8 @@ def count(text)
 end
 
 # The same arithmetic as the chart in app/views/stats/_how_fast.html.erb.
-def position(ms)
-  (ms.clamp(0, SCALE_MS) * 100.0 / SCALE_MS).round(2)
+def position(ms, scale_ms)
+  (ms.clamp(0, scale_ms) * 100.0 / scale_ms).round(2)
 end
 
 def printed(ms)
@@ -56,14 +56,15 @@ def printed_ms(text)
 end
 
 # The millisecond that is drawn at `drawn` percent and printed as `text`.
-def time_ms(drawn, text, what)
+def time_ms(drawn, text, what, scale_ms)
   if drawn >= 100
     ms = printed_ms(text)
-    stop "#{what}: #{text} is on the scale, but its bar ends at #{drawn}%" if ms < SCALE_MS
+    stop "#{what}: #{text} is on the scale, but its bar ends at #{drawn}%" if ms < scale_ms
     return ms
   end
-  centre = (drawn * SCALE_MS / 100).round
-  found = (centre - 2..centre + 2).sort_by { |ms| (ms - centre).abs }.find { |ms| position(ms) == drawn && printed(ms) == text }
+  centre = (drawn * scale_ms / 100).round
+  step = [(scale_ms / 10_000.0).ceil, 2].max
+  found = (centre - step..centre + step).sort_by { |ms| (ms - centre).abs }.find { |ms| position(ms, scale_ms) == drawn && printed(ms) == text }
   found || stop("#{what}: no millisecond is drawn at #{drawn}% and printed as #{text}")
 end
 
@@ -88,12 +89,12 @@ def ranked_sets(html, heading, name)
   rows.map { |rank, cards, value| yield set_in(cards, "#{name} #{rank}"), value }
 end
 
-def kind(row)
+def kind(row, scale_ms)
   label = row[%r{<span class="kind-label">([^<]+)</span>}, 1] || stop("a row without a label")
   cards = set_in(row, label)
   track = row.match(/aria-label="middle half (\S+) to (\S+)" title="(\S+) – (\S+) · ([\d,]+) finds"/) || stop("#{label}: no middle half")
   stop "#{label}: the bar's label and its title disagree" unless track[1] == track[3] && track[2] == track[4]
-  bar = row.match(/<span class="kind-iqr" style="left:([\d.]+)%;width:([\d.]+)%">/) || stop("#{label}: no bar")
+  bar = row.match(/<span class="kind-iqr(?:\s+clipped)?" style="left:([\d.]+)%;width:([\d.]+)%">/) || stop("#{label}: no bar")
   line = row[/<span class="kind-mid" style="left:([\d.]+)%">/, 1] || stop("#{label}: no median line")
   median = row[%r{<b class="kind-med">([\d.]+s)</b>}, 1] || stop("#{label}: no median")
   left = bar[1].to_f
@@ -101,11 +102,11 @@ def kind(row)
     label: label,
     cards: cards,
     n: count(track[5]),
-    p25_ms: time_ms(left, track[1], "#{label} p25"),
-    median_ms: time_ms(line.to_f, median, "#{label} median"),
-    p75_ms: time_ms((left + bar[2].to_f).round(2), track[2], "#{label} p75")
+    p25_ms: time_ms(left, track[1], "#{label} p25", scale_ms),
+    median_ms: time_ms(line.to_f, median, "#{label} median", scale_ms),
+    p75_ms: time_ms((left + bar[2].to_f).round(2), track[2], "#{label} p75", scale_ms)
   }.tap do |k|
-    stop "#{label}: the bar is not #{bar[2]}% wide" unless (position(k[:p75_ms]) - position(k[:p25_ms])).round(2) == bar[2].to_f
+    stop "#{label}: the bar is not #{bar[2]}% wide" unless (position(k[:p75_ms], scale_ms) - position(k[:p25_ms], scale_ms)).round(2) == bar[2].to_f
     stop "#{label}: out of order" unless k[:p25_ms] <= k[:median_ms] && k[:median_ms] <= k[:p75_ms]
   end
 end
@@ -117,7 +118,9 @@ taken_at = Time.iso8601(taken_at)
 
 tiles = html.scan(%r{<div><dt>([^<]+)</dt><dd>([^<]+)</dd></div>}).to_h
 how_fast = html[%r{<div class="card kinds">(.*?)</ol>}m, 1] || stop("no How fast chart")
-kinds = how_fast.scan(%r{<li class="kind">(.*?)</li>}m).flatten.map { |row| kind(row) }
+scale_max_s = how_fast.scan(%r{<i[^>]*>(\d+)s</i>}).flatten.map(&:to_i).max
+scale_ms = scale_max_s ? scale_max_s * 1000 : SCALE_MS
+kinds = how_fast.scan(%r{<li class="kind">(.*?)</li>}m).flatten.map { |row| kind(row, scale_ms) }
 stop "#{kinds.length} kinds of set, not 15" unless kinds.length == 15 && kinds.map { |k| k[:label] }.uniq.length == 15
 stop "the kinds are not in order of median" unless kinds.each_cons(2).all? { |a, b| a[:median_ms] <= b[:median_ms] }
 
