@@ -69,22 +69,22 @@ class SpottingSetsTest < ActiveSupport::TestCase
   end
 
   test "it says when the numbers were taken" do
-    assert_equal "2026-11-15T23:09:00-08:00", SAVED.fetch("taken_at")
+    assert_equal "2026-11-22T21:27:27-08:00", SAVED.fetch("taken_at")
     taken = SpottingSets.current.taken_at
-    assert_equal [2026, 11, 15, 23, 9], [taken.year, taken.month, taken.day, taken.hour, taken.min], "in Pacific time, as it was taken"
-    assert_equal "2026-11-15T23:09:00-08:00", taken.iso8601
+    assert_equal [2026, 11, 22, 21, 27], [taken.year, taken.month, taken.day, taken.hour, taken.min], "in Pacific time, as it was taken"
+    assert_equal "2026-11-22T21:27:27-08:00", taken.iso8601
   end
 
   test "the day the numbers were taken is the dailies' day, whatever offset it was saved with" do
     saved = JSON.parse(SAVED.to_json, symbolize_names: true)
-    # The same moment, written the way a server on UTC would: the 16th there, 11:09 PM on the 15th Pacific.
-    in_utc = SpottingSets.new(saved.merge(taken_at: "2026-11-16T07:09:00Z"))
+    # The same moment, written the way a server on UTC would: the 23rd there, 9:27 PM on the 22nd Pacific.
+    in_utc = SpottingSets.new(saved.merge(taken_at: "2026-11-23T05:27:27Z"))
 
     assert_equal SpottingSets.current.taken_at, in_utc.taken_at
-    assert_equal Date.new(2026, 11, 15), in_utc.taken_at.to_date
-    assert_equal "2026-11-15T23:09:00-08:00", in_utc.taken_at.iso8601
-    assert_equal Date.new(2026, 11, 16), SpottingSets.new(saved.merge(taken_at: "2026-11-16T08:09:00Z")).taken_at.to_date, "an hour later, past midnight Pacific"
-    Time.use_zone("Asia/Tokyo") { assert_equal Date.new(2026, 11, 15), SpottingSets.current.taken_at.to_date }
+    assert_equal Date.new(2026, 11, 22), in_utc.taken_at.to_date
+    assert_equal "2026-11-22T21:27:27-08:00", in_utc.taken_at.iso8601
+    assert_equal Date.new(2026, 11, 23), SpottingSets.new(saved.merge(taken_at: "2026-11-23T08:27:27Z")).taken_at.to_date, "three hours later, past midnight Pacific"
+    Time.use_zone("Asia/Tokyo") { assert_equal Date.new(2026, 11, 22), SpottingSets.current.taken_at.to_date }
   end
 
   test "the post reads the saved numbers as they are" do
@@ -93,7 +93,7 @@ class SpottingSetsTest < ActiveSupport::TestCase
     assert_equal SAVED.fetch("sets_found"), post.finds
     assert_equal SAVED.fetch("players"), post.players
     assert_equal SAVED.fetch("kinds").map { |k| k.transform_keys(&:to_sym) }, post.kinds, "in the shape SetStats gives the chart"
-    assert_equal({ 1 => 13.4, 2 => 34.0, 3 => 38.1, 4 => 14.4 }, post.shares)
+    assert_equal({ 1 => 13.4, 2 => 33.8, 3 => 38.4, 4 => 14.4 }, post.shares)
     assert_equal SAVED.fetch("games_finished"), post.games
     assert_equal SAVED.fetch("most_games"), post.most_games
     assert_equal SAVED.fetch("finds_per_set").transform_keys(&:to_sym), post.finds_per_set
@@ -107,10 +107,10 @@ class SpottingSetsTest < ActiveSupport::TestCase
     post = SpottingSets.current
     timed = SAVED.fetch("kinds").sum { |k| k.fetch("n") }
 
-    assert_equal 35_335, timed
+    assert_equal 42_797, timed
     assert_equal timed, post.timed_finds
     assert_equal SAVED.fetch("sets_found") - timed, post.untimed_finds
-    assert_equal 624, post.untimed_finds
+    assert_equal 651, post.untimed_finds
     assert_equal post.finds, post.timed_finds + post.untimed_finds
   end
 
@@ -156,20 +156,20 @@ class SpottingSetsTest < ActiveSupport::TestCase
 
     assert_equal [27, 54, 108, 216], (1..4).map { |d| post.possible_sets_for_kind(d) }
     assert_equal [108, 324, 432, 216], (1..4).map { |d| post.possible_sets_by_diff(d) }
-    assert_in_delta 44.0, post.avg_finds_per_set_by_diff(1), 0.1
-    assert_in_delta 23.6, post.avg_finds_per_set_by_diff(4), 0.1
+    assert_in_delta 53.2, post.avg_finds_per_set_by_diff(1), 0.1
+    assert_in_delta 28.6, post.avg_finds_per_set_by_diff(4), 0.1
     assert_operator post.relative_rate("number + shape"), :>, post.relative_rate("shading")
     assert_operator post.relative_rate("all but color"), :>, 1.0
     assert_operator post.relative_rate("all four"), :<, 1.0
 
-    assert_equal({ "solid" => 6, "striped" => 3, "open" => 1 }, post.quickest_shadings)
+    assert_equal({ "solid" => 7, "striped" => 3, "open" => 0 }, post.quickest_shadings)
 
     fit = post.multiplicative_fit
-    assert_in_delta 2143, fit[:base_ms], 20
-    assert_in_delta 1.975, fit[:multipliers]["color"], 0.01
-    assert_in_delta 1.845, fit[:multipliers]["shading"], 0.01
-    assert_in_delta 1.395, fit[:multipliers]["shape"], 0.01
-    assert_in_delta 1.363, fit[:multipliers]["number"], 0.01
+    assert_in_delta 2106, fit[:base_ms], 20
+    assert_in_delta 1.973, fit[:multipliers]["color"], 0.01
+    assert_in_delta 1.855, fit[:multipliers]["shading"], 0.01
+    assert_in_delta 1.411, fit[:multipliers]["shape"], 0.01
+    assert_in_delta 1.375, fit[:multipliers]["number"], 0.01
     assert_operator fit[:r_squared], :>, 0.99
   end
 end

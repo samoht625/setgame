@@ -14,7 +14,7 @@ class SpottingSets
   TITLE = "Why “all different” Sets take 5x longer"
   SLUG = "spotting-sets"
   DESCRIPTION = "In Set Daily’s Daily Deal and Practice games, each differing feature multiplies search time, sharing color alone beats sharing shape and number, and all-different sets take five times as long."
-  PUBLISHED_ON = Date.new(2026, 11, 16)
+  PUBLISHED_ON = Date.new(2026, 11, 22)
   SNAPSHOT = Rails.root.join("config/blog/spotting_sets.json")
   SHADINGS = %w[solid striped open].freeze
 
