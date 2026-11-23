@@ -150,4 +150,26 @@ class SpottingSetsTest < ActiveSupport::TestCase
     refute_match(/["'<>&]/, SpottingSets::TITLE)
     assert_equal SpottingSets::TITLE.count("“"), SpottingSets::TITLE.count("”"), "every opening quote is closed"
   end
+
+  test "combinatorics, per-kind find rates, shading counts, and the multiplicative fit agree with the saved snapshot" do
+    post = SpottingSets.current
+
+    assert_equal [27, 54, 108, 216], (1..4).map { |d| post.possible_sets_for_kind(d) }
+    assert_equal [108, 324, 432, 216], (1..4).map { |d| post.possible_sets_by_diff(d) }
+    assert_in_delta 44.0, post.avg_finds_per_set_by_diff(1), 0.1
+    assert_in_delta 23.6, post.avg_finds_per_set_by_diff(4), 0.1
+    assert_operator post.relative_rate("number + shape"), :>, post.relative_rate("shading")
+    assert_operator post.relative_rate("all but color"), :>, 1.0
+    assert_operator post.relative_rate("all four"), :<, 1.0
+
+    assert_equal({ "solid" => 6, "striped" => 3, "open" => 1 }, post.quickest_shadings)
+
+    fit = post.multiplicative_fit
+    assert_in_delta 2143, fit[:base_ms], 20
+    assert_in_delta 1.975, fit[:multipliers]["color"], 0.01
+    assert_in_delta 1.845, fit[:multipliers]["shading"], 0.01
+    assert_in_delta 1.395, fit[:multipliers]["shape"], 0.01
+    assert_in_delta 1.363, fit[:multipliers]["number"], 0.01
+    assert_operator fit[:r_squared], :>, 0.99
+  end
 end

@@ -67,6 +67,8 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
       "every fun fact is a label, a value and a note"
     assert_select ".facts .wide .note svg.c", 3, "the fastest find shows its three cards"
     assert_includes response.body, "kind-iqr"
+    assert_equal %w[0s 5s 10s 15s 20s], css_select(".kind-scale i").map(&:text), "keeps 0–20s when p75 fits under 20s"
+    assert_select ".kind-iqr.clipped", 0
     assert_includes response.body, %(for="act-players">Players</label>)
     assert_includes response.body, %(data-tip="Today · 2 games")
     refute_includes response.body, "vs all"
@@ -362,6 +364,27 @@ class StatsControllerTest < ActionDispatch::IntegrationTest
     assert_equal({ 0 => 3_000, 1 => 7_000 }, medians[:by_index])
     assert_equal({ 0 => 1, 1 => 1 }, medians[:samples])
     assert_equal 5_000, medians[:overall]
+  end
+
+  test "How fast scales past 20s so p75 bars are not silently clipped" do
+    reset_games
+    game = SoloGame.create!(id: SecureRandom.uuid, player_id: "p1", seed: "1", started_at: 2.minutes.ago, status: "completed", completed_at: Time.current)
+    SoloScore.create!(
+      solo_game: game,
+      player_id: "p1",
+      elapsed_ms: 58_000,
+      completed_at: Time.current,
+      events: [
+        { "type" => "claim", "cards" => [1, 2, 3], "t_ms" => 10_000 },
+        { "type" => "claim", "cards" => [4, 5, 6], "t_ms" => 30_000 },
+        { "type" => "claim", "cards" => [7, 8, 9], "t_ms" => 58_000 }
+      ]
+    )
+
+    get "/stats"
+    assert_response :success
+    assert_equal %w[0s 5s 10s 15s 20s 25s 30s], css_select(".kind-scale i").map(&:text)
+    assert_select ".kind-iqr.clipped", 0
   end
 
   private

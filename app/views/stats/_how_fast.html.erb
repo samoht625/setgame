@@ -1,15 +1,28 @@
-<%# How fast each kind of set is found: one row per kind on a shared 0–20s scale, with an example set, the middle half of its find times and their median. `kinds` is SetStats' list, or a saved copy of it (see SpottingSets). Styled by the stats layout. %>
-<% kmax = 20_000; kpos = ->(ms) { (ms.clamp(0, kmax) * 100.0 / kmax).round(2) } %>
+<%# How fast each kind of set is found: one row per kind on a shared scale sized to fit the data (at least 0–20s), with an example set, the middle half of its find times and their median. `kinds` is SetStats' list, or a saved copy of it (see SpottingSets). Styled by the stats layout. %>
+<% peak_ms = kinds.map { |k| [k[:p75_ms].to_f, k[:median_ms].to_f].max }.max || 0 %>
+<% kmax, kstep = if peak_ms <= 20_000
+     [20_000, 5_000]
+   elsif peak_ms <= 30_000
+     [30_000, 5_000]
+   elsif peak_ms <= 40_000
+     [40_000, 10_000]
+   else
+     [60_000, 10_000]
+   end %>
+<% ksteps = kmax / kstep %>
+<% kpct = ->(t) { p = t * 100.0 / ksteps; p == p.to_i ? p.to_i : p.round(2) } %>
+<% kpos = ->(ms) { (ms.clamp(0, kmax) * 100.0 / kmax).round(2) } %>
 <div class="card kinds">
-  <div class="kind-axis" aria-hidden="true"><span class="kind-scale"><% (0..4).each do |t| %><i style="left:<%= t * 25 %>%"><%= t * 5 %>s</i><% end %></span></div>
+  <div class="kind-axis" aria-hidden="true"><span class="kind-scale"><% (0..ksteps).each do |t| %><i style="left:<%= kpct.(t) %>%"><%= t * (kstep / 1000) %>s</i><% end %></span></div>
   <ol role="list">
     <% kinds.each do |k| %>
+      <% clipped = k[:p75_ms].to_f > kmax %>
       <li class="kind">
         <span class="kind-label"><%= k[:label] %></span>
         <%= set_cards(k[:cards]) if k[:cards] %>
         <span class="kind-track" role="img" aria-label="middle half <%= secs(k[:p25_ms]) %> to <%= secs(k[:p75_ms]) %>" title="<%= secs(k[:p25_ms]) %> – <%= secs(k[:p75_ms]) %> · <%= num(k[:n]) %> finds">
-          <% [5_000, 10_000, 15_000].each do |t| %><span class="kind-tick" style="left:<%= kpos.(t) %>%"></span><% end %>
-          <span class="kind-iqr" style="left:<%= kpos.(k[:p25_ms]) %>%;width:<%= (kpos.(k[:p75_ms]) - kpos.(k[:p25_ms])).round(2) %>%"></span>
+          <% (1...ksteps).each do |t| %><span class="kind-tick" style="left:<%= kpct.(t) %>%"></span><% end %>
+          <span class="kind-iqr<%= " clipped" if clipped %>" style="left:<%= kpos.(k[:p25_ms]) %>%;width:<%= (kpos.(k[:p75_ms]) - kpos.(k[:p25_ms])).round(2) %>%"></span>
           <span class="kind-mid" style="left:<%= kpos.(k[:median_ms]) %>%"></span>
         </span>
         <b class="kind-med"><%= format("%.1fs", k[:median_ms] / 1000.0) %></b>
